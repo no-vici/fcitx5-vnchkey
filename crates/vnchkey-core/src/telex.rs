@@ -317,11 +317,53 @@ impl TelexEngine {
                 }
             }
 
+            // Delayed 'd' promotion in Telex:
+            // When typing 'd' at the end of a syllable that begins with 'd' and has vowel(s)
+            // (e.g. duocw + d -> được, da + d -> đa, dien + d -> điên, etc.)
+            if lower == 'd' && has_vowel {
+                if let Some(first) = letters.first_mut() {
+                    let fl = first.to_ascii_lowercase();
+                    if fl == 'd' {
+                        *first = if first.is_uppercase() || ch.is_uppercase() { 'Đ' } else { 'đ' };
+                        modified = true;
+                        continue;
+                    } else if fl == 'đ' {
+                        *first = if first.is_uppercase() { 'D' } else { 'd' };
+                        modified = true;
+                        continue;
+                    }
+                }
+            }
+
             letters.push(ch);
         }
 
         if !modified && current_tone == 0 {
             return (input.to_string(), false);
+        }
+
+        // Smart Telex horn: if syllable contains 'uo' followed by a coda (e.g. duoc, nuoc, buoc),
+        // automatically promote 'uo' -> 'ươ' when accents/tones or delayed 'd' are applied
+        if modified {
+            let mut u_idx = None;
+            let mut o_idx = None;
+            for (idx, &c) in letters.iter().enumerate() {
+                let lower_c = c.to_lowercase().next().unwrap();
+                if lower_c == 'u' || lower_c == 'ư' { u_idx = Some(idx); }
+                if lower_c == 'o' || lower_c == 'ơ' { o_idx = Some(idx); }
+            }
+            if let (Some(u), Some(o)) = (u_idx, o_idx) {
+                if (u as isize - o as isize).abs() == 1 {
+                    let max_vo = std::cmp::max(u, o);
+                    if max_vo + 1 < letters.len() {
+                        let coda = letters[max_vo + 1].to_lowercase().next().unwrap();
+                        if matches!(coda, 'c' | 'n' | 't' | 'm' | 'p' | 'g') {
+                            letters[u] = if letters[u].is_uppercase() { 'Ư' } else { 'ư' };
+                            letters[o] = if letters[o].is_uppercase() { 'Ơ' } else { 'ơ' };
+                        }
+                    }
+                }
+            }
         }
 
         if current_tone > 0 {
@@ -509,6 +551,35 @@ mod tests {
         let (res, modif) = telex.feed("duocw");
         assert_eq!(res, "dươc");
         assert!(modif);
+
+        // Delayed 'd' promotion: duocwd -> đươc
+        let (res, modif) = telex.feed("duocwd");
+        assert_eq!(res, "đươc");
+        assert!(modif);
+
+        // Delayed 'd' promotion with tone: duocwdj -> được
+        let (res, modif) = telex.feed("duocwdj");
+        assert_eq!(res, "được");
+        assert!(modif);
+
+        // Tone before delayed 'd': duocwjd -> được
+        let (res, modif) = telex.feed("duocwjd");
+        assert_eq!(res, "được");
+        assert!(modif);
+
+        // Smart horn and delayed 'd': duocd -> đươc
+        let (res, modif) = telex.feed("duocd");
+        assert_eq!(res, "đươc");
+        assert!(modif);
+
+        // Smart horn, delayed 'd' and tone: duocdj -> được
+        let (res, modif) = telex.feed("duocdj");
+        assert_eq!(res, "được");
+        assert!(modif);
+
+        // Delayed 'd' on other words
+        assert_eq!(telex.feed("dad").0, "đa");
+        assert_eq!(telex.feed("dend").0, "đen");
     }
 
     #[test]

@@ -31,7 +31,7 @@ pub struct VnchkeyConfig {
 impl Default for VnchkeyConfig {
     fn default() -> Self {
         Self {
-            input_method: "VNI".to_string(),
+            input_method: "Auto".to_string(),
             mode: "Uinput (Smooth)".to_string(),
             output_charset: "Unicode".to_string(),
             type_w_to_u: "Non-Start".to_string(),

@@ -2,6 +2,9 @@
 #include <fcitx-utils/keysym.h>
 #include <fcitx-utils/key.h>
 #include <fcitx/inputcontext.h>
+#include <fcitx/statusarea.h>
+#include <fcitx/userinterfacemanager.h>
+#include <fcitx/instance.h>
 #include <chrono>
 #include <string>
 #include <fstream>
@@ -17,14 +20,25 @@ VnchkeyEngine::VnchkeyEngine(fcitx::AddonManager* manager)
     loadConfig();
     setupStatusMenu();
 
-    if (manager_ && manager_->instance() && statusAction_) {
-        manager_->instance()->userInterfaceManager().registerAction("vnchkey-status", statusAction_.get());
+    // Register all actions with Fcitx5 UserInterfaceManager for Status Area and Main Menu
+    if (manager_ && manager_->instance()) {
+        auto& uiMgr = manager_->instance()->userInterfaceManager();
+        if (statusAction_) uiMgr.registerAction("vnchkey-status", statusAction_.get());
+        if (actionAutoRestore_) uiMgr.registerAction("vnchkey-autorestore", actionAutoRestore_.get());
+        if (actionMacro_) uiMgr.registerAction("vnchkey-macro", actionMacro_.get());
+        if (actionSpellCheck_) uiMgr.registerAction("vnchkey-spellcheck", actionSpellCheck_.get());
+        if (actionSettings_) uiMgr.registerAction("vnchkey-settings", actionSettings_.get());
     }
 }
 
 VnchkeyEngine::~VnchkeyEngine() {
-    if (manager_ && manager_->instance() && statusAction_) {
-        manager_->instance()->userInterfaceManager().unregisterAction(statusAction_.get());
+    if (manager_ && manager_->instance()) {
+        auto& uiMgr = manager_->instance()->userInterfaceManager();
+        if (statusAction_) uiMgr.unregisterAction(statusAction_.get());
+        if (actionAutoRestore_) uiMgr.unregisterAction(actionAutoRestore_.get());
+        if (actionMacro_) uiMgr.unregisterAction(actionMacro_.get());
+        if (actionSpellCheck_) uiMgr.unregisterAction(actionSpellCheck_.get());
+        if (actionSettings_) uiMgr.unregisterAction(actionSettings_.get());
     }
     connections_.clear();
     if (ctx_auto_) {
@@ -42,21 +56,21 @@ VnchkeyEngine::~VnchkeyEngine() {
 }
 
 void VnchkeyEngine::setupStatusMenu() {
+    // Main Status Action on Status Area: shows current method (Auto, Telex, VNI)
     statusAction_ = std::make_unique<fcitx::SimpleAction>();
     statusAction_->setIcon("vnchkey");
     statusAction_->setShortText(config_method_);
     statusAction_->setLongText("vnchKey (Tự Do Edition)");
 
-    statusMenu_ = std::make_unique<fcitx::Menu>();
-    statusAction_->setMenu(statusMenu_.get());
-
-    // 1. Input Method Group
-    actionMethodVni_ = std::make_unique<fcitx::SimpleAction>();
-    actionMethodVni_->setCheckable(true);
-    actionMethodVni_->setShortText("VNI");
-    actionMethodVni_->setLongText("Kiểu gõ: VNI");
-    connections_.push_back(actionMethodVni_->connect<fcitx::SimpleAction::Activated>([this](fcitx::InputContext* ic) {
-        config_method_ = "VNI";
+    // Clicking the status action directly cycles between Auto -> Telex -> VNI
+    connections_.push_back(statusAction_->connect<fcitx::SimpleAction::Activated>([this](fcitx::InputContext* ic) {
+        if (config_method_ == "Auto" || config_method_ == "auto") {
+            config_method_ = "Telex";
+        } else if (config_method_ == "Telex" || config_method_ == "telex") {
+            config_method_ = "VNI";
+        } else {
+            config_method_ = "Auto";
+        }
         updateActionState();
         saveConfig();
         if (ic && statusAction_) {
@@ -64,7 +78,25 @@ void VnchkeyEngine::setupStatusMenu() {
             ic->updateUserInterface(fcitx::UserInterfaceComponent::StatusArea);
         }
     }));
-    statusMenu_->addAction(actionMethodVni_.get());
+
+    statusMenu_ = std::make_unique<fcitx::Menu>();
+    statusAction_->setMenu(statusMenu_.get());
+
+    // 1. Input Method Group in Quick Menu
+    actionMethodAuto_ = std::make_unique<fcitx::SimpleAction>();
+    actionMethodAuto_->setCheckable(true);
+    actionMethodAuto_->setShortText("Tự Động (Auto)");
+    actionMethodAuto_->setLongText("Kiểu gõ: Tự Động (Auto Telex & VNI)");
+    connections_.push_back(actionMethodAuto_->connect<fcitx::SimpleAction::Activated>([this](fcitx::InputContext* ic) {
+        config_method_ = "Auto";
+        updateActionState();
+        saveConfig();
+        if (ic && statusAction_) {
+            statusAction_->update(ic);
+            ic->updateUserInterface(fcitx::UserInterfaceComponent::StatusArea);
+        }
+    }));
+    statusMenu_->addAction(actionMethodAuto_.get());
 
     actionMethodTelex_ = std::make_unique<fcitx::SimpleAction>();
     actionMethodTelex_->setCheckable(true);
@@ -81,12 +113,12 @@ void VnchkeyEngine::setupStatusMenu() {
     }));
     statusMenu_->addAction(actionMethodTelex_.get());
 
-    actionMethodAuto_ = std::make_unique<fcitx::SimpleAction>();
-    actionMethodAuto_->setCheckable(true);
-    actionMethodAuto_->setShortText("Tự Động (Auto)");
-    actionMethodAuto_->setLongText("Kiểu gõ: Tự Động (Telex & VNI)");
-    connections_.push_back(actionMethodAuto_->connect<fcitx::SimpleAction::Activated>([this](fcitx::InputContext* ic) {
-        config_method_ = "Auto";
+    actionMethodVni_ = std::make_unique<fcitx::SimpleAction>();
+    actionMethodVni_->setCheckable(true);
+    actionMethodVni_->setShortText("VNI");
+    actionMethodVni_->setLongText("Kiểu gõ: VNI");
+    connections_.push_back(actionMethodVni_->connect<fcitx::SimpleAction::Activated>([this](fcitx::InputContext* ic) {
+        config_method_ = "VNI";
         updateActionState();
         saveConfig();
         if (ic && statusAction_) {
@@ -94,58 +126,20 @@ void VnchkeyEngine::setupStatusMenu() {
             ic->updateUserInterface(fcitx::UserInterfaceComponent::StatusArea);
         }
     }));
-    statusMenu_->addAction(actionMethodAuto_.get());
+    statusMenu_->addAction(actionMethodVni_.get());
 
     // Separator 1
     actionSeparator1_ = std::make_unique<fcitx::SimpleAction>();
     actionSeparator1_->setSeparator(true);
     statusMenu_->addAction(actionSeparator1_.get());
 
-    // 2. Output Charset Group
+    // 2. Output Charset (Pure standard Unicode only - TCVN3 removed as requested)
     actionCharsetUnicode_ = std::make_unique<fcitx::SimpleAction>();
     actionCharsetUnicode_->setCheckable(true);
+    actionCharsetUnicode_->setChecked(true);
     actionCharsetUnicode_->setShortText("Unicode");
-    actionCharsetUnicode_->setLongText("Bảng mã: Unicode");
-    connections_.push_back(actionCharsetUnicode_->connect<fcitx::SimpleAction::Activated>([this](fcitx::InputContext* ic) {
-        config_charset_ = "Unicode";
-        updateActionState();
-        saveConfig();
-        if (ic && statusAction_) {
-            statusAction_->update(ic);
-            ic->updateUserInterface(fcitx::UserInterfaceComponent::StatusArea);
-        }
-    }));
+    actionCharsetUnicode_->setLongText("Bảng mã: Unicode Chuẩn");
     statusMenu_->addAction(actionCharsetUnicode_.get());
-
-    actionCharsetToHop_ = std::make_unique<fcitx::SimpleAction>();
-    actionCharsetToHop_->setCheckable(true);
-    actionCharsetToHop_->setShortText("Unicode Tổ Hợp");
-    actionCharsetToHop_->setLongText("Bảng mã: Unicode Tổ Hợp");
-    connections_.push_back(actionCharsetToHop_->connect<fcitx::SimpleAction::Activated>([this](fcitx::InputContext* ic) {
-        config_charset_ = "Unicode Tổ Hợp";
-        updateActionState();
-        saveConfig();
-        if (ic && statusAction_) {
-            statusAction_->update(ic);
-            ic->updateUserInterface(fcitx::UserInterfaceComponent::StatusArea);
-        }
-    }));
-    statusMenu_->addAction(actionCharsetToHop_.get());
-
-    actionCharsetTcvn3_ = std::make_unique<fcitx::SimpleAction>();
-    actionCharsetTcvn3_->setCheckable(true);
-    actionCharsetTcvn3_->setShortText("TCVN3 (ABC)");
-    actionCharsetTcvn3_->setLongText("Bảng mã: TCVN3");
-    connections_.push_back(actionCharsetTcvn3_->connect<fcitx::SimpleAction::Activated>([this](fcitx::InputContext* ic) {
-        config_charset_ = "TCVN3 (ABC)";
-        updateActionState();
-        saveConfig();
-        if (ic && statusAction_) {
-            statusAction_->update(ic);
-            ic->updateUserInterface(fcitx::UserInterfaceComponent::StatusArea);
-        }
-    }));
-    statusMenu_->addAction(actionCharsetTcvn3_.get());
 
     // Separator 2
     actionSeparator2_ = std::make_unique<fcitx::SimpleAction>();
@@ -155,7 +149,8 @@ void VnchkeyEngine::setupStatusMenu() {
     // 3. Toggles: GoNhanh Auto-Restore, Macros, Spell Check
     actionAutoRestore_ = std::make_unique<fcitx::SimpleAction>();
     actionAutoRestore_->setCheckable(true);
-    actionAutoRestore_->setShortText("Khôi Phục Tiếng Anh (GoNhanh)");
+    actionAutoRestore_->setShortText("GoNhanh");
+    actionAutoRestore_->setLongText("Khôi Phục Tiếng Anh (GoNhanh)");
     connections_.push_back(actionAutoRestore_->connect<fcitx::SimpleAction::Activated>([this](fcitx::InputContext* ic) {
         config_auto_restore_ = !config_auto_restore_;
         for (void* ctx : {ctx_auto_, ctx_telex_, ctx_vni_}) {
@@ -163,8 +158,8 @@ void VnchkeyEngine::setupStatusMenu() {
         }
         updateActionState();
         saveConfig();
-        if (ic && statusAction_) {
-            statusAction_->update(ic);
+        if (ic && actionAutoRestore_) {
+            actionAutoRestore_->update(ic);
             ic->updateUserInterface(fcitx::UserInterfaceComponent::StatusArea);
         }
     }));
@@ -172,7 +167,8 @@ void VnchkeyEngine::setupStatusMenu() {
 
     actionMacro_ = std::make_unique<fcitx::SimpleAction>();
     actionMacro_->setCheckable(true);
-    actionMacro_->setShortText("Bật Gõ Tắt (Macro)");
+    actionMacro_->setShortText("Macro");
+    actionMacro_->setLongText("Bật Gõ Tắt (Macro)");
     connections_.push_back(actionMacro_->connect<fcitx::SimpleAction::Activated>([this](fcitx::InputContext* ic) {
         config_macro_ = !config_macro_;
         for (void* ctx : {ctx_auto_, ctx_telex_, ctx_vni_}) {
@@ -180,8 +176,8 @@ void VnchkeyEngine::setupStatusMenu() {
         }
         updateActionState();
         saveConfig();
-        if (ic && statusAction_) {
-            statusAction_->update(ic);
+        if (ic && actionMacro_) {
+            actionMacro_->update(ic);
             ic->updateUserInterface(fcitx::UserInterfaceComponent::StatusArea);
         }
     }));
@@ -189,21 +185,28 @@ void VnchkeyEngine::setupStatusMenu() {
 
     actionSpellCheck_ = std::make_unique<fcitx::SimpleAction>();
     actionSpellCheck_->setCheckable(true);
-    actionSpellCheck_->setShortText("Kiểm Tra Chính Tả");
+    actionSpellCheck_->setShortText("ChínhTả");
+    actionSpellCheck_->setLongText("Kiểm Tra Chính Tả");
     connections_.push_back(actionSpellCheck_->connect<fcitx::SimpleAction::Activated>([this](fcitx::InputContext* ic) {
         config_spell_check_ = !config_spell_check_;
         updateActionState();
         saveConfig();
-        if (ic && statusAction_) {
-            statusAction_->update(ic);
+        if (ic && actionSpellCheck_) {
+            actionSpellCheck_->update(ic);
             ic->updateUserInterface(fcitx::UserInterfaceComponent::StatusArea);
         }
     }));
     statusMenu_->addAction(actionSpellCheck_.get());
 
+    // Separator 3
+    actionSeparator3_ = std::make_unique<fcitx::SimpleAction>();
+    actionSeparator3_->setSeparator(true);
+    statusMenu_->addAction(actionSeparator3_.get());
+
     // 4. Launch Settings GUI
     actionSettings_ = std::make_unique<fcitx::SimpleAction>();
-    actionSettings_->setShortText("Cài Đặt Fcitx5 vnchKey...");
+    actionSettings_->setShortText("Cài Đặt");
+    actionSettings_->setLongText("Cài Đặt Fcitx5 vnchKey...");
     actionSettings_->setIcon("preferences-system");
     connections_.push_back(actionSettings_->connect<fcitx::SimpleAction::Activated>([](fcitx::InputContext*) {
         if (fork() == 0) {
@@ -221,13 +224,11 @@ void VnchkeyEngine::updateActionState() {
         statusAction_->setShortText(config_method_);
     }
 
-    if (actionMethodVni_) actionMethodVni_->setChecked(config_method_ == "VNI" || config_method_ == "vni");
-    if (actionMethodTelex_) actionMethodTelex_->setChecked(config_method_ == "Telex" || config_method_ == "telex");
     if (actionMethodAuto_) actionMethodAuto_->setChecked(config_method_ == "Auto" || config_method_ == "auto");
+    if (actionMethodTelex_) actionMethodTelex_->setChecked(config_method_ == "Telex" || config_method_ == "telex");
+    if (actionMethodVni_) actionMethodVni_->setChecked(config_method_ == "VNI" || config_method_ == "vni");
 
-    if (actionCharsetUnicode_) actionCharsetUnicode_->setChecked(config_charset_ == "Unicode");
-    if (actionCharsetToHop_) actionCharsetToHop_->setChecked(config_charset_ == "Unicode Tổ Hợp");
-    if (actionCharsetTcvn3_) actionCharsetTcvn3_->setChecked(config_charset_ == "TCVN3 (ABC)");
+    if (actionCharsetUnicode_) actionCharsetUnicode_->setChecked(true);
 
     if (actionAutoRestore_) actionAutoRestore_->setChecked(config_auto_restore_);
     if (actionMacro_) actionMacro_->setChecked(config_macro_);
@@ -240,13 +241,29 @@ void VnchkeyEngine::activate(const fcitx::InputMethodEntry &entry, fcitx::InputC
         config_method_ = "VNI";
     } else if (name.find("telex") != std::string::npos) {
         config_method_ = "Telex";
+    } else {
+        // vnchkey default (Auto mode)
+        if (config_method_ != "Telex" && config_method_ != "VNI") {
+            config_method_ = "Auto";
+        }
     }
 
     auto* ic = event.inputContext();
-    if (ic && statusAction_) {
+    if (ic) {
         updateActionState();
-        ic->statusArea().addAction(fcitx::StatusGroup::InputMethod, statusAction_.get());
-        statusAction_->update(ic);
+        ic->statusArea().clearGroup(fcitx::StatusGroup::InputMethod);
+        if (statusAction_) ic->statusArea().addAction(fcitx::StatusGroup::InputMethod, statusAction_.get());
+        if (actionAutoRestore_) ic->statusArea().addAction(fcitx::StatusGroup::InputMethod, actionAutoRestore_.get());
+        if (actionMacro_) ic->statusArea().addAction(fcitx::StatusGroup::InputMethod, actionMacro_.get());
+        if (actionSpellCheck_) ic->statusArea().addAction(fcitx::StatusGroup::InputMethod, actionSpellCheck_.get());
+        if (actionSettings_) ic->statusArea().addAction(fcitx::StatusGroup::InputMethod, actionSettings_.get());
+
+        if (statusAction_) statusAction_->update(ic);
+        if (actionAutoRestore_) actionAutoRestore_->update(ic);
+        if (actionMacro_) actionMacro_->update(ic);
+        if (actionSpellCheck_) actionSpellCheck_->update(ic);
+        if (actionSettings_) actionSettings_->update(ic);
+
         ic->updateUserInterface(fcitx::UserInterfaceComponent::StatusArea);
     }
 }
@@ -254,8 +271,8 @@ void VnchkeyEngine::activate(const fcitx::InputMethodEntry &entry, fcitx::InputC
 void VnchkeyEngine::deactivate(const fcitx::InputMethodEntry &entry, fcitx::InputContextEvent &event) {
     FCITX_UNUSED(entry);
     auto* ic = event.inputContext();
-    if (ic && statusAction_) {
-        ic->statusArea().removeAction(statusAction_.get());
+    if (ic) {
+        ic->statusArea().clearGroup(fcitx::StatusGroup::InputMethod);
         ic->updateUserInterface(fcitx::UserInterfaceComponent::StatusArea);
     }
 }
@@ -352,7 +369,7 @@ void VnchkeyEngine::saveConfig() {
             out << l << "\n";
         }
         out << "InputMethod=" << config_method_ << "\n";
-        out << "OutputCharset=" << config_charset_ << "\n";
+        out << "OutputCharset=Unicode\n";
         out << "AutoRestoreEnglish=" << (config_auto_restore_ ? "True" : "False") << "\n";
         out << "EnableMacro=" << (config_macro_ ? "True" : "False") << "\n";
         out << "SpellCheck=" << (config_spell_check_ ? "True" : "False") << "\n";
@@ -374,7 +391,7 @@ void* VnchkeyEngine::getContext(const std::string& entryName) {
         return ctx_vni_;
     }
 
-    // Default entry: obey user's preference in ~/.config/fcitx5/conf/vnchkey.conf
+    // Default or Auto entry: obey config_method_
     if (config_method_ == "VNI" || config_method_ == "vni") {
         return ctx_vni_;
     } else if (config_method_ == "Telex" || config_method_ == "telex") {
@@ -413,10 +430,7 @@ void VnchkeyEngine::keyEvent(const fcitx::InputMethodEntry &entry, fcitx::KeyEve
 
     // User pressed physical Backspace: let the app delete character naturally, sync engine state
     if (sym == FcitxKey_BackSpace) {
-        if (rawKey.isVirtual() || pending_backspaces_ > 0) {
-            if (pending_backspaces_ > 0) {
-                --pending_backspaces_;
-            }
+        if (rawKey.isVirtual()) {
             return;
         }
         fcitx5_vnchkey_handle_backspace(ctx);
@@ -446,12 +460,15 @@ void VnchkeyEngine::keyEvent(const fcitx::InputMethodEntry &entry, fcitx::KeyEve
         auto* ic = keyEvent.inputContext();
         if (ic) {
             if (out_backspaces > 0) {
-                pending_backspaces_ += out_backspaces;
-                is_forwarding_ = true;
-                for (size_t i = 0; i < out_backspaces; ++i) {
-                    ic->forwardKey(fcitx::Key(FcitxKey_BackSpace));
+                if (ic->capabilityFlags().test(fcitx::CapabilityFlag::SurroundingText)) {
+                    ic->deleteSurroundingText(-static_cast<int>(out_backspaces), out_backspaces);
+                } else {
+                    is_forwarding_ = true;
+                    for (size_t i = 0; i < out_backspaces; ++i) {
+                        ic->forwardKey(fcitx::Key(FcitxKey_BackSpace));
+                    }
+                    is_forwarding_ = false;
                 }
-                is_forwarding_ = false;
             }
 
             // Commit transformed string

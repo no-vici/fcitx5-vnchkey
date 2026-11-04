@@ -378,10 +378,10 @@ makepkg -si
 vnchKey tích hợp sâu trực tiếp vào Fcitx5 với hai cơ chế điều khiển hiện đại, **hoàn toàn viết bằng 100% Safe Rust**, không phụ thuộc Python:
 
 #### 1. Menu Nhanh Trên Khay Hệ Thống (Status Area Quick Menu)
-Khi vnchKey được kích hoạt, biểu tượng trên thanh tác vụ / khay hệ thống Fcitx5 hiển thị nhãn kiểu gõ hiện tại (`VNI`, `Telex`, `Auto`). Nhấp vào biểu tượng sẽ mở ngay Menu Nhanh:
-* **Kiểu gõ**: VNI, Telex, Tự Động (Auto Telex & VNI).
-* **Bảng mã**: Unicode chuẩn, Unicode Tổ Hợp, TCVN3 (ABC).
-* **Bật/Tắt tức thì**: Khôi phục tiếng Anh (GoNhanh), Gõ tắt (Macro), Kiểm tra chính tả.
+Khi vnchKey được kích hoạt, biểu tượng trên thanh tác vụ / khay hệ thống Fcitx5 hiển thị nhãn kiểu gõ hiện tại (`Auto`, `Telex`, `VNI`). Nhấp trực tiếp vào biểu tượng sẽ chuyển nhanh kiểu gõ hoặc mở ngay Menu Nhanh:
+* **Kiểu gõ**: Tự Động (Auto Telex & VNI), Telex, VNI.
+* **Bảng mã**: Chuẩn Unicode quốc tế duy nhất (tối ưu, tinh gọn, loại bỏ hoàn toàn các bảng mã lỗi thời).
+* **Bật/Tắt tức thì trên thanh tác vụ**: Khôi phục tiếng Anh (GoNhanh), Gõ tắt (Macro), Kiểm tra chính tả.
 * **Cài đặt Fcitx5 vnchKey...**: Mở cửa sổ cấu hình chi tiết.
 
 #### 2. Cửa Sổ Cài Đặt Fcitx5 vnchKey Settings (100% Native Rust)
@@ -395,7 +395,7 @@ vnchkey-settings
 ```
 
 Giao diện cài đặt hỗ trợ đầy đủ 10 danh mục:
-* **General**: Chọn kiểu gõ (**VNI**, **Telex**, hoặc **Auto**), chế độ (**Uinput Smooth** hoặc **Native Fcitx5 Direct Commit**), bảng mã đầu ra (**Unicode**, **Unicode Tổ Hợp**, **TCVN3**), tuỳ chọn gõ phím `w` thành `ư`, chuyển dấu ngoặc vuông `[` thành `ơ` và `]` thành `ư`.
+* **General**: Chọn kiểu gõ (**Auto**, **Telex**, hoặc **VNI**), chế độ (**Uinput Smooth** hoặc **Native Fcitx5 Direct Commit**), bảng mã đầu ra chuẩn **Unicode**, tuỳ chọn gõ phím `w` thành `ư`, chuyển dấu ngoặc vuông `[` thành `ơ` và `]` thành `ư`.
 * **Typing**: Quy tắc dấu thanh (Chuẩn mới `oà, uý` / Chuẩn cũ `òa, úy`), Smart Horn tự động thêm râu cho `uo` (`duoc95` -> `được`), GoNhanh tự động khôi phục từ tiếng Anh, XKey Smart Casing, Gõ nhanh phụ âm đầu (`cc` -> `ch`, `gg` -> `gi`).
 * **Applications**: Quản lý danh sách ứng dụng bỏ qua (Bypass cho terminal, game, v.v.).
 * **Macros**: Bảng quản lý gõ tắt trực quan (Thêm, Xoá, Nhập, Xuất file).

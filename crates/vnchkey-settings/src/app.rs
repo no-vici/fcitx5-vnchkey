@@ -341,12 +341,10 @@ impl SettingsApp {
             ui.label(egui::RichText::new("Output Charset").size(13.0));
             ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                 egui::ComboBox::from_id_salt("output_charset")
-                    .selected_text(&self.config.output_charset)
+                    .selected_text("Unicode (Standard)")
                     .width(200.0)
                     .show_ui(ui, |ui| {
-                        ui.selectable_value(&mut self.config.output_charset, "Unicode".to_string(), "Unicode");
-                        ui.selectable_value(&mut self.config.output_charset, "Unicode Tổ Hợp".to_string(), "Unicode Tổ Hợp");
-                        ui.selectable_value(&mut self.config.output_charset, "TCVN3 (ABC)".to_string(), "TCVN3 (ABC)");
+                        ui.selectable_value(&mut self.config.output_charset, "Unicode".to_string(), "Unicode (Standard)");
                     });
             });
         });

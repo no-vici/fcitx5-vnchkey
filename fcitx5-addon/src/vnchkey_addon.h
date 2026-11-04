@@ -71,26 +71,23 @@ private:
     void* ctx_telex_ = nullptr;
     void* ctx_vni_ = nullptr;
 
-    std::string config_method_ = "VNI";
+    std::string config_method_ = "Auto";
     std::string config_charset_ = "Unicode";
     bool config_auto_restore_ = true;
     bool config_macro_ = true;
     bool config_spell_check_ = true;
 
     bool is_forwarding_ = false;
-    int pending_backspaces_ = 0;
 
     // Fcitx5 Tray & Status Menu
     std::unique_ptr<fcitx::SimpleAction> statusAction_;
     std::unique_ptr<fcitx::Menu> statusMenu_;
 
-    std::unique_ptr<fcitx::SimpleAction> actionMethodVni_;
-    std::unique_ptr<fcitx::SimpleAction> actionMethodTelex_;
     std::unique_ptr<fcitx::SimpleAction> actionMethodAuto_;
+    std::unique_ptr<fcitx::SimpleAction> actionMethodTelex_;
+    std::unique_ptr<fcitx::SimpleAction> actionMethodVni_;
 
     std::unique_ptr<fcitx::SimpleAction> actionCharsetUnicode_;
-    std::unique_ptr<fcitx::SimpleAction> actionCharsetToHop_;
-    std::unique_ptr<fcitx::SimpleAction> actionCharsetTcvn3_;
 
     std::unique_ptr<fcitx::SimpleAction> actionAutoRestore_;
     std::unique_ptr<fcitx::SimpleAction> actionMacro_;
@@ -98,6 +95,7 @@ private:
 
     std::unique_ptr<fcitx::SimpleAction> actionSeparator1_;
     std::unique_ptr<fcitx::SimpleAction> actionSeparator2_;
+    std::unique_ptr<fcitx::SimpleAction> actionSeparator3_;
     std::unique_ptr<fcitx::SimpleAction> actionSettings_;
 
     std::vector<fcitx::Connection> connections_;

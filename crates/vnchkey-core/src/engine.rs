@@ -245,6 +245,43 @@ impl Engine {
             };
         }
 
+        // Handle digits (0-9):
+        // In Telex, numbers are never accents. In Auto mode, numbers only apply if current word is VNI.
+        if ch.is_ascii_digit() {
+            match self.config.method {
+                InputMethod::Telex | InputMethod::SimpleTelex => {
+                    self.reset();
+                    return EngineOutput {
+                        backspaces: 0,
+                        commit_text: ch.to_string(),
+                        consumed: false,
+                        auto_restored: false,
+                        macro_expanded: false,
+                        adaptive_delay_ms: adaptive_delay,
+                    };
+                }
+                InputMethod::Auto => {
+                    let has_telex = has_telex_markers(&self.raw_strokes);
+                    let mut test_strokes = self.raw_strokes.clone();
+                    test_strokes.push(ch);
+                    let (_, vni_ok) = self.vni.feed(&test_strokes);
+
+                    if has_telex || !vni_ok {
+                        self.reset();
+                        return EngineOutput {
+                            backspaces: 0,
+                            commit_text: ch.to_string(),
+                            consumed: false,
+                            auto_restored: false,
+                            macro_expanded: false,
+                            adaptive_delay_ms: adaptive_delay,
+                        };
+                    }
+                }
+                InputMethod::Vni => {}
+            }
+        }
+
         self.raw_strokes.push(ch);
         self.casing.track(ch);
 
@@ -301,6 +338,18 @@ impl Engine {
     }
 }
 
+/// Checks if a string of strokes contains explicit Telex modifiers.
+fn has_telex_markers(s: &str) -> bool {
+    let lower = s.to_ascii_lowercase();
+    lower.contains('w')
+        || lower.contains("dd")
+        || lower.contains("aa")
+        || lower.contains("ee")
+        || lower.contains("oo")
+        || (lower.chars().any(crate::telex::is_vietnamese_vowel)
+            && lower.chars().any(|c| matches!(c, 's' | 'f' | 'r' | 'x' | 'j')))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -341,5 +390,17 @@ mod tests {
         // Test VNI in Auto mode: tinh2 -> tình
         let r4 = type_word(&mut engine, "tinh2 ");
         assert_eq!(r4, "tình ");
+
+        // Test Telex delayed 'd': duocwdj -> được
+        let r5 = type_word(&mut engine, "duocwdj ");
+        assert_eq!(r5, "được ");
+
+        // Test Telex delayed 'd' without 'w': duocdj -> được
+        let r6 = type_word(&mut engine, "duocdj ");
+        assert_eq!(r6, "được ");
+
+        // Test typing digits after word does not corrupt buffer: duocwdj7duo
+        let r7 = type_word(&mut engine, "duocwdj7duo ");
+        assert_eq!(r7, "được7duo ");
     }
 }
