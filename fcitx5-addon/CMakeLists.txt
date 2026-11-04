@@ -1,19 +1,36 @@
 cmake_minimum_required(VERSION 3.16)
 project(fcitx5-vnchkey-addon VERSION 0.2.0 LANGUAGES CXX)
 
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
-find_package(ECM 1.0.0 REQUIRED NO_MODULE)
-set(CMAKE_MODULE_PATH ${ECM_MODULE_PATH} ${CMAKE_MODULE_PATH})
+find_package(ECM 1.0.0 QUIET NO_MODULE)
+if(ECM_FOUND)
+    set(CMAKE_MODULE_PATH ${ECM_MODULE_PATH} ${CMAKE_MODULE_PATH})
+endif()
 
 find_package(Fcitx5Core 5.0.0 REQUIRED)
+find_package(Fcitx5Utils 5.0.0 REQUIRED)
 
 include(GNUInstallDirs)
 
-# Locate the compiled Rust FFI library (from target/release/)
-set(RUST_TARGET_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../target/release")
+if(NOT DEFINED FCITX_INSTALL_PKGDATADIR)
+    set(FCITX_INSTALL_PKGDATADIR "${CMAKE_INSTALL_DATADIR}/fcitx5")
+endif()
+if(NOT DEFINED FCITX_INSTALL_LIBDIR)
+    set(FCITX_INSTALL_LIBDIR "${CMAKE_INSTALL_LIBDIR}/fcitx5")
+endif()
+
+# Locate the compiled Rust FFI library
+if(NOT DEFINED RUST_TARGET_DIR)
+    if(DEFINED ENV{CARGO_TARGET_DIR})
+        set(RUST_TARGET_DIR "$ENV{CARGO_TARGET_DIR}/release")
+    else()
+        set(RUST_TARGET_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../target/release")
+    endif()
+endif()
+
 find_library(RUST_FFI_LIB
     NAMES fcitx5_vnchkey_ffi
     PATHS "${RUST_TARGET_DIR}"
@@ -21,7 +38,11 @@ find_library(RUST_FFI_LIB
 )
 
 if(NOT RUST_FFI_LIB)
-    find_library(RUST_FFI_LIB NAMES fcitx5_vnchkey_ffi)
+    if(EXISTS "${RUST_TARGET_DIR}/libfcitx5_vnchkey_ffi.so")
+        set(RUST_FFI_LIB "${RUST_TARGET_DIR}/libfcitx5_vnchkey_ffi.so")
+    else()
+        find_library(RUST_FFI_LIB NAMES fcitx5_vnchkey_ffi)
+    endif()
 endif()
 
 add_library(fcitx5-vnchkey-addon MODULE
@@ -34,6 +55,7 @@ target_include_directories(fcitx5-vnchkey-addon PRIVATE
 
 target_link_libraries(fcitx5-vnchkey-addon PRIVATE
     Fcitx5::Core
+    Fcitx5::Utils
     ${RUST_FFI_LIB}
 )
 
@@ -50,10 +72,9 @@ install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/../data/addon/vnchkey.conf"
     DESTINATION "${FCITX_INSTALL_PKGDATADIR}/addon"
 )
 
-# Install Fcitx5 input method entries (Telex & VNI)
+# Install Fcitx5 input method entry (unified vnchKey supporting Telex & VNI)
 install(FILES
-    "${CMAKE_CURRENT_SOURCE_DIR}/../data/inputmethod/vnchkey-telex.conf"
-    "${CMAKE_CURRENT_SOURCE_DIR}/../data/inputmethod/vnchkey-vni.conf"
+    "${CMAKE_CURRENT_SOURCE_DIR}/../data/inputmethod/vnchkey.conf"
     DESTINATION "${FCITX_INSTALL_PKGDATADIR}/inputmethod"
 )
 

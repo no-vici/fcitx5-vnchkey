@@ -21,6 +21,7 @@ extern "C" {
         char** out_commit
     );
     void fcitx5_vnchkey_reset(void* ctx);
+    void fcitx5_vnchkey_handle_backspace(void* ctx);
     void fcitx5_vnchkey_free_string(char* s);
 }
 
@@ -34,10 +35,8 @@ public:
 
 private:
     fcitx::AddonManager* manager_;
-    void* telex_ctx_ = nullptr;
-    void* vni_ctx_ = nullptr;
-
-    void* getContext(const fcitx::InputMethodEntry &entry);
+    void* ctx_ = nullptr;
+    bool is_forwarding_ = false;
 };
 
 class VnchkeyEngineFactory : public fcitx::AddonFactory {

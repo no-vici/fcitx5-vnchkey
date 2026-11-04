@@ -348,66 +348,26 @@ sudo udevadm control --reload-rules && sudo udevadm trigger
 
 ---
 
-### 5.3. Biên dịch và đóng gói (PKGBUILD hoặc Trực tiếp Cargo)
+### 5.3. Hướng Dẫn Cài Đặt (Nhanh Nhất & Tự Động)
 
-#### Cách 1: Đóng gói chuẩn Arch Linux bằng PKGBUILD (Khuyên dùng)
-Cách này giúp trình quản lý gói `pacman` theo dõi toàn bộ tệp tin, thuận tiện cho việc gỡ cài đặt hoặc cập nhật:
+#### Cách 1: Cài đặt tự động 1-Click bằng `install.sh` (Khuyên Dùng ⭐)
+Script sẽ tự động biên dịch mã nguồn Rust, build Fcitx5 addon, cài đặt các file cấu hình vào hệ thống, cấp quyền kernel `/dev/uinput` và khởi động lại Fcitx5:
 
 ```bash
-mkdir -p ~/build/vnchkey && cd ~/build/vnchkey
+git clone https://github.com/no-vici/fcitx5-vnchkey.git
+cd fcitx5-vnchkey
+chmod +x install.sh
+./install.sh
+```
 
-cat << 'EOF' > PKGBUILD
-pkgname=fcitx5-vnchkey-git
-pkgver=0.2.0
-pkgrel=1
-pkgdesc="High-performance memory-safe Vietnamese input engine in 100% Rust for Fcitx5 (vnchKey Tự Do Edition)"
-arch=('x86_64')
-url="https://github.com/no-vici/fcitx5-vnchkey"
-license=('GPL-3.0-or-later')
-depends=('fcitx5')
-makedepends=('git' 'cargo' 'rust' 'cmake' 'extra-cmake-modules' 'gcc')
-provides=('fcitx5-vnchkey')
-conflicts=('fcitx5-vnchkey')
+---
 
-build() {
-  cd "$srcdir"
-  if [ -d "source" ]; then
-    cd source && git pull
-  else
-    git clone https://github.com/no-vici/fcitx5-vnchkey.git source
-    cd source
-  fi
-  # 1. Biên dịch bộ máy Rust lõi
-  cargo build --release --locked
+#### Cách 2: Đóng gói chuẩn Arch Linux bằng `makepkg -si`
+Tệp tin `PKGBUILD` đã được tích hợp sẵn ngay trong thư mục gốc của repository:
 
-  # 2. Biên dịch Fcitx5 Native C++ Addon Shim
-  if [ -d "fcitx5-addon" ]; then
-    mkdir -p fcitx5-addon/build && cd fcitx5-addon/build
-    cmake -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_BUILD_TYPE=Release ..
-    make -j$(nproc)
-  fi
-}
-
-package() {
-  cd "$srcdir/source"
-  # Cài đặt file thực thi daemon và thư viện Rust FFI
-  install -Dm755 target/release/libfcitx5_vnchkey_ffi.so "$pkgdir/usr/lib/libfcitx5_vnchkey_ffi.so"
-  install -Dm755 target/release/vnchkey-daemon "$pkgdir/usr/bin/vnchkey-daemon"
-
-  # Cài đặt Fcitx5 native addon module
-  if [ -f fcitx5-addon/build/fcitx5-vnchkey-addon.so ]; then
-    install -Dm755 fcitx5-addon/build/fcitx5-vnchkey-addon.so "$pkgdir/usr/lib/fcitx5/fcitx5-vnchkey-addon.so"
-  fi
-
-  # Cài đặt metadata để Fcitx5 Settings nhận diện bộ gõ (Telex & VNI)
-  install -Dm644 data/addon/vnchkey.conf "$pkgdir/usr/share/fcitx5/addon/vnchkey.conf"
-  install -Dm644 data/inputmethod/vnchkey-telex.conf "$pkgdir/usr/share/fcitx5/inputmethod/vnchkey-telex.conf"
-  install -Dm644 data/inputmethod/vnchkey-vni.conf "$pkgdir/usr/share/fcitx5/inputmethod/vnchkey-vni.conf"
-  install -Dm644 data/icons/vnchkey.png "$pkgdir/usr/share/icons/hicolor/128x128/apps/vnchkey.png"
-}
-EOF
-
-# Biên dịch và cài đặt tự động
+```bash
+git clone https://github.com/no-vici/fcitx5-vnchkey.git
+cd fcitx5-vnchkey
 makepkg -si
 ```
 

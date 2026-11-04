@@ -11,6 +11,8 @@ use crate::sentinel::SentinelBarrier;
 /// Supported Vietnamese typing methods.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum InputMethod {
+    /// Auto adaptive mode (seamlessly supports both Telex and VNI like lilypad)
+    Auto,
     /// Telex typing method (aa->â, aw->ă, s->sắc, f->huyền, etc.)
     Telex,
     /// VNI typing method (a6->â, a8->ă, a1->á, a2->à, etc.)
@@ -48,7 +50,7 @@ pub struct EngineConfig {
 impl Default for EngineConfig {
     fn default() -> Self {
         Self {
-            method: InputMethod::Telex,
+            method: InputMethod::Auto,
             tone_style: ToneStyle::Modern,
             auto_restore_english: true,
             smart_casing: true,
@@ -115,6 +117,12 @@ impl Engine {
         self.sentinel.reset();
     }
 
+    /// Handles physical Backspace pressed by the user without getting stuck.
+    pub fn handle_backspace(&mut self) {
+        self.raw_strokes.pop();
+        self.current_word.pop();
+    }
+
     /// Process a key press event.
     pub fn process_key(&mut self, ch: char, timestamp_ms: f64) -> EngineOutput {
         let adaptive_delay = self.iki.record_stroke(timestamp_ms);
@@ -162,6 +170,18 @@ impl Engine {
 
         // Transform via selected method
         let (transformed, is_transformed) = match self.config.method {
+            InputMethod::Auto => {
+                if self.raw_strokes.chars().any(|c| c.is_ascii_digit()) {
+                    let (vni_res, vni_ok) = self.vni.feed(&self.raw_strokes);
+                    if vni_ok {
+                        (vni_res, true)
+                    } else {
+                        self.telex.feed(&self.raw_strokes)
+                    }
+                } else {
+                    self.telex.feed(&self.raw_strokes)
+                }
+            }
             InputMethod::Telex => self.telex.feed(&self.raw_strokes),
             InputMethod::Vni => self.vni.feed(&self.raw_strokes),
             InputMethod::SimpleTelex => self.telex.feed_simple(&self.raw_strokes),

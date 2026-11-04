@@ -116,8 +116,20 @@ impl VniEngine {
             if !vowel_indices.is_empty() {
                 let target_idx = if vowel_indices.len() == 1 {
                     vowel_indices[0]
-                } else if vowel_indices.len() == 2 && self.tone_style == ToneStyle::Modern {
-                    vowel_indices[1]
+                } else if vowel_indices.len() == 2 {
+                    let first = letters[vowel_indices[0]].to_lowercase().next().unwrap();
+                    let second = letters[vowel_indices[1]].to_lowercase().next().unwrap();
+                    if (first == 'o' && second == 'a') || (first == 'u' && second == 'y') || (first == 'o' && second == 'e') {
+                        if self.tone_style == ToneStyle::Modern {
+                            vowel_indices[1]
+                        } else {
+                            vowel_indices[0]
+                        }
+                    } else if (second == 'ê' || second == 'ô' || second == 'ơ') && vowel_indices[1] + 1 < letters.len() {
+                        vowel_indices[1]
+                    } else {
+                        vowel_indices[0]
+                    }
                 } else if vowel_indices.len() >= 3 {
                     vowel_indices[1]
                 } else {

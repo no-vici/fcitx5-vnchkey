@@ -86,3 +86,12 @@ pub unsafe extern "C" fn fcitx5_vnchkey_reset(ctx: *mut Fcitx5VnchkeyContext) {
         ctx.engine.reset();
     }
 }
+
+/// Handles physical Backspace pressed by the user.
+#[no_mangle]
+pub unsafe extern "C" fn fcitx5_vnchkey_handle_backspace(ctx: *mut Fcitx5VnchkeyContext) {
+    if !ctx.is_null() {
+        let ctx = &mut *ctx;
+        ctx.engine.handle_backspace();
+    }
+}
