@@ -89,6 +89,12 @@ sudo cp -r data/icons/breeze "$PREFIX/share/icons/"
 sudo cp -r data/icons/breeze-dark "$PREFIX/share/icons/"
 sudo gtk-update-icon-cache -q -t -f "$PREFIX/share/icons/hicolor" 2>/dev/null || true
 
+# Settings GUI Application
+sudo install -Dm755 bin/vnchkey-settings "$PREFIX/bin/vnchkey-settings"
+sudo mkdir -p "$PREFIX/share/fcitx5-vnchkey"
+sudo cp -r settings-gui "$PREFIX/share/fcitx5-vnchkey/"
+sudo install -Dm644 data/org.fcitx.Fcitx5.Addon.Vnchkey.Settings.desktop "$PREFIX/share/applications/org.fcitx.Fcitx5.Addon.Vnchkey.Settings.desktop"
+
 echo -e "\n${GREEN}==> 4/4. Thiết lập quyền kernel Linux /dev/uinput...${NC}"
 sudo usermod -aG input "$USER" 2>/dev/null || true
 echo 'KERNEL=="uinput", MODE="0660", GROUP="input", OPTIONS+="static_node=uinput"' | sudo tee /etc/udev/rules.d/99-uinput.rules >/dev/null

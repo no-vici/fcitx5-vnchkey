@@ -1,7 +1,7 @@
 //! VNI Input Method Transformer.
 
 use crate::engine::ToneStyle;
-use crate::telex::place_tone;
+use crate::telex::{is_vietnamese_vowel, place_tone};
 
 /// VNI engine processing number-based Vietnamese accents.
 #[derive(Debug, Clone)]
@@ -105,6 +105,25 @@ impl VniEngine {
             return (input.to_string(), false);
         }
 
+        // Smart VNI horn: if letters contain 'uo' followed by a coda (e.g. duoc, nuoc, buoc),
+        // automatically promote 'uo' -> 'ươ'
+        let mut u_idx = None;
+        let mut o_idx = None;
+        for (idx, &c) in letters.iter().enumerate() {
+            let lower = c.to_lowercase().next().unwrap();
+            if lower == 'u' { u_idx = Some(idx); }
+            if lower == 'o' { o_idx = Some(idx); }
+        }
+        if let (Some(u), Some(o)) = (u_idx, o_idx) {
+            if (u as isize - o as isize).abs() == 1 {
+                let has_coda = o + 1 < letters.len() && !is_vietnamese_vowel(letters[o + 1]);
+                if has_coda {
+                    letters[u] = if letters[u].is_uppercase() { 'Ư' } else { 'ư' };
+                    letters[o] = if letters[o].is_uppercase() { 'Ơ' } else { 'ơ' };
+                }
+            }
+        }
+
         if current_tone > 0 {
             place_tone(&mut letters, current_tone, self.tone_style);
         }
@@ -123,6 +142,8 @@ mod tests {
         assert_eq!(vni.feed("tinh2").0, "tình");
         assert_eq!(vni.feed("dau61").0, "dấu");
         assert_eq!(vni.feed("duoc975").0, "được");
+        assert_eq!(vni.feed("duoc95").0, "được");
+        assert_eq!(vni.feed("nuoc1").0, "nước");
         assert_eq!(vni.feed("viet65").0, "việt");
     }
 }

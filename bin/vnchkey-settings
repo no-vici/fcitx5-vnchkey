@@ -1,0 +1,2 @@
+#!/bin/sh
+exec python3 /usr/share/fcitx5-vnchkey/settings-gui/main.py "$@"

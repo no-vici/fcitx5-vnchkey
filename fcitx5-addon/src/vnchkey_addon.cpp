@@ -4,6 +4,8 @@
 #include <fcitx/inputcontext.h>
 #include <chrono>
 #include <string>
+#include <fstream>
+#include <cstdlib>
 
 VnchkeyEngine::VnchkeyEngine(fcitx::AddonManager* manager)
     : manager_(manager) {
@@ -11,6 +13,7 @@ VnchkeyEngine::VnchkeyEngine(fcitx::AddonManager* manager)
     ctx_auto_ = fcitx5_vnchkey_init_with_method(0);
     ctx_telex_ = fcitx5_vnchkey_init_with_method(1);
     ctx_vni_ = fcitx5_vnchkey_init_with_method(2);
+    loadConfig();
 }
 
 VnchkeyEngine::~VnchkeyEngine() {
@@ -28,11 +31,45 @@ VnchkeyEngine::~VnchkeyEngine() {
     }
 }
 
+void VnchkeyEngine::loadConfig() {
+    const char* home = getenv("HOME");
+    if (!home) return;
+    std::string path = std::string(home) + "/.config/fcitx5/conf/vnchkey.conf";
+    std::ifstream file(path);
+    if (!file.is_open()) return;
+
+    std::string line;
+    while (std::getline(file, line)) {
+        if (line.rfind("InputMethod=", 0) == 0) {
+            std::string val = line.substr(12);
+            size_t start = val.find_first_not_of(" \t\"'");
+            size_t end = val.find_last_not_of(" \t\"'");
+            if (start != std::string::npos && end != std::string::npos) {
+                config_method_ = val.substr(start, end - start + 1);
+            }
+        }
+    }
+}
+
+void VnchkeyEngine::reloadConfig() {
+    loadConfig();
+    if (ctx_auto_) fcitx5_vnchkey_reset(ctx_auto_);
+    if (ctx_telex_) fcitx5_vnchkey_reset(ctx_telex_);
+    if (ctx_vni_) fcitx5_vnchkey_reset(ctx_vni_);
+}
+
 void* VnchkeyEngine::getContext(const std::string& entryName) {
-    if (entryName == "vnchkey-telex") {
+    if (entryName.find("telex") != std::string::npos) {
         return ctx_telex_;
-    } else if (entryName == "vnchkey-vni") {
+    } else if (entryName.find("vni") != std::string::npos) {
         return ctx_vni_;
+    }
+
+    // Default entry: obey user's preference in ~/.config/fcitx5/conf/vnchkey.conf
+    if (config_method_ == "VNI" || config_method_ == "vni") {
+        return ctx_vni_;
+    } else if (config_method_ == "Telex" || config_method_ == "telex") {
+        return ctx_telex_;
     } else {
         return ctx_auto_;
     }
@@ -92,11 +129,12 @@ void VnchkeyEngine::keyEvent(const fcitx::InputMethodEntry &entry, fcitx::KeyEve
     if (consumed) {
         auto* ic = keyEvent.inputContext();
         if (ic) {
-            // Forward backspaces with re-entrancy protection
+            // Forward both KeyPress and KeyRelease for every BackSpace to avoid key dropping
             if (out_backspaces > 0) {
                 is_forwarding_ = true;
                 for (size_t i = 0; i < out_backspaces; ++i) {
-                    ic->forwardKey(fcitx::Key(FcitxKey_BackSpace));
+                    ic->forwardKey(fcitx::Key(FcitxKey_BackSpace), false);
+                    ic->forwardKey(fcitx::Key(FcitxKey_BackSpace), true);
                 }
                 is_forwarding_ = false;
             }

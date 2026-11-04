@@ -4,6 +4,11 @@ Cargo.lock
 build/
 fcitx5-addon/build/
 
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+
 # System & Editor
 *.log
 .DS_Store

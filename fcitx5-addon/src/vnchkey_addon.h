@@ -33,14 +33,17 @@ public:
 
     void keyEvent(const fcitx::InputMethodEntry &entry, fcitx::KeyEvent &keyEvent) override;
     void reset(const fcitx::InputMethodEntry &entry, fcitx::InputContextEvent &event) override;
+    void reloadConfig() override;
 
 private:
     void* getContext(const std::string& entryName);
+    void loadConfig();
 
     fcitx::AddonManager* manager_;
     void* ctx_auto_ = nullptr;
     void* ctx_telex_ = nullptr;
     void* ctx_vni_ = nullptr;
+    std::string config_method_ = "Auto";
     bool is_forwarding_ = false;
 };
 

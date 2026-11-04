@@ -1,0 +1,11 @@
+[Desktop Entry]
+Name[vi]=Cài đặt vnchKey
+Name=vnchKey Settings
+Comment[vi]=Tuỳ chỉnh bộ gõ Tiếng Việt vnchKey (Tự Do Edition)
+Comment=Configure vnchKey Vietnamese Input Engine (Tự Do Edition)
+Exec=vnchkey-settings
+Icon=vnchkey
+StartupWMClass=vnchKey Settings
+Terminal=false
+Type=Application
+Categories=Settings;DesktopSettings;Utility;
