@@ -12,11 +12,54 @@ pub struct Fcitx5VnchkeyContext {
 /// Initializes a new vnchKey engine instance.
 #[no_mangle]
 pub extern "C" fn fcitx5_vnchkey_init() -> *mut Fcitx5VnchkeyContext {
-    let config = EngineConfig::default();
+    fcitx5_vnchkey_init_with_method(0)
+}
+
+/// Initializes a new vnchKey engine instance with a specific method (0 = Telex, 1 = VNI).
+#[no_mangle]
+pub extern "C" fn fcitx5_vnchkey_init_with_method(method: u32) -> *mut Fcitx5VnchkeyContext {
+    let input_method = match method {
+        1 => vnchkey_core::InputMethod::Vni,
+        _ => vnchkey_core::InputMethod::Telex,
+    };
+    let config = EngineConfig {
+        method: input_method,
+        ..EngineConfig::default()
+    };
     let ctx = Box::new(Fcitx5VnchkeyContext {
         engine: Engine::new(config),
     });
     Box::into_raw(ctx)
+}
+
+/// Frees a string allocated by Rust FFI.
+#[no_mangle]
+pub unsafe extern "C" fn fcitx5_vnchkey_free_string(s: *mut c_char) {
+    if !s.is_null() {
+        drop(CString::from_raw(s));
+    }
+}
+
+/// Initializes a new vnchKey engine instance with a specific input method (0 = Telex, 1 = Vni).
+#[no_mangle]
+pub extern "C" fn fcitx5_vnchkey_init_with_method(method: u8) -> *mut Fcitx5VnchkeyContext {
+    let mut config = EngineConfig::default();
+    config.method = match method {
+        1 => vnchkey_core::InputMethod::Vni,
+        _ => vnchkey_core::InputMethod::Telex,
+    };
+    let ctx = Box::new(Fcitx5VnchkeyContext {
+        engine: Engine::new(config),
+    });
+    Box::into_raw(ctx)
+}
+
+/// Frees a C string allocated by Rust.
+#[no_mangle]
+pub unsafe extern "C" fn fcitx5_vnchkey_free_string(s: *mut c_char) {
+    if !s.is_null() {
+        drop(CString::from_raw(s));
+    }
 }
 
 /// Frees a vnchKey engine instance.

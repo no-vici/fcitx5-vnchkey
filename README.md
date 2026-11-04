@@ -363,9 +363,9 @@ pkgrel=1
 pkgdesc="High-performance memory-safe Vietnamese input engine in 100% Rust for Fcitx5 (vnchKey Tự Do Edition)"
 arch=('x86_64')
 url="https://github.com/no-vici/fcitx5-vnchkey"
-license=('MIT' 'Apache-2.0')
+license=('GPL-3.0-or-later')
 depends=('fcitx5')
-makedepends=('git' 'cargo' 'rust')
+makedepends=('git' 'cargo' 'rust' 'cmake' 'extra-cmake-modules' 'gcc')
 provides=('fcitx5-vnchkey')
 conflicts=('fcitx5-vnchkey')
 
@@ -377,13 +377,33 @@ build() {
     git clone https://github.com/no-vici/fcitx5-vnchkey.git source
     cd source
   fi
+  # 1. Biên dịch bộ máy Rust lõi
   cargo build --release --locked
+
+  # 2. Biên dịch Fcitx5 Native C++ Addon Shim
+  if [ -d "fcitx5-addon" ]; then
+    mkdir -p fcitx5-addon/build && cd fcitx5-addon/build
+    cmake -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_BUILD_TYPE=Release ..
+    make -j$(nproc)
+  fi
 }
 
 package() {
   cd "$srcdir/source"
-  install -Dm755 target/release/libfcitx5_vnchkey_ffi.so "$pkgdir/usr/lib/fcitx5/libfcitx5-vnchkey.so"
+  # Cài đặt file thực thi daemon và thư viện Rust FFI
+  install -Dm755 target/release/libfcitx5_vnchkey_ffi.so "$pkgdir/usr/lib/libfcitx5_vnchkey_ffi.so"
   install -Dm755 target/release/vnchkey-daemon "$pkgdir/usr/bin/vnchkey-daemon"
+
+  # Cài đặt Fcitx5 native addon module
+  if [ -f fcitx5-addon/build/fcitx5-vnchkey-addon.so ]; then
+    install -Dm755 fcitx5-addon/build/fcitx5-vnchkey-addon.so "$pkgdir/usr/lib/fcitx5/fcitx5-vnchkey-addon.so"
+  fi
+
+  # Cài đặt metadata để Fcitx5 Settings nhận diện bộ gõ (Telex & VNI)
+  install -Dm644 data/addon/vnchkey.conf "$pkgdir/usr/share/fcitx5/addon/vnchkey.conf"
+  install -Dm644 data/inputmethod/vnchkey-telex.conf "$pkgdir/usr/share/fcitx5/inputmethod/vnchkey-telex.conf"
+  install -Dm644 data/inputmethod/vnchkey-vni.conf "$pkgdir/usr/share/fcitx5/inputmethod/vnchkey-vni.conf"
+  install -Dm644 data/icons/vnchkey.png "$pkgdir/usr/share/icons/hicolor/128x128/apps/vnchkey.png"
 }
 EOF
 

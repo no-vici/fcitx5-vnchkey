@@ -1,6 +1,8 @@
-# Cargo build artifacts
+# Cargo & CMake build artifacts
 target/
 Cargo.lock
+build/
+fcitx5-addon/build/
 
 # System & Editor
 *.log
