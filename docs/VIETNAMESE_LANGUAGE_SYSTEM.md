@@ -1,6 +1,6 @@
 # Nền Tảng Ngôn Ngữ Học & Cơ Chế Hoạt Động của vnchKey
 
-Tài liệu này phân tích chi tiết nền tảng ngữ âm học tiếng Việt (dựa trên các nghiên cứu ngôn ngữ học tiếng Việt truyền thống, tài liệu `vietnamese-language-system.md` từ dự án Gõ Nhanh, và kho tàng ngữ liệu *e-cadao.com/Ngonngu*) cùng cơ chế chuyển đổi âm tiết tốc độ cao, thông minh và an toàn của **vnchKey (Tự Do Edition)**.
+Tài liệu này phân tích chi tiết nền tảng ngữ âm học tiếng Việt (dựa trên các nghiên cứu ngôn ngữ học Tiếng Việt truyền thống, tài liệu `vietnamese-language-system.md` từ dự án Gõ Nhanh, và kho tàng ngữ liệu *e-cadao.com/Ngonngu*) cùng cơ chế chuyển đổi âm tiết tốc độ cao, thông minh và an toàn của **vnchKey (Tự Do Edition)**.
 
 ---
 
@@ -33,7 +33,7 @@ Trong đó:
 
 ## 2. Quy Tắc Ngữ Âm Học (Phonology Constraints)
 
-Khác với tiếng Anh, cấu tạo âm tiết tiếng Việt tuân thủ các định luật ngữ âm cực kỳ nghiêm ngặt:
+Khác với Tiếng Anh, cấu tạo âm tiết Tiếng Việt tuân thủ các định luật ngữ âm cực kỳ nghiêm ngặt:
 
 ### Quy tắc 1: Cặp chính tả `c/k`
 - Phụ âm `c` **không bao giờ** đi trước các nguyên âm dòng trước `e`, `ê`, `i`, `y`.
@@ -87,3 +87,4 @@ Theo khảo sát ngôn ngữ học dân gian miền Nam (nguồn *e-cadao.com*):
 | **Restore English Tức Thời** | Bộ từ điển ~360 từ khóa lập trình & thuật ngữ tiếng Anh thông dụng kết hợp kiểm tra luật ngữ âm. | Gõ `text`, `user`, `filters`, `windows` không bị biến thành `têt`, `úẻ`, `ưindoưs`. Tự khôi phục ngay trên màn hình. |
 | **Chánh Tả Tích Hợp** | ~6,750 âm tiết tiếng Việt nạp vào `OnceLock<HashSet<String>>` với độ phức tạp tra cứu $O(1)$. | Bắt lỗi chính tả tức thì mà không tiêu tốn bộ nhớ hay làm chậm máy. |
 | **100% Native Rust & C-ABI** | Lõi logic viết bằng Safe Rust (`forbid(unsafe_code)`), giao tiếp C-ABI siêu mỏng với Fcitx5 C++. | Khởi động tức thì (< 2ms), tiêu thụ RAM < 10MB, an toàn tuyệt đối trước memory leak. |
+

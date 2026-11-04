@@ -163,13 +163,13 @@ Các bộ gõ truyền thống trên Linux (Unikey, Bamboo, IBus-Bamboo cũ) s�
 - **Giải pháp Direct Clean Commit của vnchKey**: 
   1. vnchKey mở trực tiếp thiết bị kernel `/dev/uinput` thông qua `ioctl(fd, UI_DEV_CREATE, &uinput_setup)`.
   2. Khi người dùng nhập một phím, vnchKey phát sự kiện bàn phím phần cứng thật (`EV_KEY`, `KEY_A`, `SYN_REPORT`).
-  3. Khi cần sửa dấu (ví dụ: `a` + `s` $\to$ `á`), engine phát chính xác 1 sự kiện phần cứng `KEY_BACKSPACE`, sau đó đẩy trực tiếp ký tự `á` bằng Unicode virtual stroke.
+  3. Khi cần sửa dấu (thí dụ: `a` + `s` $\to$ `á`), engine phát chính xác 1 sự kiện phần cứng `KEY_BACKSPACE`, sau đó đẩy trực tiếp ký tự `á` bằng Unicode virtual stroke.
   4. Ứng dụng nhìn nhận toàn bộ quá trình như người dùng đang gõ trên một bàn phím vật lý thực thụ, hoàn toàn không có vệt gạch chân, không gây gián đoạn DOM.
 
 ---
 
 ### 3.2. Giao Thức Sentinel Barrier (N+1) & Chống Race Condition
-Khi gõ với tốc độ cao (>100 WPM), các trình duyệt web và ứng dụng Electron xử lý hàng đợi sự kiện một cách bất đồng bộ qua nhiều tiến trình (Renderer Process $\leftrightarrow$ Browser Process $\leftrightarrow$ GPU Process). Nếu lệnh Backspace và ký tự mới được gửi quá sát nhau, trình duyệt có thể áp dụng ký tự mới *trước khi* xử lý Backspace, gây ra lỗi nhân đôi chữ (ví dụ: gõ `toans` bị biến thành `toaán`).
+Khi gõ với tốc độ cao (>100 WPM), các trình duyệt web và ứng dụng Electron xử lý hàng đợi sự kiện một cách bất đồng bộ qua nhiều tiến trình (Renderer Process $\leftrightarrow$ Browser Process $\leftrightarrow$ GPU Process). Nếu lệnh Backspace và ký tự mới được gởi quá sát nhau, trình duyệt có thể áp dụng ký tự mới *trước khi* xử lý Backspace, gây ra lỗi nhân đôi chữ (thí dụ: gõ `toans` bị biến thành `toaán`).
 
 **Giao Thức Sentinel Barrier (N+1) của vnchKey**:
 1. **Pha 1 (Arming Barrier)**: Khi phát hiện cần thay thế một từ $N$ ký tự, engine đóng rào cản ngăn chặn sự kiện phím kế tiếp.

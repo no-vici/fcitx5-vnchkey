@@ -167,3 +167,4 @@ void VnchkeyEngine::keyEvent(const fcitx::InputMethodEntry &entry, fcitx::KeyEve
    fcitx5 -r -d
    ```
 Sau khi cài đặt, bộ gõ sẽ xuất hiện tức thì trong khay hệ thống mà không cần khởi động lại máy tính.
+
