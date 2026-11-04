@@ -2,12 +2,15 @@
 
 #include <fcitx/addonfactory.h>
 #include <fcitx/addoninstance.h>
+#include <fcitx/addonmanager.h>
 #include <fcitx/inputmethodengine.h>
 #include <fcitx/inputcontext.h>
 #include <fcitx/event.h>
 #include <fcitx/action.h>
 #include <fcitx/menu.h>
 #include <fcitx/statusarea.h>
+#include <fcitx/instance.h>
+#include <fcitx/userinterfacemanager.h>
 #include <fcitx-utils/signals.h>
 #include <cstdint>
 #include <cstddef>
@@ -49,7 +52,12 @@ public:
     void keyEvent(const fcitx::InputMethodEntry &entry, fcitx::KeyEvent &keyEvent) override;
     void reset(const fcitx::InputMethodEntry &entry, fcitx::InputContextEvent &event) override;
     void activate(const fcitx::InputMethodEntry &entry, fcitx::InputContextEvent &event) override;
+    void deactivate(const fcitx::InputMethodEntry &entry, fcitx::InputContextEvent &event) override;
     void reloadConfig() override;
+
+    std::string subMode(const fcitx::InputMethodEntry &entry, fcitx::InputContext &inputContext) override;
+    std::string subModeIconImpl(const fcitx::InputMethodEntry &entry, fcitx::InputContext &ic) override;
+    std::string subModeLabelImpl(const fcitx::InputMethodEntry &entry, fcitx::InputContext &ic) override;
 
 private:
     void* getContext(const std::string& entryName);
@@ -70,6 +78,7 @@ private:
     bool config_spell_check_ = true;
 
     bool is_forwarding_ = false;
+    int pending_backspaces_ = 0;
 
     // Fcitx5 Tray & Status Menu
     std::unique_ptr<fcitx::SimpleAction> statusAction_;
@@ -96,7 +105,5 @@ private:
 
 class VnchkeyEngineFactory : public fcitx::AddonFactory {
 public:
-    fcitx::AddonInstance *create(fcitx::AddonManager *manager) override {
-        return new VnchkeyEngine(manager);
-    }
+    fcitx::AddonInstance *create(fcitx::AddonManager *manager) override;
 };

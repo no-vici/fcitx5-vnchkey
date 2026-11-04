@@ -62,6 +62,26 @@ impl SettingsApp {
 
         cc.egui_ctx.set_visuals(visuals);
 
+        // Setup Vietnamese font with complete diacritics support (Roboto Regular)
+        let mut fonts = egui::FontDefinitions::default();
+        fonts.font_data.insert(
+            "roboto_vietnamese".to_owned(),
+            std::sync::Arc::new(egui::FontData::from_static(include_bytes!(
+                "../../../assets/fonts/Roboto-Regular.ttf"
+            ))),
+        );
+        fonts
+            .families
+            .entry(egui::FontFamily::Proportional)
+            .or_default()
+            .insert(0, "roboto_vietnamese".to_owned());
+        fonts
+            .families
+            .entry(egui::FontFamily::Monospace)
+            .or_default()
+            .push("roboto_vietnamese".to_owned());
+        cc.egui_ctx.set_fonts(fonts);
+
         // Load logo texture
         let logo_texture = Self::load_logo_texture(&cc.egui_ctx);
 

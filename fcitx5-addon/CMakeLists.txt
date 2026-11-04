@@ -23,26 +23,38 @@ if(NOT DEFINED FCITX_INSTALL_LIBDIR)
 endif()
 
 # Locate the compiled Rust FFI library
-if(NOT DEFINED RUST_TARGET_DIR)
-    if(DEFINED ENV{CARGO_TARGET_DIR})
-        set(RUST_TARGET_DIR "$ENV{CARGO_TARGET_DIR}/release")
-    else()
-        set(RUST_TARGET_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../target/release")
-    endif()
-endif()
+set(RUST_SEARCH_DIRS
+    "${RUST_TARGET_DIR}"
+    "${CMAKE_CURRENT_SOURCE_DIR}/../target/release"
+    "${CMAKE_CURRENT_SOURCE_DIR}/../target/debug"
+    "$ENV{CARGO_TARGET_DIR}/release"
+    "/tmp/cargo-vnchkey-target/release"
+    "/tmp/vnchkey-target/release"
+    "/usr/lib"
+    "/usr/local/lib"
+)
 
 find_library(RUST_FFI_LIB
     NAMES fcitx5_vnchkey_ffi
-    PATHS "${RUST_TARGET_DIR}"
+    PATHS ${RUST_SEARCH_DIRS}
     NO_DEFAULT_PATH
 )
 
 if(NOT RUST_FFI_LIB)
-    if(EXISTS "${RUST_TARGET_DIR}/libfcitx5_vnchkey_ffi.so")
-        set(RUST_FFI_LIB "${RUST_TARGET_DIR}/libfcitx5_vnchkey_ffi.so")
-    else()
-        find_library(RUST_FFI_LIB NAMES fcitx5_vnchkey_ffi)
-    endif()
+    foreach(d IN LISTS RUST_SEARCH_DIRS)
+        if(EXISTS "${d}/libfcitx5_vnchkey_ffi.so")
+            set(RUST_FFI_LIB "${d}/libfcitx5_vnchkey_ffi.so")
+            break()
+        endif()
+    endforeach()
+endif()
+
+if(NOT RUST_FFI_LIB)
+    find_library(RUST_FFI_LIB NAMES fcitx5_vnchkey_ffi)
+endif()
+
+if(NOT RUST_FFI_LIB)
+    message(FATAL_ERROR "Could not find libfcitx5_vnchkey_ffi.so. Please run 'cargo build --release' first!")
 endif()
 
 add_library(fcitx5-vnchkey-addon MODULE

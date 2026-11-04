@@ -32,11 +32,12 @@ build() {
 
   # 2. Biên dịch Fcitx5 C++ Addon Shim
   if [ -d "fcitx5-addon" ]; then
+    ROOT_DIR="$PWD"
     mkdir -p fcitx5-addon/build
     cd fcitx5-addon/build
-    cmake -GNinja -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_BUILD_TYPE=Release ..
+    cmake -GNinja -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_BUILD_TYPE=Release -DRUST_TARGET_DIR="$ROOT_DIR/target/release" ..
     ninja
-    cd ../..
+    cd "$ROOT_DIR"
   fi
 }
 
@@ -50,9 +51,7 @@ package() {
   install -Dm755 target/release/vnchkey-daemon "$pkgdir/usr/bin/vnchkey-daemon"
 
   # Cài đặt Fcitx5 native addon module
-  if [ -f fcitx5-addon/build/fcitx5-vnchkey-addon.so ]; then
-    install -Dm755 fcitx5-addon/build/fcitx5-vnchkey-addon.so "$pkgdir/usr/lib/fcitx5/fcitx5-vnchkey-addon.so"
-  fi
+  install -Dm755 fcitx5-addon/build/fcitx5-vnchkey-addon.so "$pkgdir/usr/lib/fcitx5/fcitx5-vnchkey-addon.so"
 
   # Cài đặt metadata cấu hình cho Fcitx5 Settings (Auto, Telex, VNI)
   install -Dm644 data/addon/vnchkey.conf "$pkgdir/usr/share/fcitx5/addon/vnchkey.conf"
