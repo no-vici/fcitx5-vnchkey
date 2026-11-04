@@ -15,7 +15,7 @@ from ui import VnchkeySettingsWindow
 def main():
     signal.signal(signal.SIGINT, signal.SIG_DFL)
     app = QApplication(sys.argv)
-    app.setApplicationName("vnchKey Settings")
+    app.setApplicationName("Fcitx5 vnchKey Settings")
     app.setDesktopFileName("org.fcitx.Fcitx5.Addon.Vnchkey.Settings")
     app.setWindowIcon(QIcon.fromTheme("vnchkey"))
 

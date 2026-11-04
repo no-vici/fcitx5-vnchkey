@@ -1,12 +1,15 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: GPL-3.0-or-later
 """
-vnchKey Settings Window.
-Modern dark theme UI matching modern Linux desktop guidelines and fcitx5-lilypad.
+Fcitx5 vnchKey Settings Window.
+Refined dark theme UI faithfully matching fcitx5-lilypad.
 """
 
 import os
 import sys
+import getpass
+import tempfile
+import subprocess
 from qtpy.QtWidgets import (
     QWidget,
     QMainWindow,
@@ -27,91 +30,95 @@ from qtpy.QtWidgets import (
     QMessageBox,
     QFileDialog,
     QScrollArea,
+    QApplication,
 )
-from qtpy.QtCore import Qt, QSize
-from qtpy.QtGui import QIcon, QFont, QPixmap
+from qtpy.QtCore import Qt, QSize, QUrl
+from qtpy.QtGui import QIcon, QFont, QPixmap, QDesktopServices
 from config_manager import ConfigManager
-
 
 STYLE_SHEET = """
 QWidget {
-    background-color: #1e1e2e;
+    background-color: #1e1e2d;
     color: #cdd6f4;
-    font-family: system-ui, -apple-system, sans-serif;
+    font-family: system-ui, -apple-system, Cantarell, "Noto Sans", Roboto, sans-serif;
     font-size: 13px;
+    font-weight: 400;
 }
 
+/* Category & Section Titles - Light and elegant, not distracting or thick */
+QLabel#CategoryTitle {
+    font-size: 22px;
+    font-weight: 400;
+    color: #cdd6f4;
+    margin-bottom: 2px;
+}
+
+QLabel#CategoryDescription {
+    font-size: 13px;
+    color: #7f849c;
+    margin-bottom: 18px;
+}
+
+QLabel#AboutTitle {
+    font-size: 26px;
+    font-weight: 400;
+    color: #cdd6f4;
+}
+
+QLabel#GroupHeader {
+    font-size: 13px;
+    font-weight: 500;
+    color: #89b4fa;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-top: 14px;
+    margin-bottom: 8px;
+}
+
+QLabel.field-label {
+    font-size: 13px;
+    color: #cdd6f4;
+    font-weight: 400;
+}
+
+/* Sidebar styling matching lilypad */
 QListWidget#sidebar {
-    background-color: #181825;
+    background-color: transparent;
     border: none;
-    border-right: 1px solid #313244;
-    padding: 14px 8px;
+    border-right: 1px solid #282a36;
+    padding-top: 15px;
+    padding-bottom: 15px;
     outline: none;
 }
 
 QListWidget#sidebar::item {
     height: 38px;
-    padding-left: 10px;
-    margin-bottom: 3px;
+    padding-left: 14px;
     border-radius: 8px;
+    margin: 2px 10px;
     color: #a6adc8;
-    font-weight: 500;
+    font-weight: 400;
 }
 
-QListWidget#sidebar::item:hover {
-    background-color: #313244;
+QListWidget#sidebar::item:hover:!selected {
+    background-color: #2a2b3d;
     color: #cdd6f4;
 }
 
 QListWidget#sidebar::item:selected {
-    background-color: #5856d6;
+    background-color: #4b4463;
     color: #ffffff;
-    font-weight: 600;
+    font-weight: 500;
 }
 
-QFrame.card {
-    background-color: #252839;
-    border: 1px solid #313244;
-    border-radius: 10px;
-    padding: 16px;
-    margin-bottom: 14px;
-}
-
-QLabel.page-title {
-    font-size: 22px;
-    font-weight: 700;
-    color: #cdd6f4;
-    margin-bottom: 2px;
-}
-
-QLabel.page-desc {
-    font-size: 12px;
-    color: #7f849c;
-    margin-bottom: 16px;
-}
-
-QLabel.group-title {
-    font-size: 13px;
-    font-weight: 600;
-    color: #89b4fa;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    margin-bottom: 12px;
-}
-
-QLabel.field-label {
-    font-size: 13px;
-    color: #bac2de;
-    font-weight: 400;
-}
-
+/* Controls */
 QComboBox, QLineEdit {
-    background-color: #181825;
-    border: 1px solid #45475a;
+    background-color: #252839;
+    border: 1px solid #3b3e52;
     border-radius: 6px;
     padding: 6px 12px;
     color: #cdd6f4;
-    min-width: 190px;
+    font-weight: 400;
     selection-background-color: #5856d6;
 }
 
@@ -121,20 +128,21 @@ QComboBox:hover, QLineEdit:hover {
 
 QComboBox::drop-down {
     border: none;
-    width: 20px;
+    width: 22px;
 }
 
 QCheckBox {
-    spacing: 8px;
+    spacing: 10px;
     color: #cdd6f4;
+    font-weight: 400;
 }
 
 QCheckBox::indicator {
     width: 18px;
     height: 18px;
     border-radius: 4px;
-    border: 1px solid #45475a;
-    background-color: #181825;
+    border: 1px solid #3b3e52;
+    background-color: #252839;
 }
 
 QCheckBox::indicator:checked {
@@ -142,45 +150,52 @@ QCheckBox::indicator:checked {
     border-color: #5856d6;
 }
 
-QPushButton.primary-btn {
+/* Buttons */
+QPushButton {
+    background-color: #2b2d42;
+    color: #cdd6f4;
+    border: 1px solid #3d405b;
+    border-radius: 6px;
+    padding: 7px 16px;
+    font-weight: 400;
+}
+
+QPushButton:hover {
+    background-color: #383a54;
+    border-color: #5856d6;
+}
+
+QPushButton#Primary {
     background-color: #5856d6;
     color: #ffffff;
     border: none;
-    border-radius: 6px;
-    padding: 8px 22px;
-    font-weight: 600;
+    font-weight: 500;
 }
 
-QPushButton.primary-btn:hover {
+QPushButton#Primary:hover {
     background-color: #4b48c4;
 }
 
-QPushButton.secondary-btn {
-    background-color: #313244;
-    color: #cdd6f4;
-    border: 1px solid #45475a;
-    border-radius: 6px;
-    padding: 7px 16px;
-}
-
-QPushButton.secondary-btn:hover {
-    background-color: #45475a;
-}
-
+/* Tables */
 QTableWidget {
     background-color: #181825;
-    border: 1px solid #313244;
+    border: 1px solid #282a36;
     border-radius: 8px;
-    gridline-color: #313244;
+    gridline-color: #282a36;
 }
 
 QHeaderView::section {
-    background-color: #252839;
+    background-color: #222436;
     color: #a6adc8;
     padding: 6px;
     border: none;
-    border-bottom: 1px solid #313244;
-    font-weight: 600;
+    border-bottom: 1px solid #282a36;
+    font-weight: 500;
+}
+
+QFrame#BottomBar {
+    background-color: #181825;
+    border-top: 1px solid #282a36;
 }
 """
 
@@ -194,12 +209,11 @@ class VnchkeySettingsWindow(QMainWindow):
         self.dictionary = self.mgr.load_dictionary()
         self.app_modes = self.mgr.load_app_modes()
 
-        self.setWindowTitle("vnchKey Settings")
-        self.resize(840, 560)
-        self.setMinimumSize(740, 480)
+        self.setWindowTitle("Fcitx5 vnchKey Settings")
+        self._setup_window_size()
         self.setStyleSheet(STYLE_SHEET)
 
-        # Set window icon
+        # Window icon
         icon_path = "/usr/share/icons/hicolor/scalable/apps/vnchkey.svg"
         if not os.path.exists(icon_path):
             icon_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "../data/icons/vnchkey.svg"))
@@ -208,6 +222,16 @@ class VnchkeySettingsWindow(QMainWindow):
 
         self.init_ui()
 
+    def _setup_window_size(self):
+        try:
+            screen = QApplication.primaryScreen().availableGeometry()
+            w = int(screen.width() * 0.46)
+            h = int(screen.height() * 0.62)
+            self.setMinimumSize(780, 520)
+            self.resize(max(w, 780), max(h, 520))
+        except Exception:
+            self.resize(840, 560)
+
     def init_ui(self):
         central = QWidget()
         self.setCentralWidget(central)
@@ -215,17 +239,17 @@ class VnchkeySettingsWindow(QMainWindow):
         main_layout.setContentsMargins(0, 0, 0, 0)
         main_layout.setSpacing(0)
 
-        # Content Horizontal Layout (Sidebar + Pages)
+        # Body Layout: Sidebar on Left, Content on Right
         body_layout = QHBoxLayout()
         body_layout.setContentsMargins(0, 0, 0, 0)
         body_layout.setSpacing(0)
 
-        # Left Sidebar (10 Categories matching fcitx5-lilypad)
+        # Sidebar
         self.sidebar = QListWidget()
         self.sidebar.setObjectName("sidebar")
         self.sidebar.setFixedWidth(200)
 
-        categories = [
+        main_pages = [
             ("General", "preferences-system"),
             ("Typing", "input-keyboard"),
             ("Applications", "applications-other"),
@@ -235,20 +259,25 @@ class VnchkeySettingsWindow(QMainWindow):
             ("Shortcuts", "preferences-desktop-keyboard-shortcuts"),
             ("Appearance", "preferences-desktop-theme"),
             ("Backup", "document-save-as"),
-            ("About", "help-about"),
         ]
 
-        for title, icon_name in categories:
-            icon = QIcon.fromTheme(icon_name)
-            it = QListWidgetItem(icon, title)
-            self.sidebar.addItem(it)
-
-        self.sidebar.currentRowChanged.connect(self.switch_page)
-        body_layout.addWidget(self.sidebar)
-
-        # Right Content Area (Stacked pages in ScrollArea)
         self.stack = QStackedWidget()
 
+        for title, icon_name in main_pages:
+            it = QListWidgetItem(QIcon.fromTheme(icon_name), title)
+            self.sidebar.addItem(it)
+
+        # 20px Spacer between main categories and About matching lilypad
+        spacer = QListWidgetItem()
+        spacer.setFlags(Qt.NoItemFlags)
+        spacer.setSizeHint(QSize(0, 20))
+        self.sidebar.addItem(spacer)
+
+        # About item
+        it_about = QListWidgetItem(QIcon.fromTheme("help-about"), "About")
+        self.sidebar.addItem(it_about)
+
+        # Build pages
         self.page_general = self.create_general_page()
         self.page_typing = self.create_typing_page()
         self.page_applications = self.create_applications_page()
@@ -271,43 +300,44 @@ class VnchkeySettingsWindow(QMainWindow):
         self.stack.addWidget(self.page_backup)
         self.stack.addWidget(self.page_about)
 
+        self.sidebar.currentRowChanged.connect(self._on_sidebar_changed)
+        body_layout.addWidget(self.sidebar)
+
         content_wrapper = QWidget()
         content_layout = QVBoxLayout(content_wrapper)
-        content_layout.setContentsMargins(28, 20, 28, 16)
+        content_layout.setContentsMargins(35, 24, 35, 20)
         content_layout.addWidget(self.stack)
 
         body_layout.addWidget(content_wrapper, 1)
         main_layout.addLayout(body_layout, 1)
 
-        # Bottom Action Bar
+        # Bottom Bar matching lilypad
         bottom_frame = QFrame()
-        bottom_frame.setStyleSheet("background-color: #181825; border-top: 1px solid #313244; padding: 6px 16px;")
+        bottom_frame.setObjectName("BottomBar")
         bottom_layout = QHBoxLayout(bottom_frame)
-        bottom_layout.setContentsMargins(12, 8, 12, 8)
+        bottom_layout.setContentsMargins(20, 10, 20, 10)
+        bottom_layout.setSpacing(10)
+
+        self.btn_reset = QPushButton(QIcon.fromTheme("edit-undo"), "&Reset")
+        self.btn_reset.clicked.connect(self.on_reset_defaults)
+        bottom_layout.addWidget(self.btn_reset)
 
         self.status_lbl = QLabel("")
-        self.status_lbl.setStyleSheet("color: #a6e3a1; font-weight: 500;")
+        self.status_lbl.setStyleSheet("color: #a6e3a1; font-size: 12px; margin-left: 10px;")
         bottom_layout.addWidget(self.status_lbl)
 
         bottom_layout.addStretch()
 
-        self.btn_reset = QPushButton(QIcon.fromTheme("edit-undo"), "Khôi Phục Mặc Định")
-        self.btn_reset.setProperty("class", "secondary-btn")
-        self.btn_reset.clicked.connect(self.on_reset_defaults)
-        bottom_layout.addWidget(self.btn_reset)
-
-        self.btn_cancel = QPushButton(QIcon.fromTheme("dialog-cancel"), "Hủy Bỏ")
-        self.btn_cancel.setProperty("class", "secondary-btn")
+        self.btn_cancel = QPushButton(QIcon.fromTheme("dialog-cancel"), "&Cancel")
         self.btn_cancel.clicked.connect(self.close)
         bottom_layout.addWidget(self.btn_cancel)
 
-        self.btn_apply = QPushButton(QIcon.fromTheme("document-save"), "Áp Dụng")
-        self.btn_apply.setProperty("class", "secondary-btn")
+        self.btn_apply = QPushButton(QIcon.fromTheme("document-save"), "&Apply")
         self.btn_apply.clicked.connect(lambda: self.save_all(close_after=False))
         bottom_layout.addWidget(self.btn_apply)
 
-        self.btn_ok = QPushButton(QIcon.fromTheme("dialog-ok"), "Đồng Ý")
-        self.btn_ok.setProperty("class", "primary-btn")
+        self.btn_ok = QPushButton(QIcon.fromTheme("dialog-ok"), "&OK")
+        self.btn_ok.setObjectName("Primary")
         self.btn_ok.clicked.connect(lambda: self.save_all(close_after=True))
         bottom_layout.addWidget(self.btn_ok)
 
@@ -315,37 +345,41 @@ class VnchkeySettingsWindow(QMainWindow):
 
         self.sidebar.setCurrentRow(0)
 
-    def switch_page(self, index):
-        self.stack.setCurrentIndex(index)
+    def _on_sidebar_changed(self, row):
+        # Handle spacer item click
+        if row == 9:  # Spacer index
+            self.sidebar.setCurrentRow(10)
+            return
+        elif row == 10:  # About page index
+            self.stack.setCurrentIndex(9)
+        else:
+            self.stack.setCurrentIndex(row)
         self.status_lbl.clear()
 
-    # 1. General Page
+    # 1. General Page (matching lilypad General tab screenshot)
     def create_general_page(self) -> QWidget:
         w = QWidget()
         layout = QVBoxLayout(w)
         layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(10)
 
         title = QLabel("General")
-        title.setProperty("class", "page-title")
+        title.setObjectName("CategoryTitle")
         desc = QLabel("Configure basic input method settings and behaviors.")
-        desc.setProperty("class", "page-desc")
+        desc.setObjectName("CategoryDescription")
         layout.addWidget(title)
         layout.addWidget(desc)
 
-        card = QFrame()
-        card.setProperty("class", "card")
-        card_layout = QVBoxLayout(card)
-        card_layout.setSpacing(14)
+        # Section: Input Method
+        h_im = QLabel("Input Method")
+        h_im.setObjectName("GroupHeader")
+        layout.addWidget(h_im)
 
-        grp1 = QLabel("Input Method")
-        grp1.setProperty("class", "group-title")
-        card_layout.addWidget(grp1)
-
-        # Input Method
         r1 = QHBoxLayout()
         lbl1 = QLabel("Input Method")
         lbl1.setProperty("class", "field-label")
         self.combo_method = QComboBox()
+        self.combo_method.setFixedWidth(200)
         self.combo_method.addItems(["VNI", "Telex", "Auto (Telex & VNI)"])
         cur_m = self.config.get("InputMethod", "VNI")
         if cur_m == "Telex":
@@ -357,13 +391,13 @@ class VnchkeySettingsWindow(QMainWindow):
         r1.addWidget(lbl1)
         r1.addStretch()
         r1.addWidget(self.combo_method)
-        card_layout.addLayout(r1)
+        layout.addLayout(r1)
 
-        # Mode
         r2 = QHBoxLayout()
         lbl2 = QLabel("Mode")
         lbl2.setProperty("class", "field-label")
         self.combo_mode = QComboBox()
+        self.combo_mode.setFixedWidth(200)
         self.combo_mode.addItems(["Uinput (Smooth)", "Native Fcitx5 (Direct Commit)"])
         cur_mode = self.config.get("Mode", "Uinput (Smooth)")
         if "Native" in cur_mode:
@@ -373,13 +407,13 @@ class VnchkeySettingsWindow(QMainWindow):
         r2.addWidget(lbl2)
         r2.addStretch()
         r2.addWidget(self.combo_mode)
-        card_layout.addLayout(r2)
+        layout.addLayout(r2)
 
-        # Output Charset
         r3 = QHBoxLayout()
         lbl3 = QLabel("Output Charset")
         lbl3.setProperty("class", "field-label")
         self.combo_charset = QComboBox()
+        self.combo_charset.setFixedWidth(200)
         self.combo_charset.addItems(["Unicode", "Unicode Tổ Hợp", "TCVN3 (ABC)"])
         cur_cs = self.config.get("OutputCharset", "Unicode")
         if cur_cs in ["Unicode", "Unicode Tổ Hợp", "TCVN3 (ABC)"]:
@@ -387,24 +421,20 @@ class VnchkeySettingsWindow(QMainWindow):
         r3.addWidget(lbl3)
         r3.addStretch()
         r3.addWidget(self.combo_charset)
-        card_layout.addLayout(r3)
+        layout.addLayout(r3)
 
-        layout.addWidget(card)
+        layout.addSpacing(12)
 
-        # Typing Rules Card
-        card2 = QFrame()
-        card2.setProperty("class", "card")
-        card2_layout = QVBoxLayout(card2)
-        card2_layout.setSpacing(14)
-
-        grp2 = QLabel("Typing")
-        grp2.setProperty("class", "group-title")
-        card2_layout.addWidget(grp2)
+        # Section: Typing
+        h_type = QLabel("Typing")
+        h_type.setObjectName("GroupHeader")
+        layout.addWidget(h_type)
 
         r4 = QHBoxLayout()
         lbl4 = QLabel("Type w to Produce ư")
         lbl4.setProperty("class", "field-label")
         self.combo_w2u = QComboBox()
+        self.combo_w2u.setFixedWidth(200)
         self.combo_w2u.addItems(["Non-Start", "Always", "Disabled"])
         cur_w = self.config.get("TypeW2U", "Non-Start")
         if cur_w in ["Non-Start", "Always", "Disabled"]:
@@ -412,12 +442,13 @@ class VnchkeySettingsWindow(QMainWindow):
         r4.addWidget(lbl4)
         r4.addStretch()
         r4.addWidget(self.combo_w2u)
-        card2_layout.addLayout(r4)
+        layout.addLayout(r4)
 
         r5 = QHBoxLayout()
         lbl5 = QLabel("Type [ -> ơ, ] -> ư, { -> Ơ, } -> Ư")
         lbl5.setProperty("class", "field-label")
         self.combo_bracket = QComboBox()
+        self.combo_bracket.setFixedWidth(200)
         self.combo_bracket.addItems(["Disabled", "Enabled"])
         cur_b = self.config.get("BracketTransform", "Disabled")
         if cur_b in ["Disabled", "Enabled"]:
@@ -425,9 +456,8 @@ class VnchkeySettingsWindow(QMainWindow):
         r5.addWidget(lbl5)
         r5.addStretch()
         r5.addWidget(self.combo_bracket)
-        card2_layout.addLayout(r5)
+        layout.addLayout(r5)
 
-        layout.addWidget(card2)
         layout.addStretch()
         return w
 
@@ -436,28 +466,25 @@ class VnchkeySettingsWindow(QMainWindow):
         w = QWidget()
         layout = QVBoxLayout(w)
         layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(12)
 
         title = QLabel("Typing")
-        title.setProperty("class", "page-title")
+        title.setObjectName("CategoryTitle")
         desc = QLabel("Fine-tune spelling corrections and advanced typing options.")
-        desc.setProperty("class", "page-desc")
+        desc.setObjectName("CategoryDescription")
         layout.addWidget(title)
         layout.addWidget(desc)
 
-        card = QFrame()
-        card.setProperty("class", "card")
-        card_layout = QVBoxLayout(card)
-        card_layout.setSpacing(14)
-
-        grp = QLabel("Spelling & Tone Options")
-        grp.setProperty("class", "group-title")
-        card_layout.addWidget(grp)
+        h_tone = QLabel("Spelling & Tone Options")
+        h_tone.setObjectName("GroupHeader")
+        layout.addWidget(h_tone)
 
         row_tone = QHBoxLayout()
         lbl_tone = QLabel("Quy tắc đặt dấu thanh (Tone Style)")
         lbl_tone.setProperty("class", "field-label")
         self.combo_tone = QComboBox()
-        self.combo_tone.addItems(["Chuẩn mới: oà, uý, oè", "Chuẩn cũ: hòa, ủy, hòe"])
+        self.combo_tone.setFixedWidth(200)
+        self.combo_tone.addItems(["Modern: oà, uý, oè", "Classic: hòa, ủy, hòe"])
         if self.config.get("ModernStyle", "True") == "False":
             self.combo_tone.setCurrentIndex(1)
         else:
@@ -465,29 +492,28 @@ class VnchkeySettingsWindow(QMainWindow):
         row_tone.addWidget(lbl_tone)
         row_tone.addStretch()
         row_tone.addWidget(self.combo_tone)
-        card_layout.addLayout(row_tone)
+        layout.addLayout(row_tone)
 
         self.chk_smarthorn = QCheckBox("Tự động thêm dấu râu cho 'uo' (duoc95 -> được, nuoc1 -> nước)")
         self.chk_smarthorn.setChecked(self.config.get("SmartHorn", "True") == "True")
-        card_layout.addWidget(self.chk_smarthorn)
+        layout.addWidget(self.chk_smarthorn)
 
         self.chk_autorestore = QCheckBox("GoNhanh: Tự động khôi phục từ tiếng Anh khi gõ phím cách (post, text, class...)")
         self.chk_autorestore.setChecked(self.config.get("AutoRestoreEnglish", "True") == "True")
-        card_layout.addWidget(self.chk_autorestore)
+        layout.addWidget(self.chk_autorestore)
 
         self.chk_smartcase = QCheckBox("XKey: Giữ nguyên định dạng chữ hoa/chữ thường thông minh")
         self.chk_smartcase.setChecked(self.config.get("SmartCasing", "True") == "True")
-        card_layout.addWidget(self.chk_smartcase)
+        layout.addWidget(self.chk_smartcase)
 
         self.chk_freemarking = QCheckBox("Cho phép bỏ dấu tự do trên bất kỳ nguyên âm nào")
         self.chk_freemarking.setChecked(self.config.get("FreeMarking", "True") == "True")
-        card_layout.addWidget(self.chk_freemarking)
+        layout.addWidget(self.chk_freemarking)
 
         self.chk_fastconsonant = QCheckBox("Gõ nhanh phụ âm đầu (cc -> ch, gg -> gi, kk -> kh)")
         self.chk_fastconsonant.setChecked(self.config.get("FastConsonantDoubling", "False") == "True")
-        card_layout.addWidget(self.chk_fastconsonant)
+        layout.addWidget(self.chk_fastconsonant)
 
-        layout.addWidget(card)
         layout.addStretch()
         return w
 
@@ -496,11 +522,12 @@ class VnchkeySettingsWindow(QMainWindow):
         w = QWidget()
         layout = QVBoxLayout(w)
         layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(10)
 
         title = QLabel("Applications")
-        title.setProperty("class", "page-title")
+        title.setObjectName("CategoryTitle")
         desc = QLabel("Configure per-application input behaviors and bypass exclusions.")
-        desc.setProperty("class", "page-desc")
+        desc.setObjectName("CategoryDescription")
         layout.addWidget(title)
         layout.addWidget(desc)
 
@@ -516,11 +543,9 @@ class VnchkeySettingsWindow(QMainWindow):
 
         btn_row = QHBoxLayout()
         btn_add = QPushButton("+ Thêm Ứng Dụng")
-        btn_add.setProperty("class", "secondary-btn")
         btn_add.clicked.connect(self.add_app_row)
 
         btn_del = QPushButton("- Xoá Mục Đang Chọn")
-        btn_del.setProperty("class", "secondary-btn")
         btn_del.clicked.connect(self.del_app_row)
 
         btn_row.addWidget(btn_add)
@@ -547,20 +572,21 @@ class VnchkeySettingsWindow(QMainWindow):
         w = QWidget()
         layout = QVBoxLayout(w)
         layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(10)
 
         title = QLabel("Macros")
-        title.setProperty("class", "page-title")
+        title.setObjectName("CategoryTitle")
         desc = QLabel("Define shortcuts that automatically expand into full phrases.")
-        desc.setProperty("class", "page-desc")
+        desc.setObjectName("CategoryDescription")
         layout.addWidget(title)
         layout.addWidget(desc)
 
         chk_row = QHBoxLayout()
-        self.chk_enable_macro = QCheckBox("Bật tính năng gõ tắt (Macro expansion)")
+        self.chk_enable_macro = QCheckBox("Bật tính năng gõ tắt (Enable Macro)")
         self.chk_enable_macro.setChecked(self.config.get("EnableMacro", "True") == "True")
         chk_row.addWidget(self.chk_enable_macro)
 
-        self.chk_cap_macro = QCheckBox("Viết hoa thông minh theo tiền tố")
+        self.chk_cap_macro = QCheckBox("Viết hoa thông minh (Capitalize Macro)")
         self.chk_cap_macro.setChecked(self.config.get("CapitalizeMacro", "True") == "True")
         chk_row.addWidget(self.chk_cap_macro)
         chk_row.addStretch()
@@ -578,11 +604,9 @@ class VnchkeySettingsWindow(QMainWindow):
 
         btn_row = QHBoxLayout()
         btn_add = QPushButton("+ Thêm Viết Tắt")
-        btn_add.setProperty("class", "secondary-btn")
         btn_add.clicked.connect(self.add_macro_row)
 
         btn_del = QPushButton("- Xoá Mục Đang Chọn")
-        btn_del.setProperty("class", "secondary-btn")
         btn_del.clicked.connect(self.del_macro_row)
 
         btn_row.addWidget(btn_add)
@@ -609,40 +633,34 @@ class VnchkeySettingsWindow(QMainWindow):
         w = QWidget()
         layout = QVBoxLayout(w)
         layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(10)
 
         title = QLabel("Dictionary")
-        title.setProperty("class", "page-title")
+        title.setObjectName("CategoryTitle")
         desc = QLabel("Manage your custom vocabulary and technical jargon.")
-        desc.setProperty("class", "page-desc")
+        desc.setObjectName("CategoryDescription")
         layout.addWidget(title)
         layout.addWidget(desc)
-
-        card = QFrame()
-        card.setProperty("class", "card")
-        card_layout = QVBoxLayout(card)
 
         add_row = QHBoxLayout()
         self.txt_new_word = QLineEdit()
         self.txt_new_word.setPlaceholderText("Nhập từ tiếng Việt mới...")
         btn_add_word = QPushButton("+ Thêm")
-        btn_add_word.setProperty("class", "secondary-btn")
         btn_add_word.clicked.connect(self.add_dict_word)
         add_row.addWidget(self.txt_new_word)
         add_row.addWidget(btn_add_word)
-        card_layout.addLayout(add_row)
+        layout.addLayout(add_row)
 
         self.list_dict = QListWidget()
-        self.list_dict.setStyleSheet("background-color: #181825; border: 1px solid #313244; border-radius: 6px;")
+        self.list_dict.setStyleSheet("background-color: #181825; border: 1px solid #282a36; border-radius: 6px;")
         for word in self.dictionary:
             self.list_dict.addItem(word)
-        card_layout.addWidget(self.list_dict)
+        layout.addWidget(self.list_dict)
 
         btn_del_word = QPushButton("- Xoá Từ Đang Chọn")
-        btn_del_word.setProperty("class", "secondary-btn")
         btn_del_word.clicked.connect(self.del_dict_word)
-        card_layout.addWidget(btn_del_word)
+        layout.addWidget(btn_del_word)
 
-        layout.addWidget(card)
         return w
 
     def add_dict_word(self):
@@ -661,22 +679,18 @@ class VnchkeySettingsWindow(QMainWindow):
         w = QWidget()
         layout = QVBoxLayout(w)
         layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(10)
 
         title = QLabel("Keymap")
-        title.setProperty("class", "page-title")
+        title.setObjectName("CategoryTitle")
         desc = QLabel("Custom key mapping and layout configurations.")
-        desc.setProperty("class", "page-desc")
+        desc.setObjectName("CategoryDescription")
         layout.addWidget(title)
         layout.addWidget(desc)
 
-        card = QFrame()
-        card.setProperty("class", "card")
-        card_layout = QVBoxLayout(card)
-        card_layout.setSpacing(12)
-
-        grp = QLabel("Bảng Quy Ước Phím Gõ")
-        grp.setProperty("class", "group-title")
-        card_layout.addWidget(grp)
+        h_map = QLabel("Bảng Quy Ước Phím Gõ")
+        h_map.setObjectName("GroupHeader")
+        layout.addWidget(h_map)
 
         info_lbl = QLabel(
             "• VNI:\n"
@@ -686,10 +700,9 @@ class VnchkeySettingsWindow(QMainWindow):
             "  s: Sắc  |  f: Huyền  |  r: Hỏi  |  x: Ngã  |  j: Nặng  |  z: Xoá dấu\n"
             "  aa: â  |  ee: ê  |  oo: ô  |  dd: đ  |  aw/w: ă  |  ow/w: ơ  |  uw/w: ư"
         )
-        info_lbl.setStyleSheet("color: #a6adc8; line-height: 1.5; font-family: monospace;")
-        card_layout.addWidget(info_lbl)
+        info_lbl.setStyleSheet("color: #a6adc8; line-height: 1.6; font-family: monospace; background-color: #181825; padding: 16px; border-radius: 8px; border: 1px solid #282a36;")
+        layout.addWidget(info_lbl)
 
-        layout.addWidget(card)
         layout.addStretch()
         return w
 
@@ -698,27 +711,24 @@ class VnchkeySettingsWindow(QMainWindow):
         w = QWidget()
         layout = QVBoxLayout(w)
         layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(12)
 
         title = QLabel("Shortcuts")
-        title.setProperty("class", "page-title")
+        title.setObjectName("CategoryTitle")
         desc = QLabel("Manage keyboard shortcuts for switching languages and modes.")
-        desc.setProperty("class", "page-desc")
+        desc.setObjectName("CategoryDescription")
         layout.addWidget(title)
         layout.addWidget(desc)
 
-        card = QFrame()
-        card.setProperty("class", "card")
-        card_layout = QVBoxLayout(card)
-        card_layout.setSpacing(14)
-
-        grp = QLabel("Chuyển Đổi Nhanh")
-        grp.setProperty("class", "group-title")
-        card_layout.addWidget(grp)
+        h_sc = QLabel("Chuyển Đổi Nhanh")
+        h_sc.setObjectName("GroupHeader")
+        layout.addWidget(h_sc)
 
         r1 = QHBoxLayout()
         lbl1 = QLabel("Phím chuyển Anh / Việt")
         lbl1.setProperty("class", "field-label")
         self.combo_switch_key = QComboBox()
+        self.combo_switch_key.setFixedWidth(200)
         self.combo_switch_key.addItems(["Ctrl+Shift", "Alt+Shift", "Super+Space"])
         cur_sk = self.config.get("SwitchShortcut", "Ctrl+Shift")
         if cur_sk in ["Ctrl+Shift", "Alt+Shift", "Super+Space"]:
@@ -726,12 +736,13 @@ class VnchkeySettingsWindow(QMainWindow):
         r1.addWidget(lbl1)
         r1.addStretch()
         r1.addWidget(self.combo_switch_key)
-        card_layout.addLayout(r1)
+        layout.addLayout(r1)
 
         r2 = QHBoxLayout()
         lbl2 = QLabel("Tạm thời gõ tiếng Anh khi giữ phím")
         lbl2.setProperty("class", "field-label")
         self.combo_temp_eng = QComboBox()
+        self.combo_temp_eng.setFixedWidth(200)
         self.combo_temp_eng.addItems(["Disabled", "Hold Shift", "Right Alt"])
         cur_te = self.config.get("TempEnglishMode", "Disabled")
         if cur_te in ["Disabled", "Hold Shift", "Right Alt"]:
@@ -739,9 +750,8 @@ class VnchkeySettingsWindow(QMainWindow):
         r2.addWidget(lbl2)
         r2.addStretch()
         r2.addWidget(self.combo_temp_eng)
-        card_layout.addLayout(r2)
+        layout.addLayout(r2)
 
-        layout.addWidget(card)
         layout.addStretch()
         return w
 
@@ -750,27 +760,24 @@ class VnchkeySettingsWindow(QMainWindow):
         w = QWidget()
         layout = QVBoxLayout(w)
         layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(12)
 
         title = QLabel("Appearance")
-        title.setProperty("class", "page-title")
+        title.setObjectName("CategoryTitle")
         desc = QLabel("Customize the look and feel of status icons and themes.")
-        desc.setProperty("class", "page-desc")
+        desc.setObjectName("CategoryDescription")
         layout.addWidget(title)
         layout.addWidget(desc)
 
-        card = QFrame()
-        card.setProperty("class", "card")
-        card_layout = QVBoxLayout(card)
-        card_layout.setSpacing(14)
-
-        grp = QLabel("Giao Diện Biểu Tượng")
-        grp.setProperty("class", "group-title")
-        card_layout.addWidget(grp)
+        h_app = QLabel("Giao Diện Biểu Tượng")
+        h_app.setObjectName("GroupHeader")
+        layout.addWidget(h_app)
 
         r1 = QHBoxLayout()
         lbl1 = QLabel("Chủ đề biểu tượng trên thanh tác vụ (Tray Icon)")
         lbl1.setProperty("class", "field-label")
         self.combo_theme = QComboBox()
+        self.combo_theme.setFixedWidth(200)
         self.combo_theme.addItems(["Default (vnchKey)", "Breeze Dark", "Monochrome White", "Minimal"])
         cur_th = self.config.get("TrayIconTheme", "Default")
         if cur_th in ["Default", "Breeze Dark", "Monochrome White", "Minimal"]:
@@ -778,13 +785,12 @@ class VnchkeySettingsWindow(QMainWindow):
         r1.addWidget(lbl1)
         r1.addStretch()
         r1.addWidget(self.combo_theme)
-        card_layout.addLayout(r1)
+        layout.addLayout(r1)
 
         self.chk_badge = QCheckBox("Hiển thị phù hiệu trạng thái (Status badge)")
         self.chk_badge.setChecked(self.config.get("ShowIndicatorBadge", "True") == "True")
-        card_layout.addWidget(self.chk_badge)
+        layout.addWidget(self.chk_badge)
 
-        layout.addWidget(card)
         layout.addStretch()
         return w
 
@@ -793,34 +799,27 @@ class VnchkeySettingsWindow(QMainWindow):
         w = QWidget()
         layout = QVBoxLayout(w)
         layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(12)
 
         title = QLabel("Backup")
-        title.setProperty("class", "page-title")
+        title.setObjectName("CategoryTitle")
         desc = QLabel("Export or restore your configuration, macros, and dictionaries.")
-        desc.setProperty("class", "page-desc")
+        desc.setObjectName("CategoryDescription")
         layout.addWidget(title)
         layout.addWidget(desc)
 
-        card = QFrame()
-        card.setProperty("class", "card")
-        card_layout = QVBoxLayout(card)
-        card_layout.setSpacing(14)
-
-        grp = QLabel("Sao Lưu & Phục Hồi Dữ Liệu")
-        grp.setProperty("class", "group-title")
-        card_layout.addWidget(grp)
+        h_bk = QLabel("Sao Lưu & Phục Hồi Dữ Liệu")
+        h_bk.setObjectName("GroupHeader")
+        layout.addWidget(h_bk)
 
         btn_export = QPushButton("📥 Xuất Sao Lưu Ra Tệp JSON (Export Backup)")
-        btn_export.setProperty("class", "secondary-btn")
         btn_export.clicked.connect(self.export_backup_file)
-        card_layout.addWidget(btn_export)
+        layout.addWidget(btn_export)
 
         btn_import = QPushButton("📤 Phục Hồi Cài Đặt Từ Tệp JSON (Import Backup)")
-        btn_import.setProperty("class", "secondary-btn")
         btn_import.clicked.connect(self.import_backup_file)
-        card_layout.addWidget(btn_import)
+        layout.addWidget(btn_import)
 
-        layout.addWidget(card)
         layout.addStretch()
         return w
 
@@ -844,62 +843,176 @@ class VnchkeySettingsWindow(QMainWindow):
             else:
                 QMessageBox.warning(self, "Lỗi", "Không thể phục hồi từ tệp đã chọn.")
 
-    # 10. About Page
+    # 10. About Page (Matching Lilypad About Page Screenshot Exactly)
     def create_about_page(self) -> QWidget:
-        w = QWidget()
-        layout = QVBoxLayout(w)
-        layout.setContentsMargins(0, 0, 0, 0)
+        scroll = QScrollArea()
+        scroll.setWidgetResizable(True)
+        scroll.setFrameShape(QFrame.NoFrame)
+        scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
 
-        card = QFrame()
-        card.setProperty("class", "card")
-        card_layout = QVBoxLayout(card)
-        card_layout.setAlignment(Qt.AlignCenter)
-        card_layout.setSpacing(10)
+        content = QWidget()
+        layout = QVBoxLayout(content)
+        layout.setContentsMargins(40, 20, 40, 30)
+        layout.setSpacing(16)
+        layout.setAlignment(Qt.AlignTop | Qt.AlignHCenter)
 
-        logo_lbl = QLabel()
+        # 1. Logo
+        logo = QLabel()
         logo_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "../assets/logo.png"))
+        if not os.path.exists(logo_path):
+            logo_path = "/usr/share/icons/hicolor/scalable/apps/vnchkey.svg"
         if os.path.exists(logo_path):
-            pix = QPixmap(logo_path).scaled(96, 96, Qt.KeepAspectRatio, Qt.SmoothTransformation)
-            logo_lbl.setPixmap(pix)
-        card_layout.addWidget(logo_lbl, alignment=Qt.AlignCenter)
+            pix = QIcon(logo_path).pixmap(80, 80)
+            logo.setPixmap(pix)
+        else:
+            logo.setText("🇻🇳")
+            logo.setStyleSheet("font-size: 64px;")
+        layout.addWidget(logo, alignment=Qt.AlignCenter)
 
-        title = QLabel("vnchKey (Tự Do Edition)")
-        title.setStyleSheet("font-size: 22px; font-weight: 700; color: #89b4fa; margin-top: 10px;")
-        card_layout.addWidget(title, alignment=Qt.AlignCenter)
+        # 2. Title
+        title = QLabel("Fcitx5 vnchKey")
+        title.setObjectName("AboutTitle")
+        layout.addWidget(title, alignment=Qt.AlignCenter)
 
-        version = QLabel("Phiên bản 0.2.0 • 100% Pure Safe Rust")
-        version.setStyleSheet("color: #a6adc8; font-size: 13px;")
-        card_layout.addWidget(version, alignment=Qt.AlignCenter)
+        # 3. Version Pill Tag
+        version = QLabel("Version 0.2.0 (Stable)")
+        version.setAlignment(Qt.AlignCenter)
+        version.setStyleSheet("""
+            background-color: #4b4463;
+            color: #b4befe;
+            border-radius: 10px;
+            padding: 3px 12px;
+            font-size: 11px;
+            font-weight: 500;
+        """)
+        layout.addWidget(version, alignment=Qt.AlignCenter)
 
-        info = QLabel(
-            "Bộ gõ Tiếng Việt an toàn bộ nhớ hiệu năng cao cho Fcitx5 trên Linux.\n"
-            "Direct Clean Commit 100% không gạch chân, không kẹt phím.\n"
-            "Tích hợp thuật toán Auto-Restore của GoNhanh và Smart Casing của XKey.\n"
-            "Mã nguồn mở hoàn toàn theo giấy phép GPL-3.0."
+        # 4. Description
+        desc = QLabel(
+            '<div style="text-align: center; line-height: 1.4; padding: 4px 0; color: #a6adc8;">'
+            'Next-Gen Native Wayland Vietnamese IME for Linux.<br>'
+            'Powered by 100% Safe Rust &amp; Sentinel Barrier.'
+            '</div>'
         )
-        info.setAlignment(Qt.AlignCenter)
-        info.setStyleSheet("color: #7f849c; margin: 12px 20px; line-height: 1.5;")
-        card_layout.addWidget(info)
+        desc.setWordWrap(True)
+        desc.setAlignment(Qt.AlignCenter)
+        layout.addWidget(desc, alignment=Qt.AlignCenter)
 
-        link = QLabel("<a href='https://github.com/no-vici/fcitx5-vnchkey' style='color: #89b4fa; text-decoration: none;'>https://github.com/no-vici/fcitx5-vnchkey</a>")
+        # 5. GitHub Link
+        link = QLabel('<a href="https://github.com/no-vici/fcitx5-vnchkey" style="color: #89b4fa; text-decoration: none;">https://github.com/no-vici/fcitx5-vnchkey</a>')
         link.setOpenExternalLinks(True)
-        card_layout.addWidget(link, alignment=Qt.AlignCenter)
+        layout.addWidget(link, alignment=Qt.AlignCenter)
 
-        layout.addWidget(card)
-        layout.addStretch()
-        return w
+        # 6. Buttons Row: Report Bug + Request Feature (width 200 each)
+        support_row = QHBoxLayout()
+        support_row.setSpacing(15)
+        support_row.setAlignment(Qt.AlignCenter)
+
+        btn_bug = QPushButton("Report Bug")
+        btn_bug.setFixedWidth(200)
+        btn_bug.clicked.connect(lambda: QDesktopServices.openUrl(QUrl("https://github.com/no-vici/fcitx5-vnchkey/issues/new")))
+
+        btn_feature = QPushButton("Request Feature")
+        btn_feature.setFixedWidth(200)
+        btn_feature.clicked.connect(lambda: QDesktopServices.openUrl(QUrl("https://github.com/no-vici/fcitx5-vnchkey/issues/new")))
+
+        support_row.addWidget(btn_bug)
+        support_row.addWidget(btn_feature)
+        layout.addLayout(support_row)
+
+        # 7. Export Debug Logs (width 415)
+        btn_logs = QPushButton("Export Debug Logs")
+        btn_logs.setFixedWidth(415)
+        btn_logs.clicked.connect(self._on_export_logs)
+        layout.addWidget(btn_logs, alignment=Qt.AlignCenter)
+
+        # 8. Divider line
+        line1 = QFrame()
+        line1.setFrameShape(QFrame.HLine)
+        line1.setStyleSheet("color: #282a36;")
+        layout.addWidget(line1)
+
+        # 9. Credits section
+        credits_title = QLabel("Developed & Maintained by")
+        credits_title.setStyleSheet("color: #7f849c; font-size: 13px;")
+        layout.addWidget(credits_title, alignment=Qt.AlignCenter)
+
+        authors = [
+            ("no-vici (Creator & Maintainer)", "https://github.com/no-vici"),
+            ("Fcitx5 Input Method Framework", "https://github.com/fcitx/fcitx5"),
+            ("vnchKey Engine (100% Safe Rust Core)", "https://github.com/no-vici/fcitx5-vnchkey"),
+        ]
+        for name, url_str in authors:
+            lbl = QLabel(f'<a href="{url_str}" style="color: #b4befe; text-decoration: none;">{name}</a>')
+            lbl.setOpenExternalLinks(True)
+            lbl.setCursor(Qt.PointingHandCursor)
+            lbl.setAlignment(Qt.AlignCenter)
+            layout.addWidget(lbl)
+
+        layout.addSpacing(10)
+
+        # 10. License Footer
+        license_lbl = QLabel("Licensed under the GNU General Public License v3.0")
+        license_lbl.setStyleSheet("color: #6c7086; font-size: 12px;")
+        layout.addWidget(license_lbl, alignment=Qt.AlignCenter)
+
+        scroll.setWidget(content)
+        return scroll
+
+    def _on_export_logs(self):
+        save_path, _ = QFileDialog.getSaveFileName(
+            self,
+            "Save Debug Log",
+            os.path.expanduser("~/fcitx5-vnchkey-debug.log"),
+            "Log Files (*.log);;All Files (*)",
+        )
+        if not save_path:
+            return
+
+        try:
+            with open(save_path, "w", encoding="utf-8") as f:
+                f.write("=== Fcitx5 vnchKey Debug Log Export ===\n")
+                f.write("Version: 0.2.0 (Stable)\n")
+                f.write(f"User: {getpass.getuser()}\n")
+                f.write("--------------------------------------\n\n")
+
+                f.write("--- Configuration (~/.config/fcitx5/conf/vnchkey.conf) ---\n")
+                conf_p = os.path.expanduser("~/.config/fcitx5/conf/vnchkey.conf")
+                if os.path.exists(conf_p):
+                    with open(conf_p, "r", encoding="utf-8") as cf:
+                        f.write(cf.read())
+                else:
+                    f.write("Configuration file not found.\n")
+                f.write("\n\n")
+
+                f.write("--- Recent Systemd Journal Log (fcitx5) ---\n")
+                try:
+                    p = subprocess.run(
+                        ["journalctl", "--user", "-u", "fcitx5", "--no-pager", "-n", "100"],
+                        capture_output=True,
+                        text=True,
+                        timeout=5,
+                    )
+                    f.write(p.stdout if p.stdout else "No journalctl output.\n")
+                except Exception as ex:
+                    f.write(f"Journal error: {ex}\n")
+                f.write("\n--- End of Log ---\n")
+
+            QMessageBox.information(self, "Success", f"Debug logs exported to:\n{save_path}")
+        except Exception as e:
+            QMessageBox.critical(self, "Error", f"Failed to export logs:\n{e}")
 
     def on_reset_defaults(self):
         reply = QMessageBox.question(
             self,
-            "Khôi phục mặc định",
-            "Bạn có chắc chắn muốn thiết lập lại toàn bộ cài đặt gốc?",
+            "Confirm Reset",
+            "Restore all settings to defaults?",
             QMessageBox.Yes | QMessageBox.No,
         )
         if reply == QMessageBox.Yes:
             self.mgr.reset_to_defaults()
             self.config = self.mgr.load_config()
-            self.status_lbl.setText("✓ Đã khôi phục cài đặt mặc định gốc!")
+            self.status_lbl.setText("✓ Restored defaults!")
 
     def save_all(self, close_after=False):
         # 1. General Config
@@ -957,6 +1070,6 @@ class VnchkeySettingsWindow(QMainWindow):
                 dict_words.append(it.text().strip())
         self.mgr.save_dictionary(dict_words)
 
-        self.status_lbl.setText("✓ Đã lưu cài đặt và cập nhật Fcitx5 thành công!")
+        self.status_lbl.setText("✓ Settings saved and Fcitx5 updated!")
         if close_after:
             self.close()

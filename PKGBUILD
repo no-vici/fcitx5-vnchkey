@@ -68,8 +68,9 @@ package() {
   cp -r data/icons/breeze "$pkgdir/usr/share/icons/"
   cp -r data/icons/breeze-dark "$pkgdir/usr/share/icons/"
 
-  # Cài đặt ứng dụng cấu hình Settings GUI (vnchkey-settings)
-  install -Dm755 bin/vnchkey-settings "$pkgdir/usr/bin/vnchkey-settings"
+  # Cài đặt ứng dụng cấu hình Settings GUI (fcitx5-vnchkey-settings & alias vnchkey-settings)
+  install -Dm755 bin/fcitx5-vnchkey-settings "$pkgdir/usr/bin/fcitx5-vnchkey-settings"
+  ln -sf fcitx5-vnchkey-settings "$pkgdir/usr/bin/vnchkey-settings"
   mkdir -p "$pkgdir/usr/share/fcitx5-vnchkey"
   cp -r settings-gui "$pkgdir/usr/share/fcitx5-vnchkey/"
   install -Dm644 data/org.fcitx.Fcitx5.Addon.Vnchkey.Settings.desktop "$pkgdir/usr/share/applications/org.fcitx.Fcitx5.Addon.Vnchkey.Settings.desktop"

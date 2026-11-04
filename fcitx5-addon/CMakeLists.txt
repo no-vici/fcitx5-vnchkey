@@ -92,7 +92,9 @@ install(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/../data/icons/breeze-dark"
 )
 
 # Install Settings GUI application
-install(PROGRAMS "${CMAKE_CURRENT_SOURCE_DIR}/../bin/vnchkey-settings"
+install(PROGRAMS
+    "${CMAKE_CURRENT_SOURCE_DIR}/../bin/fcitx5-vnchkey-settings"
+    "${CMAKE_CURRENT_SOURCE_DIR}/../bin/vnchkey-settings"
     DESTINATION "${CMAKE_INSTALL_BINDIR}"
 )
 install(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/../settings-gui"

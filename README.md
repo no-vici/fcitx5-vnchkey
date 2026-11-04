@@ -373,12 +373,14 @@ makepkg -si
 
 ---
 
-### 5.4. Cửa Sổ Cài Đặt vnchKey Settings (Trực Quan Theo Chuẩn fcitx5-lilypad)
+### 5.4. Cửa Sổ Cài Đặt Fcitx5 vnchKey Settings (Trực Quan Theo Chuẩn fcitx5-lilypad)
 
-Sau khi cài đặt, bạn có thể mở giao diện cài đặt bằng một trong hai cách:
-1. Mở từ Application Menu / Tìm kiếm ứng dụng: **vnchKey Settings**
-2. Hoặc chạy lệnh trong terminal:
+Sau khi cài đặt, bạn có thể mở giao diện cài đặt bằng một trong các cách sau:
+1. Mở từ Application Menu / Tìm kiếm ứng dụng: **Fcitx5 vnchKey Settings**
+2. Hoặc chạy lệnh trong terminal (chuẩn theo định dạng `fcitx5-*-settings` như lilypad):
 ```bash
+fcitx5-vnchkey-settings
+# Hoặc lệnh rút gọn:
 vnchkey-settings
 ```
 
