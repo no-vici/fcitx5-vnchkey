@@ -4,6 +4,7 @@
 //! replacement and expansion (e.g. `VIET` -> `VIỆT`, `Viet` -> `Việt`).
 
 /// Casing category of an individual letter.
+#[allow(dead_code)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum CasingStyle {
     /// All lowercase (e.g. "việt")

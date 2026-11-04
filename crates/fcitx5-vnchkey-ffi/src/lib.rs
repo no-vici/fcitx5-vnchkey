@@ -40,28 +40,6 @@ pub unsafe extern "C" fn fcitx5_vnchkey_free_string(s: *mut c_char) {
     }
 }
 
-/// Initializes a new vnchKey engine instance with a specific input method (0 = Telex, 1 = Vni).
-#[no_mangle]
-pub extern "C" fn fcitx5_vnchkey_init_with_method(method: u8) -> *mut Fcitx5VnchkeyContext {
-    let mut config = EngineConfig::default();
-    config.method = match method {
-        1 => vnchkey_core::InputMethod::Vni,
-        _ => vnchkey_core::InputMethod::Telex,
-    };
-    let ctx = Box::new(Fcitx5VnchkeyContext {
-        engine: Engine::new(config),
-    });
-    Box::into_raw(ctx)
-}
-
-/// Frees a C string allocated by Rust.
-#[no_mangle]
-pub unsafe extern "C" fn fcitx5_vnchkey_free_string(s: *mut c_char) {
-    if !s.is_null() {
-        drop(CString::from_raw(s));
-    }
-}
-
 /// Frees a vnchKey engine instance.
 #[no_mangle]
 pub unsafe extern "C" fn fcitx5_vnchkey_free(ctx: *mut Fcitx5VnchkeyContext) {
