@@ -82,7 +82,12 @@ sudo install -Dm644 data/addon/vnchkey.conf "$PREFIX/share/fcitx5/addon/vnchkey.
 sudo install -Dm644 data/inputmethod/vnchkey.conf "$PREFIX/share/fcitx5/inputmethod/vnchkey.conf"
 sudo install -Dm644 data/inputmethod/vnchkey-telex.conf "$PREFIX/share/fcitx5/inputmethod/vnchkey-telex.conf"
 sudo install -Dm644 data/inputmethod/vnchkey-vni.conf "$PREFIX/share/fcitx5/inputmethod/vnchkey-vni.conf"
-sudo install -Dm644 data/icons/vnchkey.png "$PREFIX/share/icons/hicolor/128x128/apps/vnchkey.png"
+# Icons (Scaled to 24x24 / 22x22 matching lilypad status bar and panel standards)
+sudo mkdir -p "$PREFIX/share/icons"
+sudo cp -r data/icons/hicolor "$PREFIX/share/icons/"
+sudo cp -r data/icons/breeze "$PREFIX/share/icons/"
+sudo cp -r data/icons/breeze-dark "$PREFIX/share/icons/"
+sudo gtk-update-icon-cache -q -t -f "$PREFIX/share/icons/hicolor" 2>/dev/null || true
 
 echo -e "\n${GREEN}==> 4/4. Thiết lập quyền kernel Linux /dev/uinput...${NC}"
 sudo usermod -aG input "$USER" 2>/dev/null || true

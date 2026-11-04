@@ -28,14 +28,14 @@ build() {
   fi
 
   # 1. Biên dịch bộ máy Rust lõi
-  cargo build --release --locked
+  cargo build --release
 
   # 2. Biên dịch Fcitx5 C++ Addon Shim
   if [ -d "fcitx5-addon" ]; then
     mkdir -p fcitx5-addon/build
     cd fcitx5-addon/build
     cmake -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_BUILD_TYPE=Release ..
-    make -j"$(nproc)"
+    cmake --build . -j"$(nproc)"
     cd ../..
   fi
 }
@@ -59,6 +59,11 @@ package() {
   install -Dm644 data/inputmethod/vnchkey.conf "$pkgdir/usr/share/fcitx5/inputmethod/vnchkey.conf"
   install -Dm644 data/inputmethod/vnchkey-telex.conf "$pkgdir/usr/share/fcitx5/inputmethod/vnchkey-telex.conf"
   install -Dm644 data/inputmethod/vnchkey-vni.conf "$pkgdir/usr/share/fcitx5/inputmethod/vnchkey-vni.conf"
-  install -Dm644 data/icons/vnchkey.png "$pkgdir/usr/share/icons/hicolor/128x128/apps/vnchkey.png"
+
+  # Cài đặt biểu tượng hệ thống chuẩn kích thước giống lilypad (24x24, 22x22, scalable SVG, status)
+  mkdir -p "$pkgdir/usr/share/icons"
+  cp -r data/icons/hicolor "$pkgdir/usr/share/icons/"
+  cp -r data/icons/breeze "$pkgdir/usr/share/icons/"
+  cp -r data/icons/breeze-dark "$pkgdir/usr/share/icons/"
 }
 

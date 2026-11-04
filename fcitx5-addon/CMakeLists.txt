@@ -80,8 +80,14 @@ install(FILES
     DESTINATION "${FCITX_INSTALL_PKGDATADIR}/inputmethod"
 )
 
-# Install icon
-install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/../data/icons/vnchkey.png"
-    DESTINATION "${CMAKE_INSTALL_DATADIR}/icons/hicolor/128x128/apps"
+# Install icons (scaled to 24x24 / 22x22 matching lilypad standard)
+install(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/../data/icons/hicolor"
+    DESTINATION "${CMAKE_INSTALL_DATADIR}/icons"
+)
+install(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/../data/icons/breeze"
+    DESTINATION "${CMAKE_INSTALL_DATADIR}/icons"
+)
+install(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/../data/icons/breeze-dark"
+    DESTINATION "${CMAKE_INSTALL_DATADIR}/icons"
 )
 
