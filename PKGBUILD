@@ -52,11 +52,9 @@ package() {
   # Cài đặt Fcitx5 native addon module
   install -Dm755 fcitx5-addon/build/fcitx5-vnchkey-addon.so "$pkgdir/usr/lib/fcitx5/fcitx5-vnchkey-addon.so"
 
-  # Cài đặt metadata cấu hình cho Fcitx5 Settings (Auto, Telex, VNI)
+  # Cài đặt metadata cấu hình cho Fcitx5 Settings (1 gói vnchKey duy nhất)
   install -Dm644 data/addon/vnchkey.conf "$pkgdir/usr/share/fcitx5/addon/vnchkey.conf"
   install -Dm644 data/inputmethod/vnchkey.conf "$pkgdir/usr/share/fcitx5/inputmethod/vnchkey.conf"
-  install -Dm644 data/inputmethod/vnchkey-telex.conf "$pkgdir/usr/share/fcitx5/inputmethod/vnchkey-telex.conf"
-  install -Dm644 data/inputmethod/vnchkey-vni.conf "$pkgdir/usr/share/fcitx5/inputmethod/vnchkey-vni.conf"
 
   # Cài đặt biểu tượng hệ thống chuẩn kích thước giống lilypad (24x24, 22x22, scalable SVG, status)
   mkdir -p "$pkgdir/usr/share/icons"

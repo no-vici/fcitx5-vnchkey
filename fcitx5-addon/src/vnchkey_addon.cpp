@@ -281,18 +281,7 @@ void VnchkeyEngine::updateActionState() {
 }
 
 void VnchkeyEngine::activate(const fcitx::InputMethodEntry &entry, fcitx::InputContextEvent &event) {
-    auto name = entry.uniqueName();
-    if (name.find("vni") != std::string::npos) {
-        config_method_ = "VNI";
-    } else if (name.find("telex") != std::string::npos) {
-        config_method_ = "Telex";
-    } else {
-        // vnchkey default (Auto mode)
-        if (config_method_ != "Telex" && config_method_ != "VNI") {
-            config_method_ = "Auto";
-        }
-    }
-
+    FCITX_UNUSED(entry);
     auto* ic = event.inputContext();
     if (ic) {
         updateActionState();
@@ -438,13 +427,7 @@ void VnchkeyEngine::reloadConfig() {
 }
 
 void* VnchkeyEngine::getContext(const std::string& entryName) {
-    if (entryName.find("telex") != std::string::npos) {
-        return ctx_telex_;
-    } else if (entryName.find("vni") != std::string::npos) {
-        return ctx_vni_;
-    }
-
-    // Default or Auto entry: obey config_method_
+    FCITX_UNUSED(entryName);
     if (config_method_ == "VNI" || config_method_ == "vni") {
         return ctx_vni_;
     } else if (config_method_ == "Telex" || config_method_ == "telex") {

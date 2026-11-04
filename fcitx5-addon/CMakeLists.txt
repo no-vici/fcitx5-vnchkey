@@ -84,11 +84,9 @@ install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/../data/addon/vnchkey.conf"
     DESTINATION "${FCITX_INSTALL_PKGDATADIR}/addon"
 )
 
-# Install Fcitx5 input method entries (Auto, Telex, VNI)
+# Install Fcitx5 input method entry
 install(FILES
     "${CMAKE_CURRENT_SOURCE_DIR}/../data/inputmethod/vnchkey.conf"
-    "${CMAKE_CURRENT_SOURCE_DIR}/../data/inputmethod/vnchkey-telex.conf"
-    "${CMAKE_CURRENT_SOURCE_DIR}/../data/inputmethod/vnchkey-vni.conf"
     DESTINATION "${FCITX_INSTALL_PKGDATADIR}/inputmethod"
 )
 

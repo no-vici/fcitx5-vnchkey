@@ -119,10 +119,10 @@ impl SettingsApp {
         let ok4 = ConfigManager::save_app_modes(&self.app_modes).is_ok();
 
         if ok1 && ok2 && ok3 && ok4 {
-            self.status_message = Some(("✓ Cài đặt đã được lưu và cập nhật Fcitx5!".to_string(), true));
+            self.status_message = Some(("Cài đặt đã được lưu và cập nhật Fcitx5!".to_string(), true));
             true
         } else {
-            self.status_message = Some(("✗ Đã xảy ra lỗi khi lưu cấu hình!".to_string(), false));
+            self.status_message = Some(("Đã xảy ra lỗi khi lưu cấu hình!".to_string(), false));
             false
         }
     }
@@ -146,28 +146,62 @@ impl eframe::App for SettingsApp {
                         self.macros = ConfigManager::load_macros();
                         self.dictionary = ConfigManager::load_dictionary();
                         self.app_modes = ConfigManager::load_app_modes();
-                        self.status_message = Some(("✓ Đã khôi phục cài đặt gốc mặc định!".to_string(), true));
+                        self.status_message = Some(("Đã khôi phục cài đặt gốc mặc định!".to_string(), true));
                     }
 
                     if let Some((msg, is_success)) = &self.status_message {
-                        ui.add_space(15.0);
+                        ui.add_space(12.0);
                         let color = if *is_success {
                             egui::Color32::from_rgb(0xa6, 0xe3, 0xa1)
                         } else {
                             egui::Color32::from_rgb(0xf3, 0x8b, 0xa8)
                         };
+                        let (icon_rect, _) = ui.allocate_exact_size(egui::vec2(14.0, 14.0), egui::Sense::hover());
+                        let c = icon_rect.center();
+                        let stroke = egui::Stroke::new(2.0_f32, color);
+                        if *is_success {
+                            ui.painter().line_segment([egui::pos2(c.x - 5.0, c.y + 0.5), egui::pos2(c.x - 1.5, c.y + 4.0)], stroke);
+                            ui.painter().line_segment([egui::pos2(c.x - 1.5, c.y + 4.0), egui::pos2(c.x + 5.5, c.y - 3.5)], stroke);
+                        } else {
+                            ui.painter().line_segment([egui::pos2(c.x - 4.0, c.y - 4.0), egui::pos2(c.x + 4.0, c.y + 4.0)], stroke);
+                            ui.painter().line_segment([egui::pos2(c.x + 4.0, c.y - 4.0), egui::pos2(c.x - 4.0, c.y + 4.0)], stroke);
+                        }
                         ui.colored_label(color, msg);
                     }
 
                     ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                        // Primary OK Button
-                        let ok_btn = egui::Button::new(
-                            egui::RichText::new("✓ Đồng Ý (OK)").color(egui::Color32::WHITE),
-                        )
-                        .fill(egui::Color32::from_rgb(0x58, 0x56, 0xd6))
-                        .min_size(egui::vec2(80.0, 28.0));
+                        // Primary OK Button with custom vector checkmark (no tofu box)
+                        let (ok_rect, ok_resp) = ui.allocate_exact_size(egui::vec2(118.0, 28.0), egui::Sense::click());
+                        let ok_bg = if ok_resp.is_pointer_button_down_on() {
+                            egui::Color32::from_rgb(0x48, 0x46, 0xc0)
+                        } else if ok_resp.hovered() {
+                            egui::Color32::from_rgb(0x68, 0x66, 0xe6)
+                        } else {
+                            egui::Color32::from_rgb(0x58, 0x56, 0xd6)
+                        };
+                        ui.painter().rect_filled(ok_rect, egui::CornerRadius::same(6), ok_bg);
 
-                        if ui.add(ok_btn).clicked() {
+                        // Vector checkmark on left of OK button
+                        let ck_x = ok_rect.left() + 16.0;
+                        let ck_y = ok_rect.center().y;
+                        let ck_stroke = egui::Stroke::new(1.8_f32, egui::Color32::WHITE);
+                        ui.painter().line_segment(
+                            [egui::pos2(ck_x - 4.0, ck_y + 0.5), egui::pos2(ck_x - 1.0, ck_y + 3.5)],
+                            ck_stroke,
+                        );
+                        ui.painter().line_segment(
+                            [egui::pos2(ck_x - 1.0, ck_y + 3.5), egui::pos2(ck_x + 5.0, ck_y - 3.0)],
+                            ck_stroke,
+                        );
+                        ui.painter().text(
+                            egui::pos2(ok_rect.left() + 28.0, ok_rect.center().y),
+                            egui::Align2::LEFT_CENTER,
+                            "Đồng Ý (OK)",
+                            egui::FontId::proportional(13.0),
+                            egui::Color32::WHITE,
+                        );
+
+                        if ok_resp.clicked() {
                             if self.save_all() {
                                 ctx.send_viewport_cmd(egui::ViewportCommand::Close);
                             }
@@ -199,15 +233,15 @@ impl eframe::App for SettingsApp {
                 ui.spacing_mut().item_spacing = egui::vec2(0.0, 4.0);
 
                 let nav_items = [
-                    (TabPage::General, "🛠  General"),
-                    (TabPage::Typing, "⌨  Typing"),
-                    (TabPage::Applications, "💬  Applications"),
-                    (TabPage::Macros, "✎  Macros"),
-                    (TabPage::Dictionary, "📖  Dictionary"),
-                    (TabPage::Keymap, "⌨  Keymap"),
-                    (TabPage::Shortcuts, "⌨  Shortcuts"),
-                    (TabPage::Appearance, "🎬  Appearance"),
-                    (TabPage::Backup, "💾  Backup"),
+                    (TabPage::General, "General"),
+                    (TabPage::Typing, "Typing"),
+                    (TabPage::Applications, "Applications"),
+                    (TabPage::Macros, "Macros"),
+                    (TabPage::Dictionary, "Dictionary"),
+                    (TabPage::Keymap, "Keymap"),
+                    (TabPage::Shortcuts, "Shortcuts"),
+                    (TabPage::Appearance, "Appearance"),
+                    (TabPage::Backup, "Backup"),
                 ];
 
                 for (page, title) in nav_items {
@@ -217,7 +251,7 @@ impl eframe::App for SettingsApp {
                 // 20px Spacer between main categories and About matching lilypad
                 ui.add_space(20.0);
 
-                self.render_nav_button(ui, TabPage::About, "ℹ  About");
+                self.render_nav_button(ui, TabPage::About, "About");
             });
 
         // Central Content Area
@@ -251,11 +285,20 @@ impl eframe::App for SettingsApp {
 impl SettingsApp {
     fn render_nav_button(&mut self, ui: &mut egui::Ui, page: TabPage, title: &str) {
         let is_selected = self.current_page == page;
+        let (rect, res) = ui.allocate_exact_size(egui::vec2(170.0, 36.0), egui::Sense::click());
+
         let bg_color = if is_selected {
             egui::Color32::from_rgb(0x4b, 0x44, 0x63)
+        } else if res.hovered() {
+            egui::Color32::from_rgb(0x28, 0x28, 0x3d)
         } else {
             egui::Color32::TRANSPARENT
         };
+
+        if bg_color != egui::Color32::TRANSPARENT {
+            ui.painter()
+                .rect_filled(rect, egui::CornerRadius::same(8), bg_color);
+        }
 
         let text_color = if is_selected {
             egui::Color32::WHITE
@@ -263,19 +306,136 @@ impl SettingsApp {
             egui::Color32::from_rgb(0xa6, 0xad, 0xc8)
         };
 
-        let btn = egui::Button::new(
-            egui::RichText::new(title)
-                .size(13.0)
-                .color(text_color),
-        )
-        .fill(bg_color)
-        .corner_radius(egui::CornerRadius::same(8))
-        .min_size(egui::vec2(170.0, 36.0));
+        // Paint crisp colorful vector icon matching fcitx5-lilypad sidebar icons
+        let icon_center = egui::pos2(rect.left() + 20.0, rect.center().y);
+        Self::paint_nav_icon(ui.painter(), page, icon_center);
 
-        let res = ui.add(btn);
+        // Paint tab label
+        ui.painter().text(
+            egui::pos2(rect.left() + 38.0, rect.center().y),
+            egui::Align2::LEFT_CENTER,
+            title,
+            egui::FontId::proportional(13.0),
+            text_color,
+        );
+
         if res.clicked() {
             self.current_page = page;
             self.status_message = None;
+        }
+    }
+
+    fn paint_nav_icon(painter: &egui::Painter, page: TabPage, c: egui::Pos2) {
+        let white = egui::Color32::from_rgb(0xec, 0xef, 0xf4);
+        let dark = egui::Color32::from_rgb(0x18, 0x18, 0x25);
+        let light_grey = egui::Color32::from_rgb(0xd8, 0xde, 0xe9);
+
+        match page {
+            TabPage::General => {
+                // Green badge with white wrench (matching Lilypad General icon)
+                let r = egui::Rect::from_center_size(c, egui::vec2(15.0, 15.0));
+                painter.rect_filled(r, egui::CornerRadius::same(4), egui::Color32::from_rgb(0x26, 0xa2, 0x69));
+                painter.line_segment(
+                    [egui::pos2(c.x, c.y - 2.0), egui::pos2(c.x, c.y + 4.5)],
+                    egui::Stroke::new(2.2_f32, white),
+                );
+                painter.circle_stroke(egui::pos2(c.x, c.y - 3.0), 2.5, egui::Stroke::new(1.8_f32, white));
+                painter.rect_filled(
+                    egui::Rect::from_center_size(egui::pos2(c.x, c.y - 4.8), egui::vec2(2.4, 2.4)),
+                    egui::CornerRadius::ZERO,
+                    egui::Color32::from_rgb(0x26, 0xa2, 0x69),
+                );
+            }
+            TabPage::Typing => {
+                // White/grey keyboard icon
+                let r = egui::Rect::from_center_size(c, egui::vec2(16.0, 11.0));
+                painter.rect_filled(r, egui::CornerRadius::same(2), light_grey);
+                for dx in [-4.5_f32, -1.5, 1.5, 4.5] {
+                    painter.rect_filled(
+                        egui::Rect::from_center_size(egui::pos2(c.x + dx, c.y - 2.0), egui::vec2(1.8, 1.8)),
+                        egui::CornerRadius::ZERO,
+                        dark,
+                    );
+                }
+                painter.rect_filled(
+                    egui::Rect::from_center_size(egui::pos2(c.x, c.y + 2.2), egui::vec2(8.0, 1.8)),
+                    egui::CornerRadius::ZERO,
+                    dark,
+                );
+            }
+            TabPage::Applications => {
+                // Slate-purple circle with 3 cyan dots (matching Lilypad Applications icon)
+                painter.circle_filled(c, 7.5, egui::Color32::from_rgb(0x45, 0x47, 0x5a));
+                let dot_color = egui::Color32::from_rgb(0x74, 0xc7, 0xec);
+                for dx in [-3.5_f32, 0.0, 3.5] {
+                    painter.circle_filled(egui::pos2(c.x + dx, c.y), 1.3, dot_color);
+                }
+            }
+            TabPage::Macros => {
+                // Orange-red circle with white diagonal pencil (matching Lilypad Macros icon)
+                painter.circle_filled(c, 7.5, egui::Color32::from_rgb(0xff, 0x5e, 0x3a));
+                painter.line_segment(
+                    [egui::pos2(c.x - 3.0, c.y + 3.0), egui::pos2(c.x + 3.0, c.y - 3.0)],
+                    egui::Stroke::new(2.2_f32, white),
+                );
+                painter.circle_filled(egui::pos2(c.x - 3.5, c.y + 3.5), 1.0, egui::Color32::from_rgb(0xf9, 0xe2, 0xaf));
+            }
+            TabPage::Dictionary => {
+                // Two overlapping pages (matching Lilypad Dictionary icon)
+                let r_back = egui::Rect::from_center_size(egui::pos2(c.x - 2.0, c.y - 1.0), egui::vec2(9.0, 11.0));
+                let r_front = egui::Rect::from_center_size(egui::pos2(c.x + 2.0, c.y + 1.5), egui::vec2(9.0, 11.0));
+                painter.rect_stroke(r_back, egui::CornerRadius::same(1), egui::Stroke::new(1.5_f32, light_grey), egui::StrokeKind::Inside);
+                painter.rect_filled(r_front, egui::CornerRadius::same(1), dark);
+                painter.rect_stroke(r_front, egui::CornerRadius::same(1), egui::Stroke::new(1.5_f32, white), egui::StrokeKind::Inside);
+            }
+            TabPage::Keymap | TabPage::Shortcuts => {
+                // Keyboard with warm top bar + grey body (matching Lilypad Keymap/Shortcuts icons)
+                let top = egui::Rect::from_center_size(egui::pos2(c.x, c.y - 4.0), egui::vec2(16.0, 2.5));
+                let body = egui::Rect::from_center_size(egui::pos2(c.x, c.y + 1.0), egui::vec2(16.0, 8.5));
+                painter.rect_filled(top, egui::CornerRadius::same(1), egui::Color32::from_rgb(0xf9, 0xe2, 0xaf));
+                painter.rect_filled(body, egui::CornerRadius::same(2), light_grey);
+                for dx in [-4.5_f32, -1.5, 1.5, 4.5] {
+                    painter.rect_filled(
+                        egui::Rect::from_center_size(egui::pos2(c.x + dx, c.y - 0.5), egui::vec2(1.8, 1.8)),
+                        egui::CornerRadius::ZERO,
+                        dark,
+                    );
+                }
+                painter.rect_filled(
+                    egui::Rect::from_center_size(egui::pos2(c.x, c.y + 3.0), egui::vec2(8.0, 1.6)),
+                    egui::CornerRadius::ZERO,
+                    dark,
+                );
+            }
+            TabPage::Appearance => {
+                // Blue window/monitor badge with white inner area (matching Lilypad Appearance icon)
+                let outer = egui::Rect::from_center_size(c, egui::vec2(16.0, 12.0));
+                let inner = egui::Rect::from_center_size(egui::pos2(c.x - 1.5, c.y + 0.5), egui::vec2(9.0, 6.5));
+                painter.rect_filled(outer, egui::CornerRadius::same(2), egui::Color32::from_rgb(0x1c, 0x71, 0xd8));
+                painter.rect_filled(inner, egui::CornerRadius::same(1), white);
+            }
+            TabPage::Backup => {
+                // Floppy disk icon (matching Lilypad Backup icon)
+                let outer = egui::Rect::from_center_size(c, egui::vec2(14.0, 14.0));
+                painter.rect_filled(outer, egui::CornerRadius::same(2), light_grey);
+                let top_slot = egui::Rect::from_center_size(egui::pos2(c.x, c.y - 4.0), egui::vec2(8.0, 4.5));
+                let bot_label = egui::Rect::from_center_size(egui::pos2(c.x, c.y + 3.5), egui::vec2(9.0, 5.5));
+                painter.rect_filled(top_slot, egui::CornerRadius::same(1), dark);
+                painter.rect_filled(bot_label, egui::CornerRadius::same(1), dark);
+                painter.line_segment(
+                    [egui::pos2(c.x, c.y + 1.5), egui::pos2(c.x, c.y + 5.5)],
+                    egui::Stroke::new(1.5_f32, light_grey),
+                );
+            }
+            TabPage::About => {
+                // Solid white circle with dark 'i' inside (matching Lilypad About icon)
+                painter.circle_filled(c, 7.5, white);
+                painter.circle_filled(egui::pos2(c.x, c.y - 3.2), 1.2, dark);
+                painter.line_segment(
+                    [egui::pos2(c.x, c.y - 0.5), egui::pos2(c.x, c.y + 4.2)],
+                    egui::Stroke::new(2.0_f32, dark),
+                );
+            }
         }
     }
 
@@ -320,20 +480,6 @@ impl SettingsApp {
                         ui.selectable_value(&mut self.config.input_method, "VNI".to_string(), "VNI");
                         ui.selectable_value(&mut self.config.input_method, "Telex".to_string(), "Telex");
                         ui.selectable_value(&mut self.config.input_method, "Auto".to_string(), "Auto (Telex & VNI)");
-                    });
-            });
-        });
-        ui.add_space(8.0);
-
-        ui.horizontal(|ui| {
-            ui.label(egui::RichText::new("Mode").size(13.0));
-            ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                egui::ComboBox::from_id_salt("im_mode")
-                    .selected_text(&self.config.mode)
-                    .width(200.0)
-                    .show_ui(ui, |ui| {
-                        ui.selectable_value(&mut self.config.mode, "Uinput (Smooth)".to_string(), "Uinput (Smooth)");
-                        ui.selectable_value(&mut self.config.mode, "Native Fcitx5 (Direct Commit)".to_string(), "Native Fcitx5 (Direct Commit)");
                     });
             });
         });
@@ -730,9 +876,9 @@ impl SettingsApp {
                 .save_file()
             {
                 if ConfigManager::export_backup(&path).is_ok() {
-                    self.status_message = Some((format!("✓ Đã xuất sao lưu ra: {}", path.display()), true));
+                    self.status_message = Some((format!("Đã xuất sao lưu ra: {}", path.display()), true));
                 } else {
-                    self.status_message = Some(("✗ Không thể xuất bản sao lưu!".to_string(), false));
+                    self.status_message = Some(("Không thể xuất bản sao lưu!".to_string(), false));
                 }
             }
         }
@@ -748,9 +894,9 @@ impl SettingsApp {
                     self.macros = ConfigManager::load_macros();
                     self.dictionary = ConfigManager::load_dictionary();
                     self.app_modes = ConfigManager::load_app_modes();
-                    self.status_message = Some(("✓ Phục hồi bản sao lưu thành công!".to_string(), true));
+                    self.status_message = Some(("Phục hồi bản sao lưu thành công!".to_string(), true));
                 } else {
-                    self.status_message = Some(("✗ Không thể đọc tệp sao lưu đã chọn!".to_string(), false));
+                    self.status_message = Some(("Không thể đọc tệp sao lưu đã chọn!".to_string(), false));
                 }
             }
         }
@@ -905,9 +1051,9 @@ impl SettingsApp {
             log_content.push_str("\n--- End of Log ---\n");
 
             if fs::write(&path, log_content).is_ok() {
-                self.status_message = Some((format!("✓ Đã xuất nhật ký gỡ lỗi ra: {}", path.display()), true));
+                self.status_message = Some((format!("Đã xuất nhật ký gỡ lỗi ra: {}", path.display()), true));
             } else {
-                self.status_message = Some(("✗ Không thể xuất nhật ký gỡ lỗi!".to_string(), false));
+                self.status_message = Some(("Không thể xuất nhật ký gỡ lỗi!".to_string(), false));
             }
         }
     }

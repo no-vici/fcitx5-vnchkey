@@ -86,11 +86,10 @@ elif [ -f fcitx5-addon/build/fcitx5-vnchkey-addon.so ]; then
     sudo install -Dm755 fcitx5-addon/build/fcitx5-vnchkey-addon.so "$PREFIX/lib/fcitx5/fcitx5-vnchkey-addon.so"
 fi
 
-# Fcitx5 metadata configurations (Auto, Telex, VNI)
+# Fcitx5 metadata configuration (Single unified vnchKey entry like fcitx5-lilypad)
 sudo install -Dm644 data/addon/vnchkey.conf "$PREFIX/share/fcitx5/addon/vnchkey.conf"
 sudo install -Dm644 data/inputmethod/vnchkey.conf "$PREFIX/share/fcitx5/inputmethod/vnchkey.conf"
-sudo install -Dm644 data/inputmethod/vnchkey-telex.conf "$PREFIX/share/fcitx5/inputmethod/vnchkey-telex.conf"
-sudo install -Dm644 data/inputmethod/vnchkey-vni.conf "$PREFIX/share/fcitx5/inputmethod/vnchkey-vni.conf"
+sudo rm -f "$PREFIX/share/fcitx5/inputmethod/vnchkey-telex.conf" "$PREFIX/share/fcitx5/inputmethod/vnchkey-vni.conf"
 # Icons (Scaled to 24x24 / 22x22 matching lilypad status bar and panel standards)
 sudo mkdir -p "$PREFIX/share/icons"
 sudo cp -r data/icons/hicolor "$PREFIX/share/icons/"
@@ -103,20 +102,12 @@ sudo install -Dm755 "${TARGET_DIR}/fcitx5-vnchkey-settings" "$PREFIX/bin/fcitx5-
 sudo ln -sf fcitx5-vnchkey-settings "$PREFIX/bin/vnchkey-settings"
 sudo install -Dm644 data/org.fcitx.Fcitx5.Addon.Vnchkey.Settings.desktop "$PREFIX/share/applications/org.fcitx.Fcitx5.Addon.Vnchkey.Settings.desktop"
 
-echo -e "\n${GREEN}==> 4/4. Thiết lập quyền kernel Linux /dev/uinput...${NC}"
-sudo usermod -aG input "$USER" 2>/dev/null || true
-echo 'KERNEL=="uinput", MODE="0660", GROUP="input", OPTIONS+="static_node=uinput"' | sudo tee /etc/udev/rules.d/99-uinput.rules >/dev/null
-echo "uinput" | sudo tee /etc/modules-load.d/uinput.conf >/dev/null
-sudo modprobe uinput 2>/dev/null || true
-sudo udevadm control --reload-rules 2>/dev/null || true
-sudo udevadm trigger 2>/dev/null || true
-
 # Restart Fcitx5 to pick up new input methods
 echo -e "\n${GREEN}==> Khởi động lại Fcitx5 để nạp bộ gõ mới...${NC}"
 fcitx5 -r -d 2>/dev/null || true
 
 echo -e "\n${BLUE}══════════════════════════════════════════════════════════════${NC}"
 echo -e "${GREEN}  CÀI ĐẶT HOÀN TẤT THÀNH CÔNG!                               ${NC}"
-echo -e "${YELLOW}  1. Mở 'fcitx5-configtool' để chọn 'vnchKey Telex' hoặc 'VNI'${NC}"
-echo -e "${YELLOW}  2. Bấm Ctrl + Space để bật/tắt gõ tiếng Việt               ${NC}"
+echo -e "${YELLOW}  1. Mở 'fcitx5-configtool' để thêm bộ gõ 'vnchKey'           ${NC}"
+echo -e "${YELLOW}  2. Chọn VNI / Telex / Auto trên Menu Nhanh hoặc Cài Đặt     ${NC}"
 echo -e "${BLUE}══════════════════════════════════════════════════════════════${NC}"
