@@ -1,45 +1,187 @@
-//! GoNhanh Innovation: English Auto-Restore Algorithm.
+//! User Dictionary of English Bypass Words & Auto-Restore Engine.
 //!
-//! Prevents common English words and programming keywords from being mutilated
-//! into false Vietnamese diacritics (e.g. `text` -> `têt`, `post` -> `pót`).
+//! Ported from OpenViet IME (`dictionary.js`), preventing common English words,
+//! developer terms, and user-defined vocabulary from being accented into false
+//! Vietnamese diacritics (e.g. `text` -> `têt`, `post` -> `pót`, `window` -> `ưindoư`).
 
+use crate::vietnamese_dict::is_in_vietnamese_dictionary;
 use std::collections::HashSet;
+use std::fs;
 
-/// High-speed keyword lookup trie for English auto-restore.
+/// Built-in default list of common English and technical words bypassed by default
+/// (ported from OpenViet IME's `COMMON_ENGLISH_WORDS` / `DEFAULT_USER_WORDS`).
+pub const DEFAULT_ENGLISH_WORDS: &[&str] = &[
+    // Telex trap: words ending with 's' (sắc)
+    "always", "access", "address", "alias", "basis", "bonus", "boss", "business",
+    "campus", "canvas", "census", "chaos", "chorus", "circus", "class", "corpus",
+    "crisis", "cross", "dress", "express", "famous", "focus", "genius", "glass",
+    "guess", "hiatus", "less", "loss", "lotus", "mass", "minus", "miss", "news",
+    "nexus", "oasis", "paris", "pass", "perhaps", "plus", "press", "process",
+    "radius", "series", "sometimes", "species", "status", "success", "texas",
+    "versus", "virus", "walrus", "yes",
+    // Telex trap: words with 'x' (ngã)
+    "ajax", "annex", "box", "complex", "context", "convex", "cortex", "duplex",
+    "exact", "exam", "example", "exceed", "except", "excess", "exchange", "excite",
+    "exclude", "excuse", "execute", "exercise", "exist", "exit", "expand", "expect",
+    "expend", "expense", "expert", "expire", "explain", "explore", "export",
+    "extent", "extra", "extreme", "fax", "fix", "galaxy", "index", "latex",
+    "linux", "luxury", "matrix", "max", "maximum", "mix", "next", "oxide",
+    "oxygen", "pixel", "prefix", "reflex", "sax", "sex", "six", "suffix",
+    "syntax", "tax", "taxi", "text", "toxic", "unix", "vertex",
+    // Telex trap: words with 'r' (hỏi)
+    "after", "armor", "bear", "better", "Browser", "browser", "care", "center",
+    "clear", "color", "core", "cursor", "dear", "doctor", "driver", "error",
+    "ever", "factor", "favor", "fear", "filter", "flavor", "for", "gear",
+    "harbor", "hard", "hear", "horror", "junior", "labor", "letter", "master",
+    "matter", "mayor", "member", "mirror", "near", "never", "number", "order",
+    "other", "over", "paper", "pear", "player", "power", "prior", "rear",
+    "render", "router", "sector", "senior", "sensor", "server", "super", "tear",
+    "their", "under", "user", "vapor", "vector", "vigor", "water", "wear",
+    "worker", "year", "your",
+    // Telex trap: words with 'w' (horn/breve: ơ, ư, ă)
+    "wait", "wall", "want", "warm", "warn", "wash", "waste", "watch", "wave",
+    "way", "wayland", "web", "webpack", "website", "week", "well", "west",
+    "whale", "what", "wheat", "wheel", "when", "where", "which", "while",
+    "whip", "whisper", "white", "who", "why", "wide", "wife", "wifi", "wild",
+    "will", "wind", "window", "windows", "wine", "wing", "wire", "wise", "wish",
+    "with", "within", "without", "wood", "wool", "word", "work", "world",
+    "worth", "worthy", "would", "wrap", "write", "wrong",
+    // Telex trap: words with 'f' (huyền)
+    "face", "fact", "fail", "fair", "fall", "false", "farm", "fast", "feat",
+    "feed", "feel", "feet", "fell", "felt", "few", "figma", "file", "fill",
+    "film", "find", "fine", "fire", "firefox", "firm", "first", "fish", "fit",
+    "five", "flat", "flight", "floor", "flow", "fly", "folk", "font", "food",
+    "foot", "force", "fork", "form", "free", "friend", "from", "front",
+    "frontend", "fruit", "full", "fund", "funny", "future", "life", "off", "safe",
+    // Telex trap: words with 'j' (nặng)
+    "jail", "jar", "javascript", "jaw", "jean", "jeep", "jelly", "jest", "jet",
+    "jewel", "jig", "jinx", "job", "jockey", "jog", "join", "joint", "joke",
+    "jolly", "jolt", "journal", "journey", "joy", "json", "judge", "judo",
+    "jug", "juggle", "juggler", "juice", "jumbo", "jump", "jumper", "junction",
+    "jungle", "junk", "junkie", "jupiter", "juror", "jury", "just", "justice",
+    "justify",
+    // Tech, Developer & Linux Words
+    "alacritty", "api", "app", "arch", "assets", "async", "await", "back", "base",
+    "bash", "because", "best", "blog", "branch", "bug", "build", "bundle", "cargo",
+    "case", "catch", "cell", "chat", "chrome", "circle", "city", "class", "click",
+    "client", "clone", "cloud", "cmake", "code", "commit", "component", "config",
+    "console", "const", "cost", "could", "count", " crates", "css", "data", "date",
+    "debug", "deploy", "dev", "developer", "diff", "disk", "dist", "div", "docker",
+    "dom", "download", "edge", "egui", "email", "env", "escape", "even",
+    "extension", "facebook", "fcitx", "fcitx5", "fetch", "flatpak", "fn", "format",
+    "game", "gate", "general", "get", "gift", "git", "github", "gitlab", "gnome",
+    "going", "gone", "good", "google", "great", "group", "guard", "guest", "guide",
+    "have", "home", "hook", "host", "html", "http", "https", "hyprland", "ibus",
+    "icon", "iframe", "image", "impl", "import", "input", "install", "internet",
+    "into", "issue", "kde", "kernel", "key", "kitty", "know", "last", "lead",
+    "let", "license", "like", "line", "link", "lint", "list", "load", "local",
+    "log", "look", "lost", "macos", "make", "match", "math", "merge", "meta",
+    "minify", "modal", "mode", "mod", "module", "most", "must", "need", "net",
+    "network", "ninja", "node", "none", "null", "nvim", "offline", "online",
+    "only", "open", "output", "package", "page", "password", "past", "patch",
+    "path", "people", "ping", "plasma", "plugin", "point", "port", "post",
+    "print", "props", "pub", "public", "pull", "push", "python", "rate", "react",
+    "read", "readme", "rebase", "release", "repo", "request", "response", "rest",
+    "return", "road", "rust", "rustc", "saas", "safari", "save", "screen",
+    "script", " scss", "seed", "self", "service", "setup", "shell", "site", "some",
+    "sort", "source", "span", "sql", "ssh", "stash", "state", "steam", "string",
+    "struct", "style", " sudo", "sway", "sync", "system", "tab", "tag", "take",
+    "target", "task", "terminal", "tesla", "test", "that", "them", "then",
+    "think", "time", "token", "toml", "tool", "trait", "true", "type", "ubuntu",
+    "undefined", "update", "upload", "url", "use", "var", "version", "video",
+    "view", "vim", "vite", "void", "vscode", "vulkan", "west", "while", "yaml",
+    "zip", "zsh",
+];
+
+/// Vietnamese Telex input sequences that happen to spell common English words (`thí`, `thế`, `thể`)
+/// and must never override valid Vietnamese words unless the user explicitly forces them.
+const VIETNAMESE_COLLISION_EXCEPTIONS: &[&str] = &[
+    "this", "these", "there", "those", "has", "his", "bus", "her", "see", "can", "man", "son", "con",
+];
+
+/// High-speed dictionary for English auto-restore and user custom bypass words.
 #[derive(Debug, Clone)]
 pub struct EnglishAutoRestore {
-    keywords: HashSet<&'static str>,
+    keywords: HashSet<String>,
 }
 
 impl EnglishAutoRestore {
-    /// Creates a new auto-restore dictionary loaded with programming and technical English words.
+    /// Creates a new auto-restore dictionary loaded with the built-in English bypass words.
     pub fn new() -> Self {
-        let mut keywords = HashSet::with_capacity(256);
-        
-        // Common software development tokens that trigger false Telex accents
-        let list = [
-            "text", "test", "next", "cost", "post", "host", "most", "lost", "fast",
-            "last", "past", "best", "rest", "west", "list", "rust", "must", "just",
-            "case", "base", "import", "export", "class", "struct", "match", "catch",
-            "while", "where", "which", "system", "print", "count", "point", "joint",
-            "filter", "return", "format", "string", "vector", "state", "props", "hook",
-            "code", "node", "mode", "feed", "seed", "need", "read", "lead", "road",
-            "load", "file", "line", "type", "date", "rate", "gate", "path", "math",
-            "true", "false", "null", "none", "void", "async", "await", "const", "var",
-            "let", "fn", "pub", "mod", "use", "impl", "trait", "self", "super",
-        ];
-
-        for &word in &list {
-            keywords.insert(word);
+        let mut keywords = HashSet::with_capacity(DEFAULT_ENGLISH_WORDS.len() + 64);
+        for &word in DEFAULT_ENGLISH_WORDS {
+            let clean = word.trim().to_lowercase();
+            if !clean.is_empty() {
+                keywords.insert(clean);
+            }
         }
-
         Self { keywords }
     }
 
-    /// Checks if the raw keystroke sequence forms an English keyword.
+    /// Loads user dictionary words from a configuration file (one word per line).
+    /// Merges with the built-in English dictionary.
+    pub fn load_from_file(&mut self, path: &str) {
+        if let Ok(content) = fs::read_to_string(path) {
+            self.keywords.clear();
+            for &word in DEFAULT_ENGLISH_WORDS {
+                let clean = word.trim().to_lowercase();
+                if !clean.is_empty() {
+                    self.keywords.insert(clean);
+                }
+            }
+            for line in content.lines() {
+                let trimmed = line.trim().to_lowercase();
+                if !trimmed.is_empty() && !trimmed.starts_with('#') {
+                    self.keywords.insert(trimmed);
+                }
+            }
+        }
+    }
+
+    /// Checks if the raw keystroke sequence forms an English or user-bypassed keyword.
     #[inline]
     pub fn is_english_keyword(&self, raw: &str) -> bool {
-        self.keywords.contains(raw.to_lowercase().as_str())
+        let clean = raw.trim().to_lowercase();
+        if clean.len() < 3 || clean.chars().any(|c| c.is_ascii_digit()) {
+            return false;
+        }
+        if VIETNAMESE_COLLISION_EXCEPTIONS.contains(&clean.as_str()) {
+            return false;
+        }
+        self.keywords.contains(&clean)
+    }
+
+    /// Determines if `current_word` (transformed from `raw_strokes`) should be restored
+    /// to `raw_strokes` based on the User Dictionary and Built-in Vietnamese Dictionary.
+    pub fn should_restore(&self, raw_strokes: &str, current_word: &str, use_dictionary: bool) -> bool {
+        let raw_clean = raw_strokes.trim().to_lowercase();
+        let cur_clean = current_word.trim().to_lowercase();
+
+        // Rule 1: Never restore VNI digit sequences or very short words (< 3 raw strokes or <= 1 char result)
+        if raw_clean.len() < 3
+            || cur_clean.chars().count() <= 1
+            || raw_clean.chars().any(|c| c.is_ascii_digit())
+        {
+            return false;
+        }
+
+        // Rule 2: Protect common Vietnamese collision words ("this" -> "thí", "these" -> "thế", "there" -> "thể")
+        if VIETNAMESE_COLLISION_EXCEPTIONS.contains(&raw_clean.as_str())
+            && is_in_vietnamese_dictionary(&cur_clean)
+        {
+            return false;
+        }
+
+        // Rule 3: If User Dictionary is enabled and raw_strokes is in the English/User dictionary:
+        // - Restore if raw_strokes is >= 4 chars (e.g. "text", "post", "cost", "user", "window", "linux")
+        // - Or restore if the resulting 2-3 letter word is NOT in the Vietnamese dictionary (e.g. "fix" -> "fĩ", "web" -> "ưeb", "yes" -> "ýe")
+        if use_dictionary && self.keywords.contains(&raw_clean) {
+            if raw_clean.len() >= 4 || !is_in_vietnamese_dictionary(&cur_clean) {
+                return true;
+            }
+        }
+
+        false
     }
 }
 

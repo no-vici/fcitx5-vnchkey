@@ -27,6 +27,7 @@ VnchkeyEngine::VnchkeyEngine(fcitx::AddonManager* manager)
         if (actionAutoRestore_) uiMgr.registerAction("vnchkey-autorestore", actionAutoRestore_.get());
         if (actionMacro_) uiMgr.registerAction("vnchkey-macro", actionMacro_.get());
         if (actionSpellCheck_) uiMgr.registerAction("vnchkey-spellcheck", actionSpellCheck_.get());
+        if (actionDictionary_) uiMgr.registerAction("vnchkey-dictionary", actionDictionary_.get());
         if (actionSettings_) uiMgr.registerAction("vnchkey-settings", actionSettings_.get());
     }
 }
@@ -38,6 +39,7 @@ VnchkeyEngine::~VnchkeyEngine() {
         if (actionAutoRestore_) uiMgr.unregisterAction(actionAutoRestore_.get());
         if (actionMacro_) uiMgr.unregisterAction(actionMacro_.get());
         if (actionSpellCheck_) uiMgr.unregisterAction(actionSpellCheck_.get());
+        if (actionDictionary_) uiMgr.unregisterAction(actionDictionary_.get());
         if (actionSettings_) uiMgr.unregisterAction(actionSettings_.get());
     }
     connections_.clear();
@@ -85,7 +87,6 @@ void VnchkeyEngine::setupStatusMenu() {
     // 1. Input Method Group in Quick Menu
     actionMethodAuto_ = std::make_unique<fcitx::SimpleAction>();
     actionMethodAuto_->setCheckable(true);
-    actionMethodAuto_->setShortText("Tự Động (Auto)");
     actionMethodAuto_->setLongText("Kiểu gõ: Tự Động (Auto Telex & VNI)");
     connections_.push_back(actionMethodAuto_->connect<fcitx::SimpleAction::Activated>([this](fcitx::InputContext* ic) {
         config_method_ = "Auto";
@@ -100,7 +101,6 @@ void VnchkeyEngine::setupStatusMenu() {
 
     actionMethodTelex_ = std::make_unique<fcitx::SimpleAction>();
     actionMethodTelex_->setCheckable(true);
-    actionMethodTelex_->setShortText("Telex");
     actionMethodTelex_->setLongText("Kiểu gõ: Telex");
     connections_.push_back(actionMethodTelex_->connect<fcitx::SimpleAction::Activated>([this](fcitx::InputContext* ic) {
         config_method_ = "Telex";
@@ -115,7 +115,6 @@ void VnchkeyEngine::setupStatusMenu() {
 
     actionMethodVni_ = std::make_unique<fcitx::SimpleAction>();
     actionMethodVni_->setCheckable(true);
-    actionMethodVni_->setShortText("VNI");
     actionMethodVni_->setLongText("Kiểu gõ: VNI");
     connections_.push_back(actionMethodVni_->connect<fcitx::SimpleAction::Activated>([this](fcitx::InputContext* ic) {
         config_method_ = "VNI";
@@ -137,7 +136,6 @@ void VnchkeyEngine::setupStatusMenu() {
     actionCharsetUnicode_ = std::make_unique<fcitx::SimpleAction>();
     actionCharsetUnicode_->setCheckable(true);
     actionCharsetUnicode_->setChecked(true);
-    actionCharsetUnicode_->setShortText("Unicode");
     actionCharsetUnicode_->setLongText("Bảng mã: Unicode Chuẩn");
     statusMenu_->addAction(actionCharsetUnicode_.get());
 
@@ -146,10 +144,9 @@ void VnchkeyEngine::setupStatusMenu() {
     actionSeparator2_->setSeparator(true);
     statusMenu_->addAction(actionSeparator2_.get());
 
-    // 3. Toggles: Restore English, Macros, Chánh Tả
+    // 3. Toggles: Restore English, Macro, Chánh Tả, Custom Dictionary (with Lilypad ✔ / ✖ style)
     actionAutoRestore_ = std::make_unique<fcitx::SimpleAction>();
     actionAutoRestore_->setCheckable(true);
-    actionAutoRestore_->setShortText("Restore English");
     actionAutoRestore_->setLongText("Khôi Phục Tiếng Anh (Restore English)");
     connections_.push_back(actionAutoRestore_->connect<fcitx::SimpleAction::Activated>([this](fcitx::InputContext* ic) {
         config_auto_restore_ = !config_auto_restore_;
@@ -167,7 +164,6 @@ void VnchkeyEngine::setupStatusMenu() {
 
     actionMacro_ = std::make_unique<fcitx::SimpleAction>();
     actionMacro_->setCheckable(true);
-    actionMacro_->setShortText("Macro");
     actionMacro_->setLongText("Bật Gõ Tắt (Macro)");
     connections_.push_back(actionMacro_->connect<fcitx::SimpleAction::Activated>([this](fcitx::InputContext* ic) {
         config_macro_ = !config_macro_;
@@ -185,10 +181,12 @@ void VnchkeyEngine::setupStatusMenu() {
 
     actionSpellCheck_ = std::make_unique<fcitx::SimpleAction>();
     actionSpellCheck_->setCheckable(true);
-    actionSpellCheck_->setShortText("Chánh Tả");
     actionSpellCheck_->setLongText("Kiểm Tra Chánh Tả");
     connections_.push_back(actionSpellCheck_->connect<fcitx::SimpleAction::Activated>([this](fcitx::InputContext* ic) {
         config_spell_check_ = !config_spell_check_;
+        for (void* ctx : {ctx_auto_, ctx_telex_, ctx_vni_}) {
+            if (ctx) fcitx5_vnchkey_set_spell_check(ctx, config_spell_check_);
+        }
         updateActionState();
         saveConfig();
         if (ic && actionSpellCheck_) {
@@ -197,6 +195,23 @@ void VnchkeyEngine::setupStatusMenu() {
         }
     }));
     statusMenu_->addAction(actionSpellCheck_.get());
+
+    actionDictionary_ = std::make_unique<fcitx::SimpleAction>();
+    actionDictionary_->setCheckable(true);
+    actionDictionary_->setLongText("Từ Điển Cá Nhân (Custom Dictionary)");
+    connections_.push_back(actionDictionary_->connect<fcitx::SimpleAction::Activated>([this](fcitx::InputContext* ic) {
+        config_dictionary_ = !config_dictionary_;
+        for (void* ctx : {ctx_auto_, ctx_telex_, ctx_vni_}) {
+            if (ctx) fcitx5_vnchkey_set_dictionary_enabled(ctx, config_dictionary_);
+        }
+        updateActionState();
+        saveConfig();
+        if (ic && actionDictionary_) {
+            actionDictionary_->update(ic);
+            ic->updateUserInterface(fcitx::UserInterfaceComponent::StatusArea);
+        }
+    }));
+    statusMenu_->addAction(actionDictionary_.get());
 
     // Separator 3
     actionSeparator3_ = std::make_unique<fcitx::SimpleAction>();
@@ -224,15 +239,45 @@ void VnchkeyEngine::updateActionState() {
         statusAction_->setShortText(config_method_);
     }
 
-    if (actionMethodAuto_) actionMethodAuto_->setChecked(config_method_ == "Auto" || config_method_ == "auto");
-    if (actionMethodTelex_) actionMethodTelex_->setChecked(config_method_ == "Telex" || config_method_ == "telex");
-    if (actionMethodVni_) actionMethodVni_->setChecked(config_method_ == "VNI" || config_method_ == "vni");
+    const bool isAuto = (config_method_ == "Auto" || config_method_ == "auto");
+    const bool isTelex = (config_method_ == "Telex" || config_method_ == "telex");
+    const bool isVni = (config_method_ == "VNI" || config_method_ == "vni");
 
-    if (actionCharsetUnicode_) actionCharsetUnicode_->setChecked(true);
+    if (actionMethodAuto_) {
+        actionMethodAuto_->setChecked(isAuto);
+        actionMethodAuto_->setShortText(std::string(isAuto ? "✔ " : "   ") + "Tự Động (Auto)");
+    }
+    if (actionMethodTelex_) {
+        actionMethodTelex_->setChecked(isTelex);
+        actionMethodTelex_->setShortText(std::string(isTelex ? "✔ " : "   ") + "Telex");
+    }
+    if (actionMethodVni_) {
+        actionMethodVni_->setChecked(isVni);
+        actionMethodVni_->setShortText(std::string(isVni ? "✔ " : "   ") + "VNI");
+    }
 
-    if (actionAutoRestore_) actionAutoRestore_->setChecked(config_auto_restore_);
-    if (actionMacro_) actionMacro_->setChecked(config_macro_);
-    if (actionSpellCheck_) actionSpellCheck_->setChecked(config_spell_check_);
+    if (actionCharsetUnicode_) {
+        actionCharsetUnicode_->setChecked(true);
+        actionCharsetUnicode_->setShortText("✔ Unicode");
+    }
+
+    // Match fcitx5-lilypad style: prefix toggle items with "✔ " when enabled and "✖ " when disabled
+    if (actionAutoRestore_) {
+        actionAutoRestore_->setChecked(config_auto_restore_);
+        actionAutoRestore_->setShortText(std::string(config_auto_restore_ ? "✔ " : "✖ ") + "Restore English");
+    }
+    if (actionMacro_) {
+        actionMacro_->setChecked(config_macro_);
+        actionMacro_->setShortText(std::string(config_macro_ ? "✔ " : "✖ ") + "Macro");
+    }
+    if (actionSpellCheck_) {
+        actionSpellCheck_->setChecked(config_spell_check_);
+        actionSpellCheck_->setShortText(std::string(config_spell_check_ ? "✔ " : "✖ ") + "Chánh Tả");
+    }
+    if (actionDictionary_) {
+        actionDictionary_->setChecked(config_dictionary_);
+        actionDictionary_->setShortText(std::string(config_dictionary_ ? "✔ " : "✖ ") + "Custom Dictionary");
+    }
 }
 
 void VnchkeyEngine::activate(const fcitx::InputMethodEntry &entry, fcitx::InputContextEvent &event) {
@@ -256,12 +301,14 @@ void VnchkeyEngine::activate(const fcitx::InputMethodEntry &entry, fcitx::InputC
         if (actionAutoRestore_) ic->statusArea().addAction(fcitx::StatusGroup::InputMethod, actionAutoRestore_.get());
         if (actionMacro_) ic->statusArea().addAction(fcitx::StatusGroup::InputMethod, actionMacro_.get());
         if (actionSpellCheck_) ic->statusArea().addAction(fcitx::StatusGroup::InputMethod, actionSpellCheck_.get());
+        if (actionDictionary_) ic->statusArea().addAction(fcitx::StatusGroup::InputMethod, actionDictionary_.get());
         if (actionSettings_) ic->statusArea().addAction(fcitx::StatusGroup::InputMethod, actionSettings_.get());
 
         if (statusAction_) statusAction_->update(ic);
         if (actionAutoRestore_) actionAutoRestore_->update(ic);
         if (actionMacro_) actionMacro_->update(ic);
         if (actionSpellCheck_) actionSpellCheck_->update(ic);
+        if (actionDictionary_) actionDictionary_->update(ic);
         if (actionSettings_) actionSettings_->update(ic);
 
         ic->updateUserInterface(fcitx::UserInterfaceComponent::StatusArea);
@@ -323,20 +370,24 @@ void VnchkeyEngine::loadConfig() {
                 config_macro_ = (line.find("False") == std::string::npos);
             } else if (line.rfind("SpellCheck=", 0) == 0) {
                 config_spell_check_ = (line.find("False") == std::string::npos);
+            } else if (line.rfind("EnableDictionary=", 0) == 0) {
+                config_dictionary_ = (line.find("False") == std::string::npos);
             }
         }
     }
 
-    // Load macro table if configured
+    // Load macro table & user dictionary if configured
     std::string macro_path = std::string(home) + "/.config/fcitx5/conf/vnchkey-macro-table.conf";
-    if (ctx_auto_) fcitx5_vnchkey_load_macros(ctx_auto_, macro_path.c_str());
-    if (ctx_telex_) fcitx5_vnchkey_load_macros(ctx_telex_, macro_path.c_str());
-    if (ctx_vni_) fcitx5_vnchkey_load_macros(ctx_vni_, macro_path.c_str());
+    std::string dict_path = std::string(home) + "/.config/fcitx5/conf/vnchkey-dictionary.conf";
 
     for (void* ctx : {ctx_auto_, ctx_telex_, ctx_vni_}) {
         if (!ctx) continue;
+        fcitx5_vnchkey_load_macros(ctx, macro_path.c_str());
+        fcitx5_vnchkey_load_dictionary(ctx, dict_path.c_str());
         fcitx5_vnchkey_set_auto_restore(ctx, config_auto_restore_);
         fcitx5_vnchkey_set_macro_enabled(ctx, config_macro_);
+        fcitx5_vnchkey_set_spell_check(ctx, config_spell_check_);
+        fcitx5_vnchkey_set_dictionary_enabled(ctx, config_dictionary_);
     }
 }
 
@@ -356,7 +407,8 @@ void VnchkeyEngine::saveConfig() {
                     l.rfind("OutputCharset=", 0) != 0 &&
                     l.rfind("AutoRestoreEnglish=", 0) != 0 &&
                     l.rfind("EnableMacro=", 0) != 0 &&
-                    l.rfind("SpellCheck=", 0) != 0) {
+                    l.rfind("SpellCheck=", 0) != 0 &&
+                    l.rfind("EnableDictionary=", 0) != 0) {
                     lines.push_back(l);
                 }
             }
@@ -373,6 +425,7 @@ void VnchkeyEngine::saveConfig() {
         out << "AutoRestoreEnglish=" << (config_auto_restore_ ? "True" : "False") << "\n";
         out << "EnableMacro=" << (config_macro_ ? "True" : "False") << "\n";
         out << "SpellCheck=" << (config_spell_check_ ? "True" : "False") << "\n";
+        out << "EnableDictionary=" << (config_dictionary_ ? "True" : "False") << "\n";
     }
 }
 

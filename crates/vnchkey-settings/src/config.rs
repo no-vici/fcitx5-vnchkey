@@ -18,6 +18,7 @@ pub struct VnchkeyConfig {
     pub smart_horn: bool,
     pub spell_check: bool,
     pub auto_restore_english: bool,
+    pub enable_dictionary: bool,
     pub smart_casing: bool,
     pub free_marking: bool,
     pub fast_consonant_doubling: bool,
@@ -41,6 +42,7 @@ impl Default for VnchkeyConfig {
             smart_horn: true,
             spell_check: true,
             auto_restore_english: true,
+            enable_dictionary: true,
             smart_casing: true,
             free_marking: true,
             fast_consonant_doubling: false,
@@ -122,6 +124,7 @@ impl ConfigManager {
             if let Some(v) = map.get("SmartHorn") { cfg.smart_horn = v.eq_ignore_ascii_case("true"); }
             if let Some(v) = map.get("SpellCheck") { cfg.spell_check = v.eq_ignore_ascii_case("true"); }
             if let Some(v) = map.get("AutoRestoreEnglish") { cfg.auto_restore_english = v.eq_ignore_ascii_case("true"); }
+            if let Some(v) = map.get("EnableDictionary") { cfg.enable_dictionary = v.eq_ignore_ascii_case("true"); }
             if let Some(v) = map.get("SmartCasing") { cfg.smart_casing = v.eq_ignore_ascii_case("true"); }
             if let Some(v) = map.get("FreeMarking") { cfg.free_marking = v.eq_ignore_ascii_case("true"); }
             if let Some(v) = map.get("FastConsonantDoubling") { cfg.fast_consonant_doubling = v.eq_ignore_ascii_case("true"); }
@@ -153,6 +156,7 @@ impl ConfigManager {
         lines.push(format!("SmartHorn={}", if cfg.smart_horn { "True" } else { "False" }));
         lines.push(format!("SpellCheck={}", if cfg.spell_check { "True" } else { "False" }));
         lines.push(format!("AutoRestoreEnglish={}", if cfg.auto_restore_english { "True" } else { "False" }));
+        lines.push(format!("EnableDictionary={}", if cfg.enable_dictionary { "True" } else { "False" }));
         lines.push(format!("SmartCasing={}", if cfg.smart_casing { "True" } else { "False" }));
         lines.push(format!("FreeMarking={}", if cfg.free_marking { "True" } else { "False" }));
         lines.push(format!("FastConsonantDoubling={}", if cfg.fast_consonant_doubling { "True" } else { "False" }));
@@ -214,10 +218,21 @@ impl ConfigManager {
         Ok(())
     }
 
+    pub fn default_dictionary() -> Vec<String> {
+        let mut words: Vec<String> = vnchkey_core::DEFAULT_ENGLISH_WORDS
+            .iter()
+            .map(|w| w.trim().to_lowercase())
+            .filter(|w| !w.is_empty())
+            .collect();
+        words.sort();
+        words.dedup();
+        words
+    }
+
     pub fn load_dictionary() -> Vec<String> {
         let path = Self::dict_path();
         if !path.exists() {
-            return Vec::new();
+            return Self::default_dictionary();
         }
 
         let mut res = Vec::new();
@@ -228,6 +243,9 @@ impl ConfigManager {
                     res.push(line.to_string());
                 }
             }
+        }
+        if res.is_empty() {
+            return Self::default_dictionary();
         }
         res
     }

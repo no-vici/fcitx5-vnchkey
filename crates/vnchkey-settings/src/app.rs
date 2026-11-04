@@ -29,6 +29,7 @@ pub struct SettingsApp {
 
     // Form editing states
     new_dict_word: String,
+    dict_search: String,
 
     // Logo texture
     logo_texture: Option<egui::TextureHandle>,
@@ -93,6 +94,7 @@ impl SettingsApp {
             app_modes: ConfigManager::load_app_modes(),
             status_message: None,
             new_dict_word: String::new(),
+            dict_search: String::new(),
             logo_texture,
         }
     }
@@ -533,33 +535,83 @@ impl SettingsApp {
 
     // 5. Dictionary Page
     fn show_dictionary_page(&mut self, ui: &mut egui::Ui) {
-        self.render_header(ui, "Dictionary", "Manage your custom vocabulary and technical jargon.");
+        self.render_header(
+            ui,
+            "Dictionary",
+            "Từ điển Tiếng Anh bỏ qua không thêm dấu & Từ điển Tiếng Việt tích hợp (Chánh Tả).",
+        );
 
-        ui.horizontal(|ui| {
-            let te = egui::TextEdit::singleline(&mut self.new_dict_word)
-                .hint_text("Nhập từ tiếng Việt mới...")
-                .desired_width(280.0);
-            ui.add(te);
-
-            if ui.button("+ Thêm Từ").clicked() {
-                let trimmed = self.new_dict_word.trim().to_string();
-                if !trimmed.is_empty() && !self.dictionary.contains(&trimmed) {
-                    self.dictionary.push(trimmed);
-                    self.new_dict_word.clear();
-                }
-            }
-        });
-        ui.add_space(12.0);
-
+        let vn_count = vnchkey_core::vietnamese_word_set().len();
         egui::Frame::new()
             .fill(egui::Color32::from_rgb(0x18, 0x18, 0x25))
             .stroke(egui::Stroke::new(1.0_f32, egui::Color32::from_rgb(0x28, 0x2a, 0x36)))
             .corner_radius(egui::CornerRadius::same(8))
             .inner_margin(egui::Margin::same(12))
             .show(ui, |ui| {
-                egui::ScrollArea::vertical().max_height(240.0).show(ui, |ui| {
+                ui.checkbox(
+                    &mut self.config.enable_dictionary,
+                    "Bật User Dictionary (Tự động bỏ qua không bỏ dấu cho danh sách từ Tiếng Anh bên dưới)",
+                );
+                ui.add_space(6.0);
+                ui.checkbox(
+                    &mut self.config.spell_check,
+                    format!(
+                        "Bật Từ Điển Tiếng Việt Tích Hợp (Chánh Tả: {} âm tiết chuẩn OpenViet IME)",
+                        vn_count
+                    ),
+                );
+            });
+
+        ui.add_space(12.0);
+
+        ui.horizontal(|ui| {
+            let te = egui::TextEdit::singleline(&mut self.new_dict_word)
+                .hint_text("Thêm từ Tiếng Anh / thuật ngữ bỏ qua dấu...")
+                .desired_width(240.0);
+            let res = ui.add(te);
+            let enter_pressed = res.lost_focus() && ui.input(|i| i.key_pressed(egui::Key::Enter));
+
+            if ui.button("+ Thêm Từ").clicked() || enter_pressed {
+                let trimmed = self.new_dict_word.trim().to_lowercase();
+                if !trimmed.is_empty() && !self.dictionary.contains(&trimmed) {
+                    self.dictionary.push(trimmed);
+                    self.dictionary.sort();
+                    self.new_dict_word.clear();
+                }
+            }
+
+            ui.add_space(12.0);
+            ui.add(
+                egui::TextEdit::singleline(&mut self.dict_search)
+                    .hint_text("🔍 Tìm từ trong danh sách...")
+                    .desired_width(180.0),
+            );
+        });
+        ui.add_space(8.0);
+
+        ui.label(
+            egui::RichText::new(format!(
+                "Danh sách từ Tiếng Anh bỏ qua dấu ({} từ):",
+                self.dictionary.len()
+            ))
+            .size(12.0)
+            .color(egui::Color32::from_rgb(0x89, 0xb4, 0xfa)),
+        );
+        ui.add_space(4.0);
+
+        let search_filter = self.dict_search.trim().to_lowercase();
+        egui::Frame::new()
+            .fill(egui::Color32::from_rgb(0x18, 0x18, 0x25))
+            .stroke(egui::Stroke::new(1.0_f32, egui::Color32::from_rgb(0x28, 0x2a, 0x36)))
+            .corner_radius(egui::CornerRadius::same(8))
+            .inner_margin(egui::Margin::same(12))
+            .show(ui, |ui| {
+                egui::ScrollArea::vertical().max_height(220.0).show(ui, |ui| {
                     let mut to_remove = None;
                     for (idx, word) in self.dictionary.iter().enumerate() {
+                        if !search_filter.is_empty() && !word.to_lowercase().contains(&search_filter) {
+                            continue;
+                        }
                         ui.horizontal(|ui| {
                             ui.label(word);
                             ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {

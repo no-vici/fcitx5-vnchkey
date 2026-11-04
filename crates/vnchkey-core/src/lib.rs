@@ -13,11 +13,15 @@ pub mod casing;
 pub mod engine;
 pub mod macros;
 pub mod telex;
+pub mod vietnamese_dict;
 pub mod vni;
 
-pub use auto_restore::EnglishAutoRestore;
+pub use auto_restore::{EnglishAutoRestore, DEFAULT_ENGLISH_WORDS};
 pub use casing::{CaseTracker, CasingStyle};
 pub use engine::{Engine, EngineConfig, EngineOutput, InputMethod, ToneStyle, W2UType};
 pub use macros::MacroTable;
 pub use telex::TelexEngine;
+pub use vietnamese_dict::{
+    has_phonology_violation, is_in_vietnamese_dictionary, vietnamese_word_set,
+};
 pub use vni::VniEngine;

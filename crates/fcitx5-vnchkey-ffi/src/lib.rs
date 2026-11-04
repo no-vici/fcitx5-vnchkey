@@ -111,6 +111,20 @@ pub unsafe extern "C" fn fcitx5_vnchkey_load_macros(
     }
 }
 
+/// Loads custom user dictionary words from a configuration file.
+#[no_mangle]
+pub unsafe extern "C" fn fcitx5_vnchkey_load_dictionary(
+    ctx: *mut Fcitx5VnchkeyContext,
+    path: *const c_char,
+) {
+    if !ctx.is_null() && !path.is_null() {
+        if let Ok(c_str) = std::ffi::CStr::from_ptr(path).to_str() {
+            let ctx = &mut *ctx;
+            ctx.engine.load_dictionary_from_file(c_str);
+        }
+    }
+}
+
 /// Sets active input method (0 = Auto, 1 = Telex, 2 = VNI).
 #[no_mangle]
 pub unsafe extern "C" fn fcitx5_vnchkey_set_method(ctx: *mut Fcitx5VnchkeyContext, method: u32) {
@@ -139,7 +153,7 @@ pub unsafe extern "C" fn fcitx5_vnchkey_get_method(ctx: *mut Fcitx5VnchkeyContex
     }
 }
 
-/// Configures GoNhanh English auto-restore.
+/// Configures Restore English (auto-restore).
 #[no_mangle]
 pub unsafe extern "C" fn fcitx5_vnchkey_set_auto_restore(ctx: *mut Fcitx5VnchkeyContext, enabled: bool) {
     if !ctx.is_null() {
@@ -147,11 +161,47 @@ pub unsafe extern "C" fn fcitx5_vnchkey_set_auto_restore(ctx: *mut Fcitx5Vnchkey
     }
 }
 
-/// Returns whether English auto-restore is enabled.
+/// Returns whether Restore English is enabled.
 #[no_mangle]
 pub unsafe extern "C" fn fcitx5_vnchkey_get_auto_restore(ctx: *mut Fcitx5VnchkeyContext) -> bool {
     if !ctx.is_null() {
         (*ctx).engine.auto_restore_english()
+    } else {
+        false
+    }
+}
+
+/// Configures Chánh Tả spell checking.
+#[no_mangle]
+pub unsafe extern "C" fn fcitx5_vnchkey_set_spell_check(ctx: *mut Fcitx5VnchkeyContext, enabled: bool) {
+    if !ctx.is_null() {
+        (*ctx).engine.set_spell_check(enabled);
+    }
+}
+
+/// Returns whether Chánh Tả spell checking is enabled.
+#[no_mangle]
+pub unsafe extern "C" fn fcitx5_vnchkey_get_spell_check(ctx: *mut Fcitx5VnchkeyContext) -> bool {
+    if !ctx.is_null() {
+        (*ctx).engine.spell_check()
+    } else {
+        false
+    }
+}
+
+/// Configures User Dictionary of English & custom bypass words.
+#[no_mangle]
+pub unsafe extern "C" fn fcitx5_vnchkey_set_dictionary_enabled(ctx: *mut Fcitx5VnchkeyContext, enabled: bool) {
+    if !ctx.is_null() {
+        (*ctx).engine.set_enable_dictionary(enabled);
+    }
+}
+
+/// Returns whether User Dictionary is enabled.
+#[no_mangle]
+pub unsafe extern "C" fn fcitx5_vnchkey_get_dictionary_enabled(ctx: *mut Fcitx5VnchkeyContext) -> bool {
+    if !ctx.is_null() {
+        (*ctx).engine.dictionary_enabled()
     } else {
         false
     }

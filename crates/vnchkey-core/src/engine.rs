@@ -5,6 +5,7 @@ use crate::casing::CaseTracker;
 use crate::macros::MacroTable;
 pub use crate::telex::W2UType;
 use crate::telex::{has_vietnamese_diacritic, is_valid_vietnamese_syllable, TelexEngine};
+use crate::vietnamese_dict::{has_phonology_violation, is_in_vietnamese_dictionary};
 use crate::vni::VniEngine;
 
 /// Supported Vietnamese typing methods.
@@ -38,6 +39,10 @@ pub struct EngineConfig {
     pub tone_style: ToneStyle,
     /// Automatically restore English keywords and non-Vietnamese words (Restore English)
     pub auto_restore_english: bool,
+    /// Enable Chánh Tả spell checking using built-in ~6,750 Vietnamese dictionary & phonology rules
+    pub spell_check: bool,
+    /// Enable User Dictionary of English & custom bypass words
+    pub enable_dictionary: bool,
     /// Preserve exact capitalization pattern
     pub smart_casing: bool,
     /// Quick undo when pressing Backspace or Escape
@@ -58,6 +63,8 @@ impl Default for EngineConfig {
             method: InputMethod::Auto,
             tone_style: ToneStyle::Modern,
             auto_restore_english: true,
+            spell_check: true,
+            enable_dictionary: true,
             smart_casing: true,
             quick_undo: true,
             sentinel_enabled: true,
@@ -99,6 +106,7 @@ pub struct Engine {
     word_used_telex: bool,
     word_used_vni: bool,
     manual_undo: bool,
+    english_locked: bool,
 }
 
 impl Engine {
@@ -120,12 +128,18 @@ impl Engine {
             word_used_telex: false,
             word_used_vni: false,
             manual_undo: false,
+            english_locked: false,
         }
     }
 
     /// Loads custom macros from configuration file.
     pub fn load_macros_from_file(&mut self, path: &str) {
         self.macro_table.load_from_file(path);
+    }
+
+    /// Loads custom user dictionary words from configuration file.
+    pub fn load_dictionary_from_file(&mut self, path: &str) {
+        self.auto_restore.load_from_file(path);
     }
 
     /// Returns the current engine configuration.
@@ -151,6 +165,26 @@ impl Engine {
     /// Returns whether Restore English is enabled.
     pub fn auto_restore_english(&self) -> bool {
         self.config.auto_restore_english
+    }
+
+    /// Enables or disables Chánh Tả spell checking.
+    pub fn set_spell_check(&mut self, enabled: bool) {
+        self.config.spell_check = enabled;
+    }
+
+    /// Returns whether Chánh Tả spell checking is enabled.
+    pub fn spell_check(&self) -> bool {
+        self.config.spell_check
+    }
+
+    /// Enables or disables the User Dictionary of English & custom bypass words.
+    pub fn set_enable_dictionary(&mut self, enabled: bool) {
+        self.config.enable_dictionary = enabled;
+    }
+
+    /// Returns whether the User Dictionary is enabled.
+    pub fn dictionary_enabled(&self) -> bool {
+        self.config.enable_dictionary
     }
 
     /// Enables or disables smart casing.
@@ -201,6 +235,7 @@ impl Engine {
         self.word_used_telex = false;
         self.word_used_vni = false;
         self.manual_undo = false;
+        self.english_locked = false;
     }
 
     /// Handles physical Backspace pressed by the user.
@@ -239,30 +274,57 @@ impl Engine {
                     }
                 }
 
-                // 2. Restore English check on word completion
-                if self.config.auto_restore_english
-                    && !self.manual_undo
-                    && has_vietnamese_diacritic(&self.current_word)
-                    && (self.auto_restore.is_english_keyword(&self.raw_strokes)
-                        || !is_valid_vietnamese_syllable(&self.current_word))
-                {
-                    let target = format!("{}{}", self.raw_strokes, ch);
-                    let (backspaces, commit_text) =
-                        compare_and_split_strings(&self.current_word, &target);
-                    self.reset();
-                    return EngineOutput {
-                        backspaces,
-                        commit_text,
-                        consumed: true,
-                        auto_restored: true,
-                        macro_expanded: false,
-                        adaptive_delay_ms: 0,
-                    };
+                // 2. User Dictionary & Restore English + Chánh Tả check on word completion
+                // Never auto-restore VNI digit sequences (e.g. gio72, duoc975) because English words never contain digits.
+                let has_digits = self.raw_strokes.chars().any(|c| c.is_ascii_digit());
+                if !self.manual_undo && !has_digits && has_vietnamese_diacritic(&self.current_word) {
+                    let dict_restore = self.config.enable_dictionary
+                        && self.auto_restore.should_restore(
+                            &self.raw_strokes,
+                            &self.current_word,
+                            true,
+                        );
+                    let english_or_spell_restore = self.config.auto_restore_english
+                        && (self.auto_restore.is_english_keyword(&self.raw_strokes)
+                            || !is_valid_vietnamese_syllable(&self.current_word)
+                            || has_phonology_violation(&self.current_word)
+                            || (self.config.spell_check
+                                && !is_in_vietnamese_dictionary(&self.current_word)));
+
+                    if dict_restore || english_or_spell_restore {
+                        let target = format!("{}{}", self.raw_strokes, ch);
+                        let (backspaces, commit_text) =
+                            compare_and_split_strings(&self.current_word, &target);
+                        self.reset();
+                        return EngineOutput {
+                            backspaces,
+                            commit_text,
+                            consumed: true,
+                            auto_restored: true,
+                            macro_expanded: false,
+                            adaptive_delay_ms: 0,
+                        };
+                    }
                 }
             }
 
             // No macro or auto-restore needed: reset word buffer and let delimiter pass through natively
             self.reset();
+            return EngineOutput {
+                backspaces: 0,
+                commit_text: ch.to_string(),
+                consumed: false,
+                auto_restored: false,
+                macro_expanded: false,
+                adaptive_delay_ms: 0,
+            };
+        }
+
+        // If this word was already restored/locked as English, pass subsequent letters through untouched
+        if self.english_locked {
+            self.raw_strokes.push(ch);
+            self.current_word.push(ch);
+            self.casing.track(ch);
             return EngineOutput {
                 backspaces: 0,
                 commit_text: ch.to_string(),
@@ -411,25 +473,37 @@ impl Engine {
         self.casing.track(ch);
         self.manual_undo |= was_undo;
 
-        // Live Restore English check: if the syllable had Vietnamese marks and just became
-        // orthographically impossible (e.g. 'text' -> 'tẽt', 'general' -> 'gểna', 'case' -> 'cáe'),
-        // immediately restore to raw_strokes just like fcitx5-lilypad!
+        // Live Restore English, User Dictionary & Chánh Tả phonology check:
+        // 1. If the syllable has Vietnamese marks and violates Vietnamese phonology/structure
+        //    (e.g. 'text' -> 'tẽt', 'general' -> 'gểna', 'center' -> 'cẻnt', 'case' -> 'cáe'),
+        //    or matches a known English word in the User Dictionary, immediately restore to raw_strokes!
         let mut auto_restored = false;
-        if self.config.auto_restore_english
-            && !self.manual_undo
-            && has_vietnamese_diacritic(&new_word)
-            && !is_valid_vietnamese_syllable(&new_word)
+        let has_diacritic = has_vietnamese_diacritic(&new_word);
+        let invalid_structure =
+            has_diacritic && (!is_valid_vietnamese_syllable(&new_word) || has_phonology_violation(&new_word));
+        let dict_match = has_diacritic
+            && self.config.enable_dictionary
+            && self
+                .auto_restore
+                .should_restore(&self.raw_strokes, &new_word, true);
+
+        if !self.manual_undo
+            && ((self.config.auto_restore_english && invalid_structure) || dict_match)
         {
             new_word = self.raw_strokes.clone();
-            self.manual_undo = true;
+            self.english_locked = true;
             auto_restored = true;
+        } else if self.config.spell_check && !self.manual_undo && was_transformed && invalid_structure {
+            // If Chánh Tả is enabled (even when Restore English is disabled), prevent invalid Vietnamese syllable marks
+            new_word = format!("{}{}", self.current_word, ch);
         }
 
         let (backspaces, commit_text) = compare_and_split_strings(&self.current_word, &new_word);
         self.current_word = new_word;
 
         // Only consume the key event if earlier characters were modified or the committed character differs from `ch`
-        let consumed = was_transformed || auto_restored || backspaces > 0 || commit_text != ch.to_string();
+        let consumed =
+            was_transformed || auto_restored || backspaces > 0 || commit_text != ch.to_string();
 
         EngineOutput {
             backspaces,
@@ -533,6 +607,10 @@ mod tests {
         assert_eq!(type_word(&mut engine, "toans "), "toán ");
         assert_eq!(type_word(&mut engine, "toanss "), "toans ");
         assert_eq!(type_word(&mut engine, "toansz "), "toan ");
+        // Ensure "thí", "thế", "thể" work naturally in Telex
+        assert_eq!(type_word(&mut engine, "this "), "thí ");
+        assert_eq!(type_word(&mut engine, "thees "), "thế ");
+        assert_eq!(type_word(&mut engine, "theer "), "thể ");
     }
 
     #[test]
@@ -558,10 +636,12 @@ mod tests {
     }
 
     #[test]
-    fn test_restore_english_live_and_on_space() {
+    fn test_restore_english_and_chanh_ta_dictionary() {
         let mut engine = Engine::new(EngineConfig {
             method: InputMethod::Telex,
             auto_restore_english: true,
+            spell_check: true,
+            enable_dictionary: true,
             ..EngineConfig::default()
         });
 
@@ -569,8 +649,17 @@ mod tests {
         assert_eq!(type_word(&mut engine, "post "), "post ");
         assert_eq!(type_word(&mut engine, "general "), "general ");
         assert_eq!(type_word(&mut engine, "filter "), "filter ");
+        assert_eq!(type_word(&mut engine, "filters "), "filters ");
         assert_eq!(type_word(&mut engine, "return "), "return ");
         assert_eq!(type_word(&mut engine, "struct "), "struct ");
+        assert_eq!(type_word(&mut engine, "window "), "window ");
         assert_eq!(type_word(&mut engine, "windows "), "windows ");
+        assert_eq!(type_word(&mut engine, "user "), "user ");
+        assert_eq!(type_word(&mut engine, "users "), "users ");
+        assert_eq!(type_word(&mut engine, "linux "), "linux ");
+        assert_eq!(type_word(&mut engine, "center "), "center ");
+        // Valid Southern & Standard Vietnamese words pass Chánh Tả check
+        assert_eq!(type_word(&mut engine, "chanhs "), "chánh ");
+        assert_eq!(type_word(&mut engine, "tar "), "tả ");
     }
 }
