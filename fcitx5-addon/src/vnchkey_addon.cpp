@@ -127,6 +127,9 @@ void VnchkeyEngine::setupStatusMenu() {
     actionAutoRestore_->setShortText("Khôi Phục Tiếng Anh (GoNhanh)");
     connections_.push_back(actionAutoRestore_->connect<fcitx::SimpleAction::Activated>([this](fcitx::InputContext*) {
         config_auto_restore_ = !config_auto_restore_;
+        for (void* ctx : {ctx_auto_, ctx_telex_, ctx_vni_}) {
+            if (ctx) fcitx5_vnchkey_set_auto_restore(ctx, config_auto_restore_);
+        }
         updateActionState();
         saveConfig();
     }));
@@ -137,6 +140,9 @@ void VnchkeyEngine::setupStatusMenu() {
     actionMacro_->setShortText("Bật Gõ Tắt (Macro)");
     connections_.push_back(actionMacro_->connect<fcitx::SimpleAction::Activated>([this](fcitx::InputContext*) {
         config_macro_ = !config_macro_;
+        for (void* ctx : {ctx_auto_, ctx_telex_, ctx_vni_}) {
+            if (ctx) fcitx5_vnchkey_set_macro_enabled(ctx, config_macro_);
+        }
         updateActionState();
         saveConfig();
     }));
@@ -231,6 +237,12 @@ void VnchkeyEngine::loadConfig() {
     if (ctx_auto_) fcitx5_vnchkey_load_macros(ctx_auto_, macro_path.c_str());
     if (ctx_telex_) fcitx5_vnchkey_load_macros(ctx_telex_, macro_path.c_str());
     if (ctx_vni_) fcitx5_vnchkey_load_macros(ctx_vni_, macro_path.c_str());
+
+    for (void* ctx : {ctx_auto_, ctx_telex_, ctx_vni_}) {
+        if (!ctx) continue;
+        fcitx5_vnchkey_set_auto_restore(ctx, config_auto_restore_);
+        fcitx5_vnchkey_set_macro_enabled(ctx, config_macro_);
+    }
 }
 
 void VnchkeyEngine::saveConfig() {

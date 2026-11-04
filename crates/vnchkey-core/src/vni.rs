@@ -27,6 +27,16 @@ impl VniEngine {
         }
     }
 
+    /// Sets the tone style convention.
+    pub fn set_tone_style(&mut self, tone_style: ToneStyle) {
+        self.tone_style = tone_style;
+    }
+
+    /// Enables or disables bracket transformation.
+    pub fn set_bracket_transform(&mut self, enabled: bool) {
+        self.bracket_transform = enabled;
+    }
+
     /// Transforms raw strokes using VNI rules.
     /// Returns (transformed_string, was_transformed).
     pub fn feed(&self, input: &str) -> (String, bool) {

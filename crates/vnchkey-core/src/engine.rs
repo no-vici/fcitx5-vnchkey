@@ -50,6 +50,8 @@ pub struct EngineConfig {
     pub type_w_to_u: W2UType,
     /// Type [ -> ơ, ] -> ư, { -> Ơ, } -> Ư
     pub bracket_transform: bool,
+    /// Enable macro expansions
+    pub enable_macro: bool,
 }
 
 impl Default for EngineConfig {
@@ -63,6 +65,7 @@ impl Default for EngineConfig {
             sentinel_enabled: true,
             type_w_to_u: W2UType::NonStart,
             bracket_transform: false,
+            enable_macro: true,
         }
     }
 }
@@ -121,6 +124,71 @@ impl Engine {
         self.macro_table.load_from_file(path);
     }
 
+    /// Returns the current engine configuration.
+    pub fn config(&self) -> &EngineConfig {
+        &self.config
+    }
+
+    /// Sets the input method.
+    pub fn set_method(&mut self, method: InputMethod) {
+        self.config.method = method;
+    }
+
+    /// Returns the current input method.
+    pub fn method(&self) -> InputMethod {
+        self.config.method
+    }
+
+    /// Enables or disables GoNhanh English auto-restore.
+    pub fn set_auto_restore_english(&mut self, enabled: bool) {
+        self.config.auto_restore_english = enabled;
+    }
+
+    /// Returns whether English auto-restore is enabled.
+    pub fn auto_restore_english(&self) -> bool {
+        self.config.auto_restore_english
+    }
+
+    /// Enables or disables XKey smart casing.
+    pub fn set_smart_casing(&mut self, enabled: bool) {
+        self.config.smart_casing = enabled;
+    }
+
+    /// Returns whether smart casing is enabled.
+    pub fn smart_casing(&self) -> bool {
+        self.config.smart_casing
+    }
+
+    /// Enables or disables macro expansion.
+    pub fn set_enable_macro(&mut self, enabled: bool) {
+        self.config.enable_macro = enabled;
+    }
+
+    /// Returns whether macro expansion is enabled.
+    pub fn macro_enabled(&self) -> bool {
+        self.config.enable_macro
+    }
+
+    /// Sets tone placement style.
+    pub fn set_tone_style(&mut self, tone_style: ToneStyle) {
+        self.config.tone_style = tone_style;
+        self.telex.set_tone_style(tone_style);
+        self.vni.set_tone_style(tone_style);
+    }
+
+    /// Sets W to Ư rule.
+    pub fn set_type_w_to_u(&mut self, w2u: W2UType) {
+        self.config.type_w_to_u = w2u;
+        self.telex.set_type_w_to_u(w2u);
+    }
+
+    /// Enables or disables bracket transformation.
+    pub fn set_bracket_transform(&mut self, enabled: bool) {
+        self.config.bracket_transform = enabled;
+        self.telex.set_bracket_transform(enabled);
+        self.vni.set_bracket_transform(enabled);
+    }
+
     /// Resets all internal buffers (e.g. on mouse click or window unfocus).
     pub fn reset(&mut self) {
         self.current_word.clear();
@@ -157,7 +225,7 @@ impl Engine {
             }
 
             // XKey feature: Macro lookup
-            if !auto_restored && !self.current_word.is_empty() {
+            if !auto_restored && self.config.enable_macro && !self.current_word.is_empty() {
                 if let Some(expansion) = self.macro_table.expand(&self.current_word) {
                     backspaces = self.current_word.chars().count();
                     commit_text = expansion;

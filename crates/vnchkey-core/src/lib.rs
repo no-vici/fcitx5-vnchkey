@@ -17,7 +17,7 @@ pub mod macros;
 pub mod iki;
 pub mod sentinel;
 
-pub use engine::{Engine, InputMethod, ToneStyle, EngineConfig, EngineOutput};
+pub use engine::{Engine, InputMethod, ToneStyle, EngineConfig, EngineOutput, W2UType};
 pub use telex::TelexEngine;
 pub use vni::VniEngine;
 pub use auto_restore::EnglishAutoRestore;

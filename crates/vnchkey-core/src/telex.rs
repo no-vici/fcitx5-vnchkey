@@ -40,6 +40,21 @@ impl TelexEngine {
         }
     }
 
+    /// Sets the tone style convention.
+    pub fn set_tone_style(&mut self, tone_style: ToneStyle) {
+        self.tone_style = tone_style;
+    }
+
+    /// Sets the W to Ư rule.
+    pub fn set_type_w_to_u(&mut self, w2u: W2UType) {
+        self.w2u = w2u;
+    }
+
+    /// Enables or disables bracket transformation.
+    pub fn set_bracket_transform(&mut self, enabled: bool) {
+        self.bracket_transform = enabled;
+    }
+
     /// Transforms raw strokes using Telex rules.
     /// Returns (transformed_string, was_transformed).
     pub fn feed(&self, input: &str) -> (String, bool) {

@@ -373,9 +373,19 @@ makepkg -si
 
 ---
 
-### 5.4. Cửa Sổ Cài Đặt Fcitx5 vnchKey Settings (Trực Quan Theo Chuẩn fcitx5-lilypad)
+### 5.4. Menu Nhanh Trực Tiếp Trên Fcitx5 & Cửa Sổ Cài Đặt 100% Native Rust
 
-Sau khi cài đặt, bạn có thể mở giao diện cài đặt bằng một trong các cách sau:
+vnchKey tích hợp sâu trực tiếp vào Fcitx5 với hai cơ chế điều khiển hiện đại, **hoàn toàn viết bằng 100% Safe Rust**, không phụ thuộc Python:
+
+#### 1. Menu Nhanh Trên Khay Hệ Thống (Status Area Quick Menu)
+Khi vnchKey được kích hoạt, biểu tượng trên thanh tác vụ / khay hệ thống Fcitx5 hiển thị nhãn kiểu gõ hiện tại (`VNI`, `Telex`, `Auto`). Nhấp vào biểu tượng sẽ mở ngay Menu Nhanh:
+* **Kiểu gõ**: VNI, Telex, Tự Động (Auto Telex & VNI).
+* **Bảng mã**: Unicode chuẩn, Unicode Tổ Hợp, TCVN3 (ABC).
+* **Bật/Tắt tức thì**: Khôi phục tiếng Anh (GoNhanh), Gõ tắt (Macro), Kiểm tra chính tả.
+* **Cài đặt Fcitx5 vnchKey...**: Mở cửa sổ cấu hình chi tiết.
+
+#### 2. Cửa Sổ Cài Đặt Fcitx5 vnchKey Settings (100% Native Rust)
+Giao diện đồ hoạ được viết bằng Rust native (`egui` / `eframe`), khởi động tức thì trong mili-giây, thiết kế thanh thoát theo chuẩn Catppuccin / Lilypad dark theme với typography rõ nét, tinh tế:
 1. Mở từ Application Menu / Tìm kiếm ứng dụng: **Fcitx5 vnchKey Settings**
 2. Hoặc chạy lệnh trong terminal (chuẩn theo định dạng `fcitx5-*-settings` như lilypad):
 ```bash
@@ -386,13 +396,14 @@ vnchkey-settings
 
 Giao diện cài đặt hỗ trợ đầy đủ 10 danh mục:
 * **General**: Chọn kiểu gõ (**VNI**, **Telex**, hoặc **Auto**), chế độ (**Uinput Smooth** hoặc **Native Fcitx5 Direct Commit**), bảng mã đầu ra (**Unicode**, **Unicode Tổ Hợp**, **TCVN3**), tuỳ chọn gõ phím `w` thành `ư`, chuyển dấu ngoặc vuông `[` thành `ơ` và `]` thành `ư`.
-* **Typing**: Quy tắc dấu thanh (Chuẩn mới `oà, uý` / Chuẩn cũ `òa, úy`), Smart Horn tự động thêm râu cho `uo` (`duoc95` -> `được`), GoNhanh tự động khôi phục từ tiếng Anh, XKey Smart Casing.
+* **Typing**: Quy tắc dấu thanh (Chuẩn mới `oà, uý` / Chuẩn cũ `òa, úy`), Smart Horn tự động thêm râu cho `uo` (`duoc95` -> `được`), GoNhanh tự động khôi phục từ tiếng Anh, XKey Smart Casing, Gõ nhanh phụ âm đầu (`cc` -> `ch`, `gg` -> `gi`).
 * **Applications**: Quản lý danh sách ứng dụng bỏ qua (Bypass cho terminal, game, v.v.).
 * **Macros**: Bảng quản lý gõ tắt trực quan (Thêm, Xoá, Nhập, Xuất file).
 * **Dictionary**: Quản lý từ điển từ ngữ chuyên ngành của người dùng.
-* **Keymap & Shortcuts**: Xem quy ước phím và tuỳ biến phím tắt chuyển đổi bộ gõ.
-* **Appearance**: Tuỳ chỉnh biểu tượng khay hệ thống (Tray Icon).
+* **Keymap & Shortcuts**: Xem bảng quy ước phím gõ VNI/Telex và tuỳ biến phím tắt chuyển đổi bộ gõ.
+* **Appearance**: Tuỳ chỉnh biểu tượng khay hệ thống (Default, Breeze Dark, Monochrome White, Minimal) và huy hiệu trạng thái.
 * **Backup**: Xuất / Nhập toàn bộ cấu hình ra tệp JSON hoặc khôi phục mặc định gốc.
+* **About**: Thông tin phiên bản, bản quyền GPLv3, liên kết báo lỗi, yêu cầu tính năng và xuất nhật ký gỡ lỗi (Export Debug Logs).
 
 #### Cách 2: Biên dịch trực tiếp bằng Cargo
 ```bash

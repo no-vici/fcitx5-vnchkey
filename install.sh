@@ -99,11 +99,9 @@ sudo cp -r data/icons/breeze "$PREFIX/share/icons/"
 sudo cp -r data/icons/breeze-dark "$PREFIX/share/icons/"
 sudo gtk-update-icon-cache -q -t -f "$PREFIX/share/icons/hicolor" 2>/dev/null || true
 
-# Settings GUI Application
-sudo install -Dm755 bin/fcitx5-vnchkey-settings "$PREFIX/bin/fcitx5-vnchkey-settings"
+# Native 100% Rust Settings GUI Application
+sudo install -Dm755 "${TARGET_DIR}/fcitx5-vnchkey-settings" "$PREFIX/bin/fcitx5-vnchkey-settings"
 sudo ln -sf fcitx5-vnchkey-settings "$PREFIX/bin/vnchkey-settings"
-sudo mkdir -p "$PREFIX/share/fcitx5-vnchkey"
-sudo cp -r settings-gui "$PREFIX/share/fcitx5-vnchkey/"
 sudo install -Dm644 data/org.fcitx.Fcitx5.Addon.Vnchkey.Settings.desktop "$PREFIX/share/applications/org.fcitx.Fcitx5.Addon.Vnchkey.Settings.desktop"
 
 echo -e "\n${GREEN}==> 4/4. Thiết lập quyền kernel Linux /dev/uinput...${NC}"

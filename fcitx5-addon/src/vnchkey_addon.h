@@ -31,6 +31,14 @@ extern "C" {
     void fcitx5_vnchkey_handle_backspace(void* ctx);
     void fcitx5_vnchkey_load_macros(void* ctx, const char* path);
     void fcitx5_vnchkey_free_string(char* s);
+    void fcitx5_vnchkey_set_method(void* ctx, uint32_t method);
+    uint32_t fcitx5_vnchkey_get_method(void* ctx);
+    void fcitx5_vnchkey_set_auto_restore(void* ctx, bool enabled);
+    bool fcitx5_vnchkey_get_auto_restore(void* ctx);
+    void fcitx5_vnchkey_set_macro_enabled(void* ctx, bool enabled);
+    bool fcitx5_vnchkey_get_macro_enabled(void* ctx);
+    void fcitx5_vnchkey_set_bracket_transform(void* ctx, bool enabled);
+    void fcitx5_vnchkey_set_w2u(void* ctx, uint32_t mode);
 }
 
 class VnchkeyEngine : public fcitx::InputMethodEngineV2 {

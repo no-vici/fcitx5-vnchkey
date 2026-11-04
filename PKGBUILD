@@ -7,8 +7,6 @@ arch=('x86_64')
 url="https://github.com/no-vici/fcitx5-vnchkey"
 license=('GPL-3.0-or-later')
 depends=('fcitx5')
-optdepends=('python-qtpy: graphical settings GUI'
-            'python-pyqt5: settings window Qt backend')
 makedepends=('git' 'cargo' 'rust' 'cmake' 'extra-cmake-modules' 'gcc' 'ninja')
 provides=('fcitx5-vnchkey')
 conflicts=('fcitx5-vnchkey')
@@ -68,11 +66,9 @@ package() {
   cp -r data/icons/breeze "$pkgdir/usr/share/icons/"
   cp -r data/icons/breeze-dark "$pkgdir/usr/share/icons/"
 
-  # Cài đặt ứng dụng cấu hình Settings GUI (fcitx5-vnchkey-settings & alias vnchkey-settings)
-  install -Dm755 bin/fcitx5-vnchkey-settings "$pkgdir/usr/bin/fcitx5-vnchkey-settings"
+  # Cài đặt ứng dụng cấu hình Settings GUI native 100% Rust (fcitx5-vnchkey-settings & alias vnchkey-settings)
+  install -Dm755 target/release/fcitx5-vnchkey-settings "$pkgdir/usr/bin/fcitx5-vnchkey-settings"
   ln -sf fcitx5-vnchkey-settings "$pkgdir/usr/bin/vnchkey-settings"
-  mkdir -p "$pkgdir/usr/share/fcitx5-vnchkey"
-  cp -r settings-gui "$pkgdir/usr/share/fcitx5-vnchkey/"
   install -Dm644 data/org.fcitx.Fcitx5.Addon.Vnchkey.Settings.desktop "$pkgdir/usr/share/applications/org.fcitx.Fcitx5.Addon.Vnchkey.Settings.desktop"
 }
 

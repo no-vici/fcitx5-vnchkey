@@ -1,3 +1,13 @@
 #!/bin/sh
-exec python3 /usr/share/fcitx5-vnchkey/settings-gui/main.py "$@"
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+REPO_DIR="$(dirname "$SCRIPT_DIR")"
 
+if [ -x "$REPO_DIR/target/release/fcitx5-vnchkey-settings" ]; then
+    exec "$REPO_DIR/target/release/fcitx5-vnchkey-settings" "$@"
+elif [ -x "/usr/bin/fcitx5-vnchkey-settings" ]; then
+    exec /usr/bin/fcitx5-vnchkey-settings "$@"
+elif [ -x "/tmp/cargo-vnchkey-target/release/fcitx5-vnchkey-settings" ]; then
+    exec /tmp/cargo-vnchkey-target/release/fcitx5-vnchkey-settings "$@"
+else
+    cd "$REPO_DIR" && exec cargo run --release -p fcitx5-vnchkey-settings -- "$@"
+fi

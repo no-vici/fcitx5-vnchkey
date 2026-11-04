@@ -110,3 +110,88 @@ pub unsafe extern "C" fn fcitx5_vnchkey_load_macros(
         }
     }
 }
+
+/// Sets active input method (0 = Auto, 1 = Telex, 2 = VNI).
+#[no_mangle]
+pub unsafe extern "C" fn fcitx5_vnchkey_set_method(ctx: *mut Fcitx5VnchkeyContext, method: u32) {
+    if !ctx.is_null() {
+        let m = match method {
+            1 => vnchkey_core::InputMethod::Telex,
+            2 => vnchkey_core::InputMethod::Vni,
+            _ => vnchkey_core::InputMethod::Auto,
+        };
+        (*ctx).engine.set_method(m);
+    }
+}
+
+/// Returns active input method (0 = Auto, 1 = Telex, 2 = VNI).
+#[no_mangle]
+pub unsafe extern "C" fn fcitx5_vnchkey_get_method(ctx: *mut Fcitx5VnchkeyContext) -> u32 {
+    if !ctx.is_null() {
+        match (*ctx).engine.method() {
+            vnchkey_core::InputMethod::Auto => 0,
+            vnchkey_core::InputMethod::Telex => 1,
+            vnchkey_core::InputMethod::Vni => 2,
+            vnchkey_core::InputMethod::SimpleTelex => 3,
+        }
+    } else {
+        0
+    }
+}
+
+/// Configures GoNhanh English auto-restore.
+#[no_mangle]
+pub unsafe extern "C" fn fcitx5_vnchkey_set_auto_restore(ctx: *mut Fcitx5VnchkeyContext, enabled: bool) {
+    if !ctx.is_null() {
+        (*ctx).engine.set_auto_restore_english(enabled);
+    }
+}
+
+/// Returns whether English auto-restore is enabled.
+#[no_mangle]
+pub unsafe extern "C" fn fcitx5_vnchkey_get_auto_restore(ctx: *mut Fcitx5VnchkeyContext) -> bool {
+    if !ctx.is_null() {
+        (*ctx).engine.auto_restore_english()
+    } else {
+        false
+    }
+}
+
+/// Configures macro expansion.
+#[no_mangle]
+pub unsafe extern "C" fn fcitx5_vnchkey_set_macro_enabled(ctx: *mut Fcitx5VnchkeyContext, enabled: bool) {
+    if !ctx.is_null() {
+        (*ctx).engine.set_enable_macro(enabled);
+    }
+}
+
+/// Returns whether macro expansion is enabled.
+#[no_mangle]
+pub unsafe extern "C" fn fcitx5_vnchkey_get_macro_enabled(ctx: *mut Fcitx5VnchkeyContext) -> bool {
+    if !ctx.is_null() {
+        (*ctx).engine.macro_enabled()
+    } else {
+        false
+    }
+}
+
+/// Configures bracket transformation ([ -> ơ, ] -> ư).
+#[no_mangle]
+pub unsafe extern "C" fn fcitx5_vnchkey_set_bracket_transform(ctx: *mut Fcitx5VnchkeyContext, enabled: bool) {
+    if !ctx.is_null() {
+        (*ctx).engine.set_bracket_transform(enabled);
+    }
+}
+
+/// Configures type w to produce ư rule (0 = NonStart, 1 = Always, 2 = Disabled).
+#[no_mangle]
+pub unsafe extern "C" fn fcitx5_vnchkey_set_w2u(ctx: *mut Fcitx5VnchkeyContext, mode: u32) {
+    if !ctx.is_null() {
+        let w2u = match mode {
+            1 => vnchkey_core::W2UType::Always,
+            2 => vnchkey_core::W2UType::Disabled,
+            _ => vnchkey_core::W2UType::NonStart,
+        };
+        (*ctx).engine.set_type_w_to_u(w2u);
+    }
+}

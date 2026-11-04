@@ -91,15 +91,19 @@ install(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/../data/icons/breeze-dark"
     DESTINATION "${CMAKE_INSTALL_DATADIR}/icons"
 )
 
-# Install Settings GUI application
-install(PROGRAMS
-    "${CMAKE_CURRENT_SOURCE_DIR}/../bin/fcitx5-vnchkey-settings"
-    "${CMAKE_CURRENT_SOURCE_DIR}/../bin/vnchkey-settings"
-    DESTINATION "${CMAKE_INSTALL_BINDIR}"
-)
-install(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/../settings-gui"
-    DESTINATION "${CMAKE_INSTALL_DATADIR}/fcitx5-vnchkey"
-)
+# Install Native Rust Settings GUI application
+if(EXISTS "${RUST_TARGET_DIR}/fcitx5-vnchkey-settings")
+    install(PROGRAMS
+        "${RUST_TARGET_DIR}/fcitx5-vnchkey-settings"
+        DESTINATION "${CMAKE_INSTALL_BINDIR}"
+    )
+elseif(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/../bin/fcitx5-vnchkey-settings")
+    install(PROGRAMS
+        "${CMAKE_CURRENT_SOURCE_DIR}/../bin/fcitx5-vnchkey-settings"
+        DESTINATION "${CMAKE_INSTALL_BINDIR}"
+    )
+endif()
+
 install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/../data/org.fcitx.Fcitx5.Addon.Vnchkey.Settings.desktop"
     DESTINATION "${CMAKE_INSTALL_DATADIR}/applications"
 )
