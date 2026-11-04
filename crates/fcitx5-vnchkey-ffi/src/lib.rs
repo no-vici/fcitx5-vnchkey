@@ -96,3 +96,17 @@ pub unsafe extern "C" fn fcitx5_vnchkey_handle_backspace(ctx: *mut Fcitx5Vnchkey
         ctx.engine.handle_backspace();
     }
 }
+
+/// Loads custom macros from a configuration file.
+#[no_mangle]
+pub unsafe extern "C" fn fcitx5_vnchkey_load_macros(
+    ctx: *mut Fcitx5VnchkeyContext,
+    path: *const c_char,
+) {
+    if !ctx.is_null() && !path.is_null() {
+        if let Ok(c_str) = std::ffi::CStr::from_ptr(path).to_str() {
+            let ctx = &mut *ctx;
+            ctx.engine.load_macros_from_file(c_str);
+        }
+    }
+}

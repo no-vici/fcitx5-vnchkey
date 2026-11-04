@@ -7,18 +7,33 @@ use crate::telex::{is_vietnamese_vowel, place_tone};
 #[derive(Debug, Clone)]
 pub struct VniEngine {
     tone_style: ToneStyle,
+    bracket_transform: bool,
 }
 
 impl VniEngine {
-    /// Creates a new VniEngine.
+    /// Creates a new VniEngine with default settings.
     pub fn new(tone_style: ToneStyle) -> Self {
-        Self { tone_style }
+        Self {
+            tone_style,
+            bracket_transform: false,
+        }
+    }
+
+    /// Creates a new VniEngine with bracket transform option.
+    pub fn with_bracket_transform(tone_style: ToneStyle, bracket_transform: bool) -> Self {
+        Self {
+            tone_style,
+            bracket_transform,
+        }
     }
 
     /// Transforms raw strokes using VNI rules.
     /// Returns (transformed_string, was_transformed).
     pub fn feed(&self, input: &str) -> (String, bool) {
-        if input.is_empty() || !input.chars().any(|c| c.is_ascii_digit()) {
+        if input.is_empty() {
+            return (String::new(), false);
+        }
+        if !self.bracket_transform && !input.chars().any(|c| c.is_ascii_digit()) {
             return (input.to_string(), false);
         }
 
@@ -27,6 +42,51 @@ impl VniEngine {
         let mut modified = false;
 
         for ch in input.chars() {
+            if self.bracket_transform {
+                match ch {
+                    '[' => {
+                        if letters.last() == Some(&'ơ') {
+                            letters.pop();
+                            letters.push('[');
+                        } else {
+                            letters.push('ơ');
+                            modified = true;
+                        }
+                        continue;
+                    }
+                    ']' => {
+                        if letters.last() == Some(&'ư') {
+                            letters.pop();
+                            letters.push(']');
+                        } else {
+                            letters.push('ư');
+                            modified = true;
+                        }
+                        continue;
+                    }
+                    '{' => {
+                        if letters.last() == Some(&'Ơ') {
+                            letters.pop();
+                            letters.push('{');
+                        } else {
+                            letters.push('Ơ');
+                            modified = true;
+                        }
+                        continue;
+                    }
+                    '}' => {
+                        if letters.last() == Some(&'Ư') {
+                            letters.pop();
+                            letters.push('}');
+                        } else {
+                            letters.push('Ư');
+                            modified = true;
+                        }
+                        continue;
+                    }
+                    _ => {}
+                }
+            }
             if ch.is_ascii_digit() {
                 match ch {
                     '1'..='5' => {

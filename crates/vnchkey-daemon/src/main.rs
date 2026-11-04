@@ -48,8 +48,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         tone_style,
         auto_restore_english: args.auto_restore,
         smart_casing: args.smart_casing,
-        quick_undo: true,
-        sentinel_enabled: true,
+        ..EngineConfig::default()
     };
 
     let mut _engine = Engine::new(config);

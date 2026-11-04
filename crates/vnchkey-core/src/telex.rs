@@ -2,16 +2,42 @@
 
 use crate::engine::ToneStyle;
 
+/// Behavior of typing key 'w'.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum W2UType {
+    /// Only produce ư when not at the start of a word (default)
+    NonStart,
+    /// Always produce ư
+    Always,
+    /// Never produce standalone ư
+    Disabled,
+}
+
 /// Telex engine processing character combinations.
 #[derive(Debug, Clone)]
 pub struct TelexEngine {
     tone_style: ToneStyle,
+    w2u: W2UType,
+    bracket_transform: bool,
 }
 
 impl TelexEngine {
-    /// Creates a new TelexEngine.
+    /// Creates a new TelexEngine with modern defaults.
     pub fn new(tone_style: ToneStyle) -> Self {
-        Self { tone_style }
+        Self {
+            tone_style,
+            w2u: W2UType::NonStart,
+            bracket_transform: false,
+        }
+    }
+
+    /// Creates a new TelexEngine with custom options.
+    pub fn with_options(tone_style: ToneStyle, w2u: W2UType, bracket_transform: bool) -> Self {
+        Self {
+            tone_style,
+            w2u,
+            bracket_transform,
+        }
     }
 
     /// Transforms raw strokes using Telex rules.
@@ -27,6 +53,53 @@ impl TelexEngine {
 
         for ch in input.chars() {
             let lower = ch.to_ascii_lowercase();
+
+            // Bracket transformation: [ -> ơ, ] -> ư, { -> Ơ, } -> Ư
+            if self.bracket_transform {
+                match ch {
+                    '[' => {
+                        if letters.last() == Some(&'ơ') {
+                            letters.pop();
+                            letters.push('[');
+                        } else {
+                            letters.push('ơ');
+                            modified = true;
+                        }
+                        continue;
+                    }
+                    ']' => {
+                        if letters.last() == Some(&'ư') {
+                            letters.pop();
+                            letters.push(']');
+                        } else {
+                            letters.push('ư');
+                            modified = true;
+                        }
+                        continue;
+                    }
+                    '{' => {
+                        if letters.last() == Some(&'Ơ') {
+                            letters.pop();
+                            letters.push('{');
+                        } else {
+                            letters.push('Ơ');
+                            modified = true;
+                        }
+                        continue;
+                    }
+                    '}' => {
+                        if letters.last() == Some(&'Ư') {
+                            letters.pop();
+                            letters.push('}');
+                        } else {
+                            letters.push('Ư');
+                            modified = true;
+                        }
+                        continue;
+                    }
+                    _ => {}
+                }
+            }
 
             // Tone keys: s (1), f (2), r (3), x (4), j (5), z (0)
             // A tone key applies only if at least one vowel has been typed
@@ -137,17 +210,40 @@ impl TelexEngine {
                 }
                 if u_found { continue; }
 
-                // 5. Standalone 'w' -> 'ư'
-                if let Some(last) = letters.last_mut() {
-                    let l = last.to_lowercase().next().unwrap();
-                    if l == 'ư' {
-                        *last = if last.is_uppercase() { 'W' } else { 'w' };
+                // 5. Standalone 'w' -> 'ư' based on w2u mode
+                match self.w2u {
+                    W2UType::Disabled => {
+                        letters.push(ch);
+                    }
+                    W2UType::NonStart => {
+                        if letters.is_empty() {
+                            letters.push(ch);
+                        } else {
+                            if let Some(last) = letters.last_mut() {
+                                let l = last.to_lowercase().next().unwrap();
+                                if l == 'ư' {
+                                    *last = if last.is_uppercase() { 'W' } else { 'w' };
+                                    modified = true;
+                                    continue;
+                                }
+                            }
+                            letters.push(if is_upper { 'Ư' } else { 'ư' });
+                            modified = true;
+                        }
+                    }
+                    W2UType::Always => {
+                        if let Some(last) = letters.last_mut() {
+                            let l = last.to_lowercase().next().unwrap();
+                            if l == 'ư' {
+                                *last = if last.is_uppercase() { 'W' } else { 'w' };
+                                modified = true;
+                                continue;
+                            }
+                        }
+                        letters.push(if is_upper { 'Ư' } else { 'ư' });
                         modified = true;
-                        continue;
                     }
                 }
-                letters.push(if is_upper { 'Ư' } else { 'ư' });
-                modified = true;
                 continue;
             }
 
@@ -415,12 +511,29 @@ mod tests {
     }
 
     #[test]
+    fn test_telex_bracket_transform() {
+        let telex_bracket = TelexEngine::with_options(ToneStyle::Modern, W2UType::NonStart, true);
+        assert_eq!(telex_bracket.feed("[").0, "ơ");
+        assert_eq!(telex_bracket.feed("]").0, "ư");
+        assert_eq!(telex_bracket.feed("{").0, "Ơ");
+        assert_eq!(telex_bracket.feed("}").0, "Ư");
+        // Pressing twice returns raw bracket
+        assert_eq!(telex_bracket.feed("[[").0, "[");
+        assert_eq!(telex_bracket.feed("]]").0, "]");
+    }
+
+    #[test]
     fn test_telex_standalone_w_and_initial_consonants() {
-        let telex = TelexEngine::new(ToneStyle::Modern);
-        assert_eq!(telex.feed("w").0, "ư");
-        assert_eq!(telex.feed("sa").0, "sa");
-        assert_eq!(telex.feed("sang").0, "sang");
-        assert_eq!(telex.feed("trang").0, "trang");
-        assert_eq!(telex.feed("xa").0, "xa");
+        let telex_non_start = TelexEngine::with_options(ToneStyle::Modern, W2UType::NonStart, false);
+        // In NonStart mode, initial 'w' remains 'w' (e.g. windows, web)
+        assert_eq!(telex_non_start.feed("w").0, "w");
+        assert_eq!(telex_non_start.feed("sa").0, "sa");
+        assert_eq!(telex_non_start.feed("sang").0, "sang");
+        assert_eq!(telex_non_start.feed("trang").0, "trang");
+        assert_eq!(telex_non_start.feed("xa").0, "xa");
+
+        // In Always mode, initial 'w' produces 'ư'
+        let telex_always = TelexEngine::with_options(ToneStyle::Modern, W2UType::Always, false);
+        assert_eq!(telex_always.feed("w").0, "ư");
     }
 }

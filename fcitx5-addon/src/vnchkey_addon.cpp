@@ -36,19 +36,25 @@ void VnchkeyEngine::loadConfig() {
     if (!home) return;
     std::string path = std::string(home) + "/.config/fcitx5/conf/vnchkey.conf";
     std::ifstream file(path);
-    if (!file.is_open()) return;
-
-    std::string line;
-    while (std::getline(file, line)) {
-        if (line.rfind("InputMethod=", 0) == 0) {
-            std::string val = line.substr(12);
-            size_t start = val.find_first_not_of(" \t\"'");
-            size_t end = val.find_last_not_of(" \t\"'");
-            if (start != std::string::npos && end != std::string::npos) {
-                config_method_ = val.substr(start, end - start + 1);
+    if (file.is_open()) {
+        std::string line;
+        while (std::getline(file, line)) {
+            if (line.rfind("InputMethod=", 0) == 0) {
+                std::string val = line.substr(12);
+                size_t start = val.find_first_not_of(" \t\"'");
+                size_t end = val.find_last_not_of(" \t\"'");
+                if (start != std::string::npos && end != std::string::npos) {
+                    config_method_ = val.substr(start, end - start + 1);
+                }
             }
         }
     }
+
+    // Load macro table if configured
+    std::string macro_path = std::string(home) + "/.config/fcitx5/conf/vnchkey-macro-table.conf";
+    if (ctx_auto_) fcitx5_vnchkey_load_macros(ctx_auto_, macro_path.c_str());
+    if (ctx_telex_) fcitx5_vnchkey_load_macros(ctx_telex_, macro_path.c_str());
+    if (ctx_vni_) fcitx5_vnchkey_load_macros(ctx_vni_, macro_path.c_str());
 }
 
 void VnchkeyEngine::reloadConfig() {

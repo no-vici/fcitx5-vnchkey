@@ -9,7 +9,7 @@ license=('GPL-3.0-or-later')
 depends=('fcitx5')
 optdepends=('python-qtpy: graphical settings GUI'
             'python-pyqt5: settings window Qt backend')
-makedepends=('git' 'cargo' 'rust' 'cmake' 'extra-cmake-modules' 'gcc')
+makedepends=('git' 'cargo' 'rust' 'cmake' 'extra-cmake-modules' 'gcc' 'ninja')
 provides=('fcitx5-vnchkey')
 conflicts=('fcitx5-vnchkey')
 source=("git+https://github.com/no-vici/fcitx5-vnchkey.git")
@@ -36,8 +36,8 @@ build() {
   if [ -d "fcitx5-addon" ]; then
     mkdir -p fcitx5-addon/build
     cd fcitx5-addon/build
-    cmake -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_BUILD_TYPE=Release ..
-    cmake --build . -j"$(nproc)"
+    cmake -GNinja -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_BUILD_TYPE=Release ..
+    ninja
     cd ../..
   fi
 }

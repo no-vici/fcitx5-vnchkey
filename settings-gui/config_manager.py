@@ -2,10 +2,12 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 """
 Configuration Manager for vnchKey.
-Reads and writes ~/.config/fcitx5/conf/vnchkey.conf, macro tables, and dictionaries.
+Reads and writes ~/.config/fcitx5/conf/vnchkey.conf, macro tables, dictionaries, and app overrides.
 """
 
+import json
 import os
+import shutil
 import subprocess
 
 
@@ -16,17 +18,26 @@ class ConfigManager:
         self.conf_path = os.path.join(self.config_dir, "vnchkey.conf")
         self.macro_path = os.path.join(self.config_dir, "vnchkey-macro-table.conf")
         self.dict_path = os.path.join(self.config_dir, "vnchkey-dictionary.conf")
+        self.app_modes_path = os.path.join(self.config_dir, "vnchkey-app-modes.conf")
 
         self.default_config = {
-            "InputMethod": "Auto",  # Auto, Telex, VNI
-            "Mode": "Native Fcitx5 (Direct Commit)",  # Native, Uinput (Smooth)
+            "InputMethod": "VNI",  # Auto, Telex, VNI
+            "Mode": "Uinput (Smooth)",  # Native Fcitx5 (Direct Commit), Uinput (Smooth)
             "OutputCharset": "Unicode",
-            "ModernStyle": "True",  # True: oà, uý; False: hòa, úy
-            "SmartHorn": "True",    # True: auto horn on duoc -> được, nuoc -> nước
-            "AutoRestoreEnglish": "True",  # GoNhanh innovation
-            "SmartCasing": "True",  # XKey innovation
-            "EnableMacro": "True",
             "TypeW2U": "Non-Start",  # Non-Start, Always, Disabled
+            "BracketTransform": "Disabled",  # Disabled, Enabled
+            "ModernStyle": "True",  # True: oà, uý; False: hòa, úy
+            "SmartHorn": "True",  # True: duoc95 -> được, nuoc1 -> nước
+            "AutoRestoreEnglish": "True",  # GoNhanh
+            "SmartCasing": "True",  # XKey
+            "FreeMarking": "True",
+            "FastConsonantDoubling": "False",
+            "EnableMacro": "True",
+            "CapitalizeMacro": "True",
+            "SwitchShortcut": "Ctrl+Shift",
+            "TempEnglishMode": "Disabled",
+            "TrayIconTheme": "Default",
+            "ShowIndicatorBadge": "True",
         }
 
     def load_config(self) -> dict:
@@ -63,9 +74,10 @@ class ConfigManager:
     def load_macros(self) -> list:
         macros = []
         if not os.path.exists(self.macro_path):
-            # Default helpful Vietnamese abbreviations
             return [
                 ("vn", "Việt Nam"),
+                ("ch", "Cộng Hòa"),
+                ("td", "Tự Do"),
                 ("dc", "được"),
                 ("ko", "không"),
                 ("ng", "người"),
@@ -122,10 +134,92 @@ class ConfigManager:
         except Exception as e:
             print(f"Error saving dictionary: {e}")
 
+    def load_app_modes(self) -> list:
+        app_modes = []
+        if not os.path.exists(self.app_modes_path):
+            return [
+                ("alacritty", "Bypass (Raw English)"),
+                ("kitty", "Bypass (Raw English)"),
+                ("steam", "Bypass (Raw English)"),
+                ("code", "Direct Commit (Smooth)"),
+            ]
+
+        try:
+            with open(self.app_modes_path, "r", encoding="utf-8") as f:
+                for line in f:
+                    line = line.strip()
+                    if not line or line.startswith("#"):
+                        continue
+                    if "=" in line:
+                        app, mode = line.split("=", 1)
+                        app_modes.append((app.strip(), mode.strip()))
+        except Exception as e:
+            print(f"Error loading app modes: {e}")
+        return app_modes
+
+    def save_app_modes(self, app_modes: list):
+        try:
+            with open(self.app_modes_path, "w", encoding="utf-8") as f:
+                f.write("# vnchKey Per-Application Modes\n")
+                for app, mode in app_modes:
+                    if app.strip():
+                        f.write(f"{app.strip()}={mode.strip()}\n")
+            self.reload_fcitx5()
+        except Exception as e:
+            print(f"Error saving app modes: {e}")
+
+    def export_backup(self, filepath: str) -> bool:
+        try:
+            data = {
+                "config": self.load_config(),
+                "macros": self.load_macros(),
+                "dictionary": self.load_dictionary(),
+                "app_modes": self.load_app_modes(),
+            }
+            with open(filepath, "w", encoding="utf-8") as f:
+                json.dump(data, f, ensure_ascii=False, indent=2)
+            return True
+        except Exception as e:
+            print(f"Error exporting backup: {e}")
+            return False
+
+    def import_backup(self, filepath: str) -> bool:
+        try:
+            with open(filepath, "r", encoding="utf-8") as f:
+                data = json.load(f)
+            if "config" in data:
+                self.save_config(data["config"])
+            if "macros" in data:
+                self.save_macros(data["macros"])
+            if "dictionary" in data:
+                self.save_dictionary(data["dictionary"])
+            if "app_modes" in data:
+                self.save_app_modes(data["app_modes"])
+            return True
+        except Exception as e:
+            print(f"Error importing backup: {e}")
+            return False
+
+    def reset_to_defaults(self):
+        self.save_config(self.default_config)
+        if os.path.exists(self.macro_path):
+            os.remove(self.macro_path)
+        if os.path.exists(self.dict_path):
+            os.remove(self.dict_path)
+        if os.path.exists(self.app_modes_path):
+            os.remove(self.app_modes_path)
+        self.reload_fcitx5()
+
     def reload_fcitx5(self):
         """Notify Fcitx5 to reload configurations."""
+        # 1. fcitx5-remote -r
         try:
-            # 1. Try D-Bus notification
+            subprocess.run(["fcitx5-remote", "-r"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=1)
+        except Exception:
+            pass
+
+        # 2. D-Bus reload method
+        try:
             subprocess.run(
                 [
                     "gdbus", "call", "--session",

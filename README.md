@@ -371,6 +371,27 @@ cd fcitx5-vnchkey
 makepkg -si
 ```
 
+---
+
+### 5.4. Cửa Sổ Cài Đặt vnchKey Settings (Trực Quan Theo Chuẩn fcitx5-lilypad)
+
+Sau khi cài đặt, bạn có thể mở giao diện cài đặt bằng một trong hai cách:
+1. Mở từ Application Menu / Tìm kiếm ứng dụng: **vnchKey Settings**
+2. Hoặc chạy lệnh trong terminal:
+```bash
+vnchkey-settings
+```
+
+Giao diện cài đặt hỗ trợ đầy đủ 10 danh mục:
+* **General**: Chọn kiểu gõ (**VNI**, **Telex**, hoặc **Auto**), chế độ (**Uinput Smooth** hoặc **Native Fcitx5 Direct Commit**), bảng mã đầu ra (**Unicode**, **Unicode Tổ Hợp**, **TCVN3**), tuỳ chọn gõ phím `w` thành `ư`, chuyển dấu ngoặc vuông `[` thành `ơ` và `]` thành `ư`.
+* **Typing**: Quy tắc dấu thanh (Chuẩn mới `oà, uý` / Chuẩn cũ `òa, úy`), Smart Horn tự động thêm râu cho `uo` (`duoc95` -> `được`), GoNhanh tự động khôi phục từ tiếng Anh, XKey Smart Casing.
+* **Applications**: Quản lý danh sách ứng dụng bỏ qua (Bypass cho terminal, game, v.v.).
+* **Macros**: Bảng quản lý gõ tắt trực quan (Thêm, Xoá, Nhập, Xuất file).
+* **Dictionary**: Quản lý từ điển từ ngữ chuyên ngành của người dùng.
+* **Keymap & Shortcuts**: Xem quy ước phím và tuỳ biến phím tắt chuyển đổi bộ gõ.
+* **Appearance**: Tuỳ chỉnh biểu tượng khay hệ thống (Tray Icon).
+* **Backup**: Xuất / Nhập toàn bộ cấu hình ra tệp JSON hoặc khôi phục mặc định gốc.
+
 #### Cách 2: Biên dịch trực tiếp bằng Cargo
 ```bash
 git clone https://github.com/no-vici/fcitx5-vnchkey.git vnchkey

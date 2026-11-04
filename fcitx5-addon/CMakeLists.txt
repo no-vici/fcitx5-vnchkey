@@ -65,7 +65,7 @@ set_target_properties(fcitx5-vnchkey-addon PROPERTIES
 )
 
 # Install addon module
-install(TARGETS fcitx5-vnchkey-addon DESTINATION "${FCITX_INSTALL_LIBDIR}/fcitx5")
+install(TARGETS fcitx5-vnchkey-addon DESTINATION "${FCITX_INSTALL_LIBDIR}")
 
 # Install Fcitx5 addon declaration
 install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/../data/addon/vnchkey.conf"

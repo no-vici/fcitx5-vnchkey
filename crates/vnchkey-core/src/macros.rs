@@ -23,6 +23,27 @@ impl MacroTable {
         Self { entries }
     }
 
+    /// Clears all entries.
+    pub fn clear(&mut self) {
+        self.entries.clear();
+    }
+
+    /// Loads macro definitions from a configuration file (k=v per line).
+    pub fn load_from_file(&mut self, path: &str) {
+        if let Ok(content) = std::fs::read_to_string(path) {
+            self.entries.clear();
+            for line in content.lines() {
+                let line = line.trim();
+                if line.is_empty() || line.starts_with('#') {
+                    continue;
+                }
+                if let Some((k, v)) = line.split_once('=') {
+                    self.insert(k.trim().to_string(), v.trim().to_string());
+                }
+            }
+        }
+    }
+
     /// Expands an abbreviation if present in the dictionary.
     pub fn expand(&self, shortcut: &str) -> Option<String> {
         self.entries.get(shortcut.to_lowercase().as_str()).cloned()

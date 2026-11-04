@@ -46,15 +46,25 @@ if command -v cmake >/dev/null 2>&1; then
         
         mkdir -p "$SHADOW_BUILD_DIR/fcitx5-addon/build"
         cd "$SHADOW_BUILD_DIR/fcitx5-addon/build"
-        cmake -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_BUILD_TYPE=Release -DRUST_TARGET_DIR="$TARGET_DIR" ..
-        cmake --build . -j"$(nproc)"
+        if command -v ninja >/dev/null 2>&1; then
+            cmake -GNinja -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_BUILD_TYPE=Release -DRUST_TARGET_DIR="$TARGET_DIR" ..
+            ninja
+        else
+            cmake -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_BUILD_TYPE=Release -DRUST_TARGET_DIR="$TARGET_DIR" ..
+            cmake --build . -j"$(nproc)"
+        fi
         ADDON_SO="$SHADOW_BUILD_DIR/fcitx5-addon/build/fcitx5-vnchkey-addon.so"
         cd "$WORKSPACE_DIR"
     else
         mkdir -p fcitx5-addon/build
         cd fcitx5-addon/build
-        cmake -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_BUILD_TYPE=Release -DRUST_TARGET_DIR="$TARGET_DIR" ..
-        cmake --build . -j"$(nproc)"
+        if command -v ninja >/dev/null 2>&1; then
+            cmake -GNinja -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_BUILD_TYPE=Release -DRUST_TARGET_DIR="$TARGET_DIR" ..
+            ninja
+        else
+            cmake -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_BUILD_TYPE=Release -DRUST_TARGET_DIR="$TARGET_DIR" ..
+            cmake --build . -j"$(nproc)"
+        fi
         ADDON_SO="$WORKSPACE_DIR/fcitx5-addon/build/fcitx5-vnchkey-addon.so"
         cd "$WORKSPACE_DIR"
     fi

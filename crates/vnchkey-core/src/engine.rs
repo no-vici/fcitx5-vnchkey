@@ -1,6 +1,7 @@
 //! Syllable State Machine and Input Orchestrator.
 
 use crate::telex::TelexEngine;
+pub use crate::telex::W2UType;
 use crate::vni::VniEngine;
 use crate::auto_restore::EnglishAutoRestore;
 use crate::casing::CaseTracker;
@@ -45,6 +46,10 @@ pub struct EngineConfig {
     pub quick_undo: bool,
     /// Enable Sentinel Barrier N+1 protocol
     pub sentinel_enabled: bool,
+    /// Type w to produce ư rule
+    pub type_w_to_u: W2UType,
+    /// Type [ -> ơ, ] -> ư, { -> Ơ, } -> Ư
+    pub bracket_transform: bool,
 }
 
 impl Default for EngineConfig {
@@ -56,6 +61,8 @@ impl Default for EngineConfig {
             smart_casing: true,
             quick_undo: true,
             sentinel_enabled: true,
+            type_w_to_u: W2UType::NonStart,
+            bracket_transform: false,
         }
     }
 }
@@ -96,8 +103,8 @@ impl Engine {
     /// Creates a new Engine with the specified configuration.
     pub fn new(config: EngineConfig) -> Self {
         Self {
-            telex: TelexEngine::new(config.tone_style),
-            vni: VniEngine::new(config.tone_style),
+            telex: TelexEngine::with_options(config.tone_style, config.type_w_to_u, config.bracket_transform),
+            vni: VniEngine::with_bracket_transform(config.tone_style, config.bracket_transform),
             auto_restore: EnglishAutoRestore::new(),
             casing: CaseTracker::new(),
             macro_table: MacroTable::new(),
@@ -107,6 +114,11 @@ impl Engine {
             current_word: String::with_capacity(32),
             raw_strokes: String::with_capacity(32),
         }
+    }
+
+    /// Loads custom macros from configuration file.
+    pub fn load_macros_from_file(&mut self, path: &str) {
+        self.macro_table.load_from_file(path);
     }
 
     /// Resets all internal buffers (e.g. on mouse click or window unfocus).

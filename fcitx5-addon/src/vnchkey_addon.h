@@ -23,6 +23,7 @@ extern "C" {
     );
     void fcitx5_vnchkey_reset(void* ctx);
     void fcitx5_vnchkey_handle_backspace(void* ctx);
+    void fcitx5_vnchkey_load_macros(void* ctx, const char* path);
     void fcitx5_vnchkey_free_string(char* s);
 }
 
