@@ -7,14 +7,34 @@
 
 VnchkeyEngine::VnchkeyEngine(fcitx::AddonManager* manager)
     : manager_(manager) {
-    // Default to Auto mode (seamlessly supports both Telex and VNI)
-    ctx_ = fcitx5_vnchkey_init();
+    // 0: Auto (Telex & VNI), 1: Telex, 2: VNI
+    ctx_auto_ = fcitx5_vnchkey_init_with_method(0);
+    ctx_telex_ = fcitx5_vnchkey_init_with_method(1);
+    ctx_vni_ = fcitx5_vnchkey_init_with_method(2);
 }
 
 VnchkeyEngine::~VnchkeyEngine() {
-    if (ctx_) {
-        fcitx5_vnchkey_free(ctx_);
-        ctx_ = nullptr;
+    if (ctx_auto_) {
+        fcitx5_vnchkey_free(ctx_auto_);
+        ctx_auto_ = nullptr;
+    }
+    if (ctx_telex_) {
+        fcitx5_vnchkey_free(ctx_telex_);
+        ctx_telex_ = nullptr;
+    }
+    if (ctx_vni_) {
+        fcitx5_vnchkey_free(ctx_vni_);
+        ctx_vni_ = nullptr;
+    }
+}
+
+void* VnchkeyEngine::getContext(const std::string& entryName) {
+    if (entryName == "vnchkey-telex") {
+        return ctx_telex_;
+    } else if (entryName == "vnchkey-vni") {
+        return ctx_vni_;
+    } else {
+        return ctx_auto_;
     }
 }
 
@@ -37,7 +57,8 @@ void VnchkeyEngine::keyEvent(const fcitx::InputMethodEntry &entry, fcitx::KeyEve
         return;
     }
 
-    if (!ctx_) {
+    void* ctx = getContext(entry.uniqueName());
+    if (!ctx) {
         return;
     }
 
@@ -45,7 +66,7 @@ void VnchkeyEngine::keyEvent(const fcitx::InputMethodEntry &entry, fcitx::KeyEve
 
     // User pressed physical Backspace: let the app delete character naturally, sync engine state
     if (sym == FcitxKey_BackSpace) {
-        fcitx5_vnchkey_handle_backspace(ctx_);
+        fcitx5_vnchkey_handle_backspace(ctx);
         return;
     }
 
@@ -66,7 +87,7 @@ void VnchkeyEngine::keyEvent(const fcitx::InputMethodEntry &entry, fcitx::KeyEve
     size_t out_backspaces = 0;
     char* out_commit = nullptr;
 
-    int consumed = fcitx5_vnchkey_process_key(ctx_, ch, timestamp_ms, &out_backspaces, &out_commit);
+    int consumed = fcitx5_vnchkey_process_key(ctx, ch, timestamp_ms, &out_backspaces, &out_commit);
 
     if (consumed) {
         auto* ic = keyEvent.inputContext();
@@ -95,10 +116,10 @@ void VnchkeyEngine::keyEvent(const fcitx::InputMethodEntry &entry, fcitx::KeyEve
 }
 
 void VnchkeyEngine::reset(const fcitx::InputMethodEntry &entry, fcitx::InputContextEvent &event) {
-    FCITX_UNUSED(entry);
     FCITX_UNUSED(event);
-    if (ctx_) {
-        fcitx5_vnchkey_reset(ctx_);
+    void* ctx = getContext(entry.uniqueName());
+    if (ctx) {
+        fcitx5_vnchkey_reset(ctx);
     }
 }
 

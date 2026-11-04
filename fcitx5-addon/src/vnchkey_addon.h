@@ -7,6 +7,7 @@
 #include <fcitx/event.h>
 #include <cstdint>
 #include <cstddef>
+#include <string>
 
 // C-ABI declarations exported from Rust (crates/fcitx5-vnchkey-ffi)
 extern "C" {
@@ -34,8 +35,12 @@ public:
     void reset(const fcitx::InputMethodEntry &entry, fcitx::InputContextEvent &event) override;
 
 private:
+    void* getContext(const std::string& entryName);
+
     fcitx::AddonManager* manager_;
-    void* ctx_ = nullptr;
+    void* ctx_auto_ = nullptr;
+    void* ctx_telex_ = nullptr;
+    void* ctx_vni_ = nullptr;
     bool is_forwarding_ = false;
 };
 
@@ -45,4 +50,3 @@ public:
         return new VnchkeyEngine(manager);
     }
 };
-

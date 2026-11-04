@@ -54,9 +54,11 @@ package() {
     install -Dm755 fcitx5-addon/build/fcitx5-vnchkey-addon.so "$pkgdir/usr/lib/fcitx5/fcitx5-vnchkey-addon.so"
   fi
 
-  # Cài đặt metadata cấu hình cho Fcitx5 Settings (Hợp nhất vnchKey)
+  # Cài đặt metadata cấu hình cho Fcitx5 Settings (Auto, Telex, VNI)
   install -Dm644 data/addon/vnchkey.conf "$pkgdir/usr/share/fcitx5/addon/vnchkey.conf"
   install -Dm644 data/inputmethod/vnchkey.conf "$pkgdir/usr/share/fcitx5/inputmethod/vnchkey.conf"
+  install -Dm644 data/inputmethod/vnchkey-telex.conf "$pkgdir/usr/share/fcitx5/inputmethod/vnchkey-telex.conf"
+  install -Dm644 data/inputmethod/vnchkey-vni.conf "$pkgdir/usr/share/fcitx5/inputmethod/vnchkey-vni.conf"
   install -Dm644 data/icons/vnchkey.png "$pkgdir/usr/share/icons/hicolor/128x128/apps/vnchkey.png"
 }
 

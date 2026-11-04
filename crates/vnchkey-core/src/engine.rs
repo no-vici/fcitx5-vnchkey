@@ -220,3 +220,46 @@ impl Engine {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn type_word(engine: &mut Engine, word: &str) -> String {
+        let mut result = String::new();
+        for (i, ch) in word.chars().enumerate() {
+            let out = engine.process_key(ch, (i * 50) as f64);
+            if out.backspaces > 0 {
+                let current_len = result.chars().count();
+                let keep = current_len.saturating_sub(out.backspaces);
+                result = result.chars().take(keep).collect();
+            }
+            result.push_str(&out.commit_text);
+        }
+        result
+    }
+
+    #[test]
+    fn test_engine_auto_telex_and_vni() {
+        let mut engine = Engine::new(EngineConfig {
+            method: InputMethod::Auto,
+            ..EngineConfig::default()
+        });
+
+        // Test Telex in Auto mode: dduocwj -> được
+        let r1 = type_word(&mut engine, "dduocwj ");
+        assert_eq!(r1, "được ");
+
+        // Test VNI in Auto mode: duoc975 -> được
+        let r2 = type_word(&mut engine, "duoc975 ");
+        assert_eq!(r2, "được ");
+
+        // Test Telex in Auto mode: tinhf -> tình
+        let r3 = type_word(&mut engine, "tinhf ");
+        assert_eq!(r3, "tình ");
+
+        // Test VNI in Auto mode: tinh2 -> tình
+        let r4 = type_word(&mut engine, "tinh2 ");
+        assert_eq!(r4, "tình ");
+    }
+}

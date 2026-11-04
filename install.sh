@@ -77,12 +77,12 @@ elif [ -f fcitx5-addon/build/fcitx5-vnchkey-addon.so ]; then
     sudo install -Dm755 fcitx5-addon/build/fcitx5-vnchkey-addon.so "$PREFIX/lib/fcitx5/fcitx5-vnchkey-addon.so"
 fi
 
-# Fcitx5 metadata configurations (Unified vnchKey)
+# Fcitx5 metadata configurations (Auto, Telex, VNI)
 sudo install -Dm644 data/addon/vnchkey.conf "$PREFIX/share/fcitx5/addon/vnchkey.conf"
 sudo install -Dm644 data/inputmethod/vnchkey.conf "$PREFIX/share/fcitx5/inputmethod/vnchkey.conf"
+sudo install -Dm644 data/inputmethod/vnchkey-telex.conf "$PREFIX/share/fcitx5/inputmethod/vnchkey-telex.conf"
+sudo install -Dm644 data/inputmethod/vnchkey-vni.conf "$PREFIX/share/fcitx5/inputmethod/vnchkey-vni.conf"
 sudo install -Dm644 data/icons/vnchkey.png "$PREFIX/share/icons/hicolor/128x128/apps/vnchkey.png"
-# Clean up old split configs if any
-sudo rm -f "$PREFIX/share/fcitx5/inputmethod/vnchkey-telex.conf" "$PREFIX/share/fcitx5/inputmethod/vnchkey-vni.conf" 2>/dev/null || true
 
 echo -e "\n${GREEN}==> 4/4. Thiết lập quyền kernel Linux /dev/uinput...${NC}"
 sudo usermod -aG input "$USER" 2>/dev/null || true

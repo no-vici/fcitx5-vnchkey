@@ -15,12 +15,13 @@ pub extern "C" fn fcitx5_vnchkey_init() -> *mut Fcitx5VnchkeyContext {
     fcitx5_vnchkey_init_with_method(0)
 }
 
-/// Initializes a new vnchKey engine instance with a specific method (0 = Telex, 1 = VNI).
+/// Initializes a new vnchKey engine instance with a specific method (0 = Auto, 1 = Telex, 2 = VNI).
 #[no_mangle]
 pub extern "C" fn fcitx5_vnchkey_init_with_method(method: u32) -> *mut Fcitx5VnchkeyContext {
     let input_method = match method {
-        1 => vnchkey_core::InputMethod::Vni,
-        _ => vnchkey_core::InputMethod::Telex,
+        1 => vnchkey_core::InputMethod::Telex,
+        2 => vnchkey_core::InputMethod::Vni,
+        _ => vnchkey_core::InputMethod::Auto,
     };
     let config = EngineConfig {
         method: input_method,

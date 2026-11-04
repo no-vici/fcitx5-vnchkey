@@ -53,6 +53,11 @@ impl SentinelBarrier {
     pub fn status(&self) -> BarrierStatus {
         self.status
     }
+
+    /// Configured watchdog timeout in milliseconds.
+    pub fn watchdog_timeout_ms(&self) -> u64 {
+        self.watchdog_timeout_ms
+    }
 }
 
 impl Default for SentinelBarrier {
