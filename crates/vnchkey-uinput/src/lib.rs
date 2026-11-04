@@ -2,4 +2,4 @@
 
 pub mod device;
 
-pub use device::{UinputKeyboard, UinputError};
+pub use device::{UinputKeyboard, UinputError, EV_KEY, KEY_BACKSPACE};
