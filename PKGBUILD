@@ -46,9 +46,8 @@ package() {
     cd "$srcdir/fcitx5-vnchkey"
   fi
 
-  # Cài đặt file thực thi daemon và thư viện Rust FFI
+  # Cài đặt thư viện Rust FFI
   install -Dm755 target/release/libfcitx5_vnchkey_ffi.so "$pkgdir/usr/lib/libfcitx5_vnchkey_ffi.so"
-  install -Dm755 target/release/vnchkey-daemon "$pkgdir/usr/bin/vnchkey-daemon"
 
   # Cài đặt Fcitx5 native addon module
   install -Dm755 fcitx5-addon/build/fcitx5-vnchkey-addon.so "$pkgdir/usr/lib/fcitx5/fcitx5-vnchkey-addon.so"

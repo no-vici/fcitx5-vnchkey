@@ -16,6 +16,7 @@ pub struct VnchkeyConfig {
     pub bracket_transform: String,
     pub modern_style: bool,
     pub smart_horn: bool,
+    pub spell_check: bool,
     pub auto_restore_english: bool,
     pub smart_casing: bool,
     pub free_marking: bool,
@@ -38,6 +39,7 @@ impl Default for VnchkeyConfig {
             bracket_transform: "Disabled".to_string(),
             modern_style: true,
             smart_horn: true,
+            spell_check: true,
             auto_restore_english: true,
             smart_casing: true,
             free_marking: true,
@@ -118,6 +120,7 @@ impl ConfigManager {
             if let Some(v) = map.get("BracketTransform") { cfg.bracket_transform = v.clone(); }
             if let Some(v) = map.get("ModernStyle") { cfg.modern_style = v.eq_ignore_ascii_case("true"); }
             if let Some(v) = map.get("SmartHorn") { cfg.smart_horn = v.eq_ignore_ascii_case("true"); }
+            if let Some(v) = map.get("SpellCheck") { cfg.spell_check = v.eq_ignore_ascii_case("true"); }
             if let Some(v) = map.get("AutoRestoreEnglish") { cfg.auto_restore_english = v.eq_ignore_ascii_case("true"); }
             if let Some(v) = map.get("SmartCasing") { cfg.smart_casing = v.eq_ignore_ascii_case("true"); }
             if let Some(v) = map.get("FreeMarking") { cfg.free_marking = v.eq_ignore_ascii_case("true"); }
@@ -148,6 +151,7 @@ impl ConfigManager {
         lines.push(format!("BracketTransform={}", cfg.bracket_transform));
         lines.push(format!("ModernStyle={}", if cfg.modern_style { "True" } else { "False" }));
         lines.push(format!("SmartHorn={}", if cfg.smart_horn { "True" } else { "False" }));
+        lines.push(format!("SpellCheck={}", if cfg.spell_check { "True" } else { "False" }));
         lines.push(format!("AutoRestoreEnglish={}", if cfg.auto_restore_english { "True" } else { "False" }));
         lines.push(format!("SmartCasing={}", if cfg.smart_casing { "True" } else { "False" }));
         lines.push(format!("FreeMarking={}", if cfg.free_marking { "True" } else { "False" }));

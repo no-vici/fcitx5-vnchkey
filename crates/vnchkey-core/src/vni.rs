@@ -1,7 +1,11 @@
 //! VNI Input Method Transformer.
 
 use crate::engine::ToneStyle;
-use crate::telex::{is_vietnamese_vowel, place_tone};
+use crate::telex::{
+    apply_smart_uo_horn, can_modify_syllable, compose_vowel, decompose_vowel, extract_tone,
+    find_adjacent_uo, find_adjacent_uu, has_effective_vowel, is_qu_glide, is_vietnamese_vowel,
+    rebalance_tone, strip_tone, vowel_family,
+};
 
 /// VNI engine processing number-based Vietnamese accents.
 #[derive(Debug, Clone)]
@@ -37,168 +41,271 @@ impl VniEngine {
         self.bracket_transform = enabled;
     }
 
+    /// Incrementally applies a single typed character `ch` to the current displayed `word`.
+    /// Returns `(new_word, was_transformed, was_manual_undo)`.
+    pub fn apply_key(&self, word: &str, ch: char) -> (String, bool, bool) {
+        let mut letters: Vec<char> = word.chars().collect();
+        let current_tone = extract_tone(&letters);
+
+        // 1. Bracket transformation: [ -> ơ, ] -> ư, { -> Ơ, } -> Ư
+        if self.bracket_transform {
+            let bracket_target = match ch {
+                '[' => Some('ơ'),
+                ']' => Some('ư'),
+                '{' => Some('Ơ'),
+                '}' => Some('Ư'),
+                _ => None,
+            };
+            if let Some(target_char) = bracket_target {
+                if let Some(&last) = letters.last() {
+                    if strip_tone(last) == target_char {
+                        letters.pop();
+                        letters.push(ch);
+                        return (letters.into_iter().collect(), true, true);
+                    }
+                }
+                letters.push(target_char);
+                if current_tone > 0 && can_modify_syllable(&letters) {
+                    rebalance_tone(&mut letters, current_tone, self.tone_style);
+                }
+                return (letters.into_iter().collect(), true, false);
+            }
+        }
+
+        let has_vowel = letters.iter().any(|&c| is_vietnamese_vowel(c));
+
+        // 2. Pre-vowel stroke: d9 -> đ, đ9 -> d9
+        if !has_vowel {
+            if ch == '9' && letters.len() == 1 {
+                let first = letters[0];
+                if first == 'd' || first == 'D' {
+                    letters[0] = if first.is_uppercase() { 'Đ' } else { 'đ' };
+                    return (letters.into_iter().collect(), true, false);
+                } else if first == 'đ' || first == 'Đ' {
+                    letters[0] = if first.is_uppercase() { 'D' } else { 'd' };
+                    letters.push('9');
+                    return (letters.into_iter().collect(), true, true);
+                }
+            }
+            letters.push(ch);
+            return (letters.into_iter().collect(), false, false);
+        }
+
+        // 3. Digit modifiers when at least one vowel is present
+        if ch.is_ascii_digit() && can_modify_syllable(&letters) {
+            match ch {
+                '0'..='5' => {
+                    let tone = ch.to_digit(10).unwrap() as usize;
+                    if has_effective_vowel(&letters) {
+                        if tone == 0 {
+                            if current_tone > 0 {
+                                rebalance_tone(&mut letters, 0, self.tone_style);
+                                return (letters.into_iter().collect(), true, false);
+                            } else {
+                                letters.push(ch);
+                                return (letters.into_iter().collect(), false, false);
+                            }
+                        } else if current_tone == tone {
+                            // Pressing the same tone number again removes the tone and outputs the digit
+                            rebalance_tone(&mut letters, 0, self.tone_style);
+                            letters.push(ch);
+                            return (letters.into_iter().collect(), true, true);
+                        } else {
+                            // Apply or change tone
+                            apply_smart_uo_horn(&mut letters);
+                            rebalance_tone(&mut letters, tone, self.tone_style);
+                            return (letters.into_iter().collect(), true, false);
+                        }
+                    }
+                }
+                '6' => {
+                    // Circumflex (^): a/ă -> â, e -> ê, o/ơ -> ô, ươ -> uô
+                    if let Some((u_idx, o_idx)) = find_adjacent_uo(&letters) {
+                        let (u_base, _, u_up) = decompose_vowel(letters[u_idx]).unwrap();
+                        let (o_base, _, o_up) = decompose_vowel(letters[o_idx]).unwrap();
+                        if u_base == 'ư' && o_base == 'ơ' {
+                            letters[u_idx] = compose_vowel('u', 0, u_up);
+                            letters[o_idx] = compose_vowel('ô', 0, o_up);
+                            rebalance_tone(&mut letters, current_tone, self.tone_style);
+                            return (letters.into_iter().collect(), true, false);
+                        }
+                    }
+
+                    for idx in (0..letters.len()).rev() {
+                        if let Some((base, _, is_up)) = decompose_vowel(letters[idx]) {
+                            let fam = vowel_family(base);
+                            if matches!(fam, 'a' | 'e' | 'o') {
+                                let hat_base = match fam {
+                                    'a' => 'â',
+                                    'e' => 'ê',
+                                    'o' => 'ô',
+                                    _ => unreachable!(),
+                                };
+                                if base == hat_base {
+                                    // Toggle off: revert to plain vowel and append '6'
+                                    letters[idx] = compose_vowel(fam, 0, is_up);
+                                    letters.push('6');
+                                    rebalance_tone(&mut letters, current_tone, self.tone_style);
+                                    return (letters.into_iter().collect(), true, true);
+                                } else {
+                                    // Promote to circumflex (preserving tone via rebalance_tone)
+                                    letters[idx] = compose_vowel(hat_base, 0, is_up);
+                                    rebalance_tone(&mut letters, current_tone, self.tone_style);
+                                    return (letters.into_iter().collect(), true, false);
+                                }
+                            }
+                        }
+                    }
+                }
+                '7' => {
+                    // Horn (ơ, ư): uo -> ươ, uu -> ưu, o/ô -> ơ, u -> ư
+                    // Case 1: Adjacent 'uo' pair
+                    if let Some((u_idx, o_idx)) = find_adjacent_uo(&letters) {
+                        let (u_base, _, u_up) = decompose_vowel(letters[u_idx]).unwrap();
+                        let (o_base, _, o_up) = decompose_vowel(letters[o_idx]).unwrap();
+
+                        let is_open_thuo = u_idx == 2
+                            && o_idx + 1 == letters.len()
+                            && letters[0].eq_ignore_ascii_case(&'t')
+                            && letters[1].eq_ignore_ascii_case(&'h');
+
+                        if is_open_thuo {
+                            if o_base == 'ơ' {
+                                letters[o_idx] = compose_vowel('o', 0, o_up);
+                                letters.push('7');
+                                rebalance_tone(&mut letters, current_tone, self.tone_style);
+                                return (letters.into_iter().collect(), true, true);
+                            } else {
+                                letters[o_idx] = compose_vowel('ơ', 0, o_up);
+                                rebalance_tone(&mut letters, current_tone, self.tone_style);
+                                return (letters.into_iter().collect(), true, false);
+                            }
+                        }
+
+                        if u_base == 'ư' && o_base == 'ơ' {
+                            letters[u_idx] = compose_vowel('u', 0, u_up);
+                            letters[o_idx] = compose_vowel('o', 0, o_up);
+                            letters.push('7');
+                            rebalance_tone(&mut letters, current_tone, self.tone_style);
+                            return (letters.into_iter().collect(), true, true);
+                        } else {
+                            letters[u_idx] = compose_vowel('ư', 0, u_up);
+                            letters[o_idx] = compose_vowel('ơ', 0, o_up);
+                            rebalance_tone(&mut letters, current_tone, self.tone_style);
+                            return (letters.into_iter().collect(), true, false);
+                        }
+                    }
+
+                    // Case 2: Adjacent 'uu' pair (cuu7 -> cưu, luu7 -> lưu, huu7 -> hưu)
+                    if let Some((u1_idx, _u2_idx)) = find_adjacent_uu(&letters) {
+                        let (u1_base, _, u1_up) = decompose_vowel(letters[u1_idx]).unwrap();
+                        if u1_base == 'ư' {
+                            letters[u1_idx] = compose_vowel('u', 0, u1_up);
+                            letters.push('7');
+                            rebalance_tone(&mut letters, current_tone, self.tone_style);
+                            return (letters.into_iter().collect(), true, true);
+                        } else {
+                            letters[u1_idx] = compose_vowel('ư', 0, u1_up);
+                            rebalance_tone(&mut letters, current_tone, self.tone_style);
+                            return (letters.into_iter().collect(), true, false);
+                        }
+                    }
+
+                    // Case 3: Single 'o'/'ô'/'ơ' or 'u'/'ư' (skipping 'u' in 'qu')
+                    for idx in (0..letters.len()).rev() {
+                        if is_qu_glide(&letters, idx) {
+                            continue;
+                        }
+                        if let Some((base, _, is_up)) = decompose_vowel(letters[idx]) {
+                            let fam = vowel_family(base);
+                            if matches!(fam, 'o' | 'u') {
+                                let horn_base = if fam == 'o' { 'ơ' } else { 'ư' };
+                                if base == horn_base {
+                                    letters[idx] = compose_vowel(fam, 0, is_up);
+                                    letters.push('7');
+                                    rebalance_tone(&mut letters, current_tone, self.tone_style);
+                                    return (letters.into_iter().collect(), true, true);
+                                } else {
+                                    letters[idx] = compose_vowel(horn_base, 0, is_up);
+                                    rebalance_tone(&mut letters, current_tone, self.tone_style);
+                                    return (letters.into_iter().collect(), true, false);
+                                }
+                            }
+                        }
+                    }
+                }
+                '8' => {
+                    // Breve (ă): a/â -> ă
+                    for idx in (0..letters.len()).rev() {
+                        if let Some((base, _, is_up)) = decompose_vowel(letters[idx]) {
+                            if vowel_family(base) == 'a' {
+                                if base == 'ă' {
+                                    letters[idx] = compose_vowel('a', 0, is_up);
+                                    letters.push('8');
+                                    rebalance_tone(&mut letters, current_tone, self.tone_style);
+                                    return (letters.into_iter().collect(), true, true);
+                                } else {
+                                    letters[idx] = compose_vowel('ă', 0, is_up);
+                                    rebalance_tone(&mut letters, current_tone, self.tone_style);
+                                    return (letters.into_iter().collect(), true, false);
+                                }
+                            }
+                        }
+                    }
+                }
+                '9' => {
+                    // Stroke (đ): d -> đ, đ -> d9
+                    if let Some(&first) = letters.first() {
+                        if first == 'd' || first == 'D' {
+                            letters[0] = if first.is_uppercase() { 'Đ' } else { 'đ' };
+                            if current_tone > 0 {
+                                apply_smart_uo_horn(&mut letters);
+                                rebalance_tone(&mut letters, current_tone, self.tone_style);
+                            }
+                            return (letters.into_iter().collect(), true, false);
+                        } else if first == 'đ' || first == 'Đ' {
+                            letters[0] = if first.is_uppercase() { 'D' } else { 'd' };
+                            letters.push('9');
+                            return (letters.into_iter().collect(), true, true);
+                        }
+                    }
+                }
+                _ => {}
+            }
+        }
+
+        // 4. Normal character append (vowel or consonant)
+        let mut fallback = letters.clone();
+        fallback.push(ch);
+
+        letters.push(ch);
+        if can_modify_syllable(&letters) && current_tone > 0 {
+            let mut changed = apply_smart_uo_horn(&mut letters);
+            rebalance_tone(&mut letters, current_tone, self.tone_style);
+            changed |= letters != fallback;
+            if changed {
+                return (letters.into_iter().collect(), true, false);
+            }
+        }
+
+        (letters.into_iter().collect(), false, false)
+    }
+
     /// Transforms raw strokes using VNI rules.
-    /// Returns (transformed_string, was_transformed).
+    /// Returns `(transformed_string, was_transformed)`.
     pub fn feed(&self, input: &str) -> (String, bool) {
         if input.is_empty() {
             return (String::new(), false);
         }
-        if !self.bracket_transform && !input.chars().any(|c| c.is_ascii_digit()) {
-            return (input.to_string(), false);
-        }
-
-        let mut letters: Vec<char> = Vec::new();
-        let mut current_tone: usize = 0;
-        let mut modified = false;
-
+        let mut word = String::with_capacity(input.len());
+        let mut any_transformed = false;
         for ch in input.chars() {
-            if self.bracket_transform {
-                match ch {
-                    '[' => {
-                        if letters.last() == Some(&'ơ') {
-                            letters.pop();
-                            letters.push('[');
-                        } else {
-                            letters.push('ơ');
-                            modified = true;
-                        }
-                        continue;
-                    }
-                    ']' => {
-                        if letters.last() == Some(&'ư') {
-                            letters.pop();
-                            letters.push(']');
-                        } else {
-                            letters.push('ư');
-                            modified = true;
-                        }
-                        continue;
-                    }
-                    '{' => {
-                        if letters.last() == Some(&'Ơ') {
-                            letters.pop();
-                            letters.push('{');
-                        } else {
-                            letters.push('Ơ');
-                            modified = true;
-                        }
-                        continue;
-                    }
-                    '}' => {
-                        if letters.last() == Some(&'Ư') {
-                            letters.pop();
-                            letters.push('}');
-                        } else {
-                            letters.push('Ư');
-                            modified = true;
-                        }
-                        continue;
-                    }
-                    _ => {}
-                }
-            }
-            if ch.is_ascii_digit() {
-                match ch {
-                    '1'..='5' => {
-                        current_tone = ch.to_digit(10).unwrap() as usize;
-                        modified = true;
-                    }
-                    '0' => {
-                        current_tone = 0;
-                        modified = true;
-                    }
-                    '6' => {
-                        // Nón: a->â, e->ê, o->ô
-                        for c in letters.iter_mut().rev() {
-                            match *c {
-                                'a' => { *c = 'â'; modified = true; break; }
-                                'A' => { *c = 'Â'; modified = true; break; }
-                                'e' => { *c = 'ê'; modified = true; break; }
-                                'E' => { *c = 'Ê'; modified = true; break; }
-                                'o' => { *c = 'ô'; modified = true; break; }
-                                'O' => { *c = 'Ô'; modified = true; break; }
-                                _ => {}
-                            }
-                        }
-                    }
-                    '7' => {
-                        // Râu: u->ư, o->ơ, uo->ươ
-                        let mut u_idx = None;
-                        let mut o_idx = None;
-                        for (idx, &c) in letters.iter().enumerate() {
-                            let lower = c.to_lowercase().next().unwrap();
-                            if lower == 'u' || lower == 'ư' { u_idx = Some(idx); }
-                            if lower == 'o' || lower == 'ơ' { o_idx = Some(idx); }
-                        }
-
-                        if let (Some(u), Some(o)) = (u_idx, o_idx) {
-                            if (u as isize - o as isize).abs() == 1 {
-                                letters[u] = if letters[u].is_uppercase() { 'Ư' } else { 'ư' };
-                                letters[o] = if letters[o].is_uppercase() { 'Ơ' } else { 'ơ' };
-                                modified = true;
-                                continue;
-                            }
-                        }
-
-                        for c in letters.iter_mut().rev() {
-                            match *c {
-                                'u' => { *c = 'ư'; modified = true; break; }
-                                'U' => { *c = 'Ư'; modified = true; break; }
-                                'o' => { *c = 'ơ'; modified = true; break; }
-                                'O' => { *c = 'Ơ'; modified = true; break; }
-                                _ => {}
-                            }
-                        }
-                    }
-                    '8' => {
-                        // Trăng: a->ă
-                        for c in letters.iter_mut().rev() {
-                            if *c == 'a' { *c = 'ă'; modified = true; break; }
-                            if *c == 'A' { *c = 'Ă'; modified = true; break; }
-                        }
-                    }
-                    '9' => {
-                        // Gạch: d->đ
-                        for c in letters.iter_mut().rev() {
-                            if *c == 'd' { *c = 'đ'; modified = true; break; }
-                            if *c == 'D' { *c = 'Đ'; modified = true; break; }
-                        }
-                    }
-                    _ => letters.push(ch),
-                }
-            } else {
-                letters.push(ch);
-            }
+            let (next_word, step_transformed, _) = self.apply_key(&word, ch);
+            word = next_word;
+            any_transformed |= step_transformed;
         }
-
-        if !modified {
-            return (input.to_string(), false);
-        }
-
-        // Smart VNI horn: if letters contain 'uo' followed by a coda (e.g. duoc, nuoc, buoc),
-        // automatically promote 'uo' -> 'ươ'
-        let mut u_idx = None;
-        let mut o_idx = None;
-        for (idx, &c) in letters.iter().enumerate() {
-            let lower = c.to_lowercase().next().unwrap();
-            if lower == 'u' { u_idx = Some(idx); }
-            if lower == 'o' { o_idx = Some(idx); }
-        }
-        if let (Some(u), Some(o)) = (u_idx, o_idx) {
-            if (u as isize - o as isize).abs() == 1 {
-                let has_coda = o + 1 < letters.len() && !is_vietnamese_vowel(letters[o + 1]);
-                if has_coda {
-                    letters[u] = if letters[u].is_uppercase() { 'Ư' } else { 'ư' };
-                    letters[o] = if letters[o].is_uppercase() { 'Ơ' } else { 'ơ' };
-                }
-            }
-        }
-
-        if current_tone > 0 {
-            place_tone(&mut letters, current_tone, self.tone_style);
-        }
-
-        (letters.into_iter().collect(), true)
+        let really_changed = word != input || any_transformed;
+        (word, really_changed)
     }
 }
 
@@ -207,13 +314,40 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_vni_common() {
+    fn test_vni_common_and_gio72() {
         let vni = VniEngine::new(ToneStyle::Modern);
+        assert_eq!(vni.feed("gio72").0, "giờ");
+        assert_eq!(vni.feed("gio27").0, "giờ");
+        assert_eq!(vni.feed("gi2o7").0, "giờ");
+        assert_eq!(vni.feed("gia2").0, "già");
+        assert_eq!(vni.feed("qua1").0, "quá");
+        assert_eq!(vni.feed("quoc61").0, "quốc");
         assert_eq!(vni.feed("tinh2").0, "tình");
         assert_eq!(vni.feed("dau61").0, "dấu");
         assert_eq!(vni.feed("duoc975").0, "được");
         assert_eq!(vni.feed("duoc95").0, "được");
         assert_eq!(vni.feed("nuoc1").0, "nước");
         assert_eq!(vni.feed("viet65").0, "việt");
+        assert_eq!(vni.feed("khong6").0, "không");
+    }
+
+    #[test]
+    fn test_vni_modify_and_undo_marks() {
+        let vni = VniEngine::new(ToneStyle::Modern);
+        // Modify tone after typing gio72 -> giờ
+        assert_eq!(vni.feed("gio721").0, "giớ");
+        assert_eq!(vni.feed("gio723").0, "giở");
+        assert_eq!(vni.feed("gio720").0, "giơ");
+        // Double tone key toggles tone off and outputs digit
+        assert_eq!(vni.feed("gio722").0, "giơ2");
+        assert_eq!(vni.feed("toan11").0, "toan1");
+        // Switch vowel shapes (7 <-> 6, 8 <-> 6) while preserving tone
+        assert_eq!(vni.feed("gio726").0, "giồ");
+        assert_eq!(vni.feed("ta816").0, "tấ");
+        assert_eq!(vni.feed("ta618").0, "tắ");
+        // Toggle off shape modifiers
+        assert_eq!(vni.feed("gio77").0, "gio7");
+        assert_eq!(vni.feed("khong66").0, "khong6");
+        assert_eq!(vni.feed("d99").0, "d9");
     }
 }

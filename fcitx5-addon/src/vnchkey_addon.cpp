@@ -146,11 +146,11 @@ void VnchkeyEngine::setupStatusMenu() {
     actionSeparator2_->setSeparator(true);
     statusMenu_->addAction(actionSeparator2_.get());
 
-    // 3. Toggles: GoNhanh Auto-Restore, Macros, Spell Check
+    // 3. Toggles: Restore English, Macros, Chánh Tả
     actionAutoRestore_ = std::make_unique<fcitx::SimpleAction>();
     actionAutoRestore_->setCheckable(true);
-    actionAutoRestore_->setShortText("GoNhanh");
-    actionAutoRestore_->setLongText("Khôi Phục Tiếng Anh (GoNhanh)");
+    actionAutoRestore_->setShortText("Restore English");
+    actionAutoRestore_->setLongText("Khôi Phục Tiếng Anh (Restore English)");
     connections_.push_back(actionAutoRestore_->connect<fcitx::SimpleAction::Activated>([this](fcitx::InputContext* ic) {
         config_auto_restore_ = !config_auto_restore_;
         for (void* ctx : {ctx_auto_, ctx_telex_, ctx_vni_}) {
@@ -185,8 +185,8 @@ void VnchkeyEngine::setupStatusMenu() {
 
     actionSpellCheck_ = std::make_unique<fcitx::SimpleAction>();
     actionSpellCheck_->setCheckable(true);
-    actionSpellCheck_->setShortText("ChínhTả");
-    actionSpellCheck_->setLongText("Kiểm Tra Chính Tả");
+    actionSpellCheck_->setShortText("Chánh Tả");
+    actionSpellCheck_->setLongText("Kiểm Tra Chánh Tả");
     connections_.push_back(actionSpellCheck_->connect<fcitx::SimpleAction::Activated>([this](fcitx::InputContext* ic) {
         config_spell_check_ = !config_spell_check_;
         updateActionState();
@@ -406,18 +406,7 @@ void VnchkeyEngine::keyEvent(const fcitx::InputMethodEntry &entry, fcitx::KeyEve
         return;
     }
 
-    if (keyEvent.isRelease()) {
-        return;
-    }
-
-    auto rawKey = keyEvent.rawKey();
-    auto states = rawKey.states();
-
-    // Pass through combination shortcuts (Ctrl, Alt, Super) but allow Shift / CapsLock
-    if (states.test(fcitx::KeyState::Ctrl) ||
-        states.test(fcitx::KeyState::Alt) ||
-        states.test(fcitx::KeyState::Super)) {
-        reset(entry, keyEvent);
+    if (keyEvent.isRelease() || keyEvent.rawKey().isModifier()) {
         return;
     }
 
@@ -426,7 +415,25 @@ void VnchkeyEngine::keyEvent(const fcitx::InputMethodEntry &entry, fcitx::KeyEve
         return;
     }
 
+    auto rawKey = keyEvent.rawKey();
+    auto states = rawKey.states();
     auto sym = rawKey.sym();
+
+    // Pass through combination shortcuts (Ctrl, Alt, Super) and cursor/navigation keys
+    if (states.test(fcitx::KeyState::Ctrl) ||
+        states.test(fcitx::KeyState::Alt) ||
+        states.test(fcitx::KeyState::Super) ||
+        keyEvent.key().isCursorMove() ||
+        sym == FcitxKey_Tab ||
+        sym == FcitxKey_KP_Tab ||
+        sym == FcitxKey_ISO_Left_Tab ||
+        sym == FcitxKey_Delete ||
+        sym == FcitxKey_Escape ||
+        sym == FcitxKey_Return ||
+        sym == FcitxKey_KP_Enter) {
+        fcitx5_vnchkey_reset(ctx);
+        return;
+    }
 
     // User pressed physical Backspace: let the app delete character naturally, sync engine state
     if (sym == FcitxKey_BackSpace) {
@@ -437,10 +444,11 @@ void VnchkeyEngine::keyEvent(const fcitx::InputMethodEntry &entry, fcitx::KeyEve
         return;
     }
 
-    // Reset on Enter or Escape
-    if (sym == FcitxKey_Escape || sym == FcitxKey_Return) {
-        reset(entry, keyEvent);
-        return;
+    // Normalize numpad digits and space (matching fcitx5-lilypad)
+    if (sym >= FcitxKey_KP_0 && sym <= FcitxKey_KP_9) {
+        sym = static_cast<fcitx::KeySym>(FcitxKey_0 + (sym - FcitxKey_KP_0));
+    } else if (sym == FcitxKey_KP_Space) {
+        sym = FcitxKey_space;
     }
 
     uint32_t ch = fcitx::Key::keySymToUnicode(sym);
@@ -460,7 +468,8 @@ void VnchkeyEngine::keyEvent(const fcitx::InputMethodEntry &entry, fcitx::KeyEve
         auto* ic = keyEvent.inputContext();
         if (ic) {
             if (out_backspaces > 0) {
-                if (ic->capabilityFlags().test(fcitx::CapabilityFlag::SurroundingText)) {
+                if (ic->capabilityFlags().test(fcitx::CapabilityFlag::SurroundingText) &&
+                    ic->surroundingText().isValid()) {
                     ic->deleteSurroundingText(-static_cast<int>(out_backspaces), out_backspaces);
                 } else {
                     is_forwarding_ = true;
@@ -471,7 +480,7 @@ void VnchkeyEngine::keyEvent(const fcitx::InputMethodEntry &entry, fcitx::KeyEve
                 }
             }
 
-            // Commit transformed string
+            // Commit transformed suffix
             if (out_commit && out_commit[0] != '\0') {
                 ic->commitString(out_commit);
             }
@@ -486,7 +495,12 @@ void VnchkeyEngine::keyEvent(const fcitx::InputMethodEntry &entry, fcitx::KeyEve
 }
 
 void VnchkeyEngine::reset(const fcitx::InputMethodEntry &entry, fcitx::InputContextEvent &event) {
-    FCITX_UNUSED(event);
+    // Only reset on actual window/focus change (InputContextFocusOut).
+    // Ignore spurious InputContextReset events triggered after commitString/deleteSurroundingText,
+    // preserving the active word buffer just like fcitx5-lilypad.
+    if (event.type() != fcitx::EventType::InputContextFocusOut) {
+        return;
+    }
     void* ctx = getContext(entry.uniqueName());
     if (ctx) {
         fcitx5_vnchkey_reset(ctx);

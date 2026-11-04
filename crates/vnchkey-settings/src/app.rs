@@ -408,8 +408,14 @@ impl SettingsApp {
         ui.add_space(6.0);
 
         ui.checkbox(
+            &mut self.config.spell_check,
+            "Chánh Tả: Kiểm tra chánh tả âm tiết tiếng Việt",
+        );
+        ui.add_space(6.0);
+
+        ui.checkbox(
             &mut self.config.auto_restore_english,
-            "GoNhanh: Tự động khôi phục từ tiếng Anh khi gõ phím cách (post, text, class...)",
+            "Restore English: Tự động khôi phục từ tiếng Anh (post, text, class...)",
         );
         ui.add_space(6.0);
 

@@ -43,7 +43,7 @@ if command -v cmake >/dev/null 2>&1; then
         rm -rf "$SHADOW_BUILD_DIR"
         mkdir -p "$SHADOW_BUILD_DIR"
         cp -r "$WORKSPACE_DIR/fcitx5-addon" "$WORKSPACE_DIR/data" "$SHADOW_BUILD_DIR/"
-        
+        rm -rf "$SHADOW_BUILD_DIR/fcitx5-addon/build"
         mkdir -p "$SHADOW_BUILD_DIR/fcitx5-addon/build"
         cd "$SHADOW_BUILD_DIR/fcitx5-addon/build"
         if command -v ninja >/dev/null 2>&1; then
@@ -75,9 +75,8 @@ fi
 echo -e "\n${GREEN}==> 3/4. Cài đặt các tệp vào hệ thống (/usr)...${NC}"
 PREFIX="/usr"
 
-# Core binaries and libraries
+# Core libraries
 sudo install -Dm755 "${TARGET_DIR}/libfcitx5_vnchkey_ffi.so" "$PREFIX/lib/libfcitx5_vnchkey_ffi.so"
-sudo install -Dm755 "${TARGET_DIR}/vnchkey-daemon" "$PREFIX/bin/vnchkey-daemon"
 sudo ldconfig 2>/dev/null || true
 
 # Fcitx5 addon library
