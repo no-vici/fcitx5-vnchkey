@@ -1,0 +1,19 @@
+[package]
+name = "vnchkey-core"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Pure safe Rust syllable state machine, Telex/VNI transformers, GoNhanh English auto-restore, and XKey smart casing."
+
+[dependencies]
+# Zero external heavy dependencies to guarantee sub-millisecond execution and wasm compatibility
+hashbrown = { version = "0.14", default-features = false }
+serde = { version = "1.0", optional = true, features = ["derive"] }
+
+[features]
+default = []
+serde = ["dep:serde"]
+
+[dev-dependencies]
+criterion = "0.5"

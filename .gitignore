@@ -1,0 +1,12 @@
+# Cargo build artifacts
+target/
+Cargo.lock
+
+# System & Editor
+*.log
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+.aistudio/
+.antigravity/

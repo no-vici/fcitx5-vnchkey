@@ -1,0 +1,12 @@
+[package]
+name = "vnchkey-uinput"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Safe Linux /dev/uinput virtual keyboard driver for direct clean commit event emission."
+
+[dependencies]
+vnchkey-core = { path = "../vnchkey-core" }
+libc = "0.2"
+nix = { version = "0.28", features = ["ioctl", "fs", "uio"] }
