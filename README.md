@@ -158,7 +158,7 @@ fcitx5-vnchkey/
 ## 3. Cơ Chế Hoạt Động Chuyên Sâu (Deep Technical Mechanisms)
 
 ### 3.1. Direct Clean Commit 100% qua Linux Kernel `/dev/uinput`
-Các bộ gõ truyền thống trên Linux (Unikey, Bamboo, IBus-Bamboo cũ) sử dụng cơ chế *Pre-edit String* (chuỗi gạch chân nhấp nháy dưới con trỏ). Mỗi lần người dùng gõ một phím, bộ gõ gửi thông điệp IBus/Fcitx yêu cầu ứng dụng vẽ chuỗi tạm.
+Các bộ gõ truyền thống trên Linux (Unikey, Bamboo, IBus-Bamboo cũ) sử dụng cơ chế *Pre-edit String* (chuỗi gạch chân nhấp nháy dưới con trỏ). Mỗi lần người dùng gõ một phím, bộ gõ gởi thông điệp IBus/Fcitx yêu cầu ứng dụng vẽ chuỗi tạm.
 - **Hậu quả trong môi trường hiện đại**: Các ứng dụng Web/Electron (VS Code, Cursor, Discord, Slack, Chrome) có vòng đời DOM phức tạp. Mỗi chuỗi pre-edit kích hoạt đồng thời `compositionstart`, `compositionupdate`, `input` và `selectionchange`. Điều này làm lu mờ gợi ý autocomplete, làm con trỏ nhảy giật và gây lỗi mất chữ khi gõ nhanh.
 - **Giải pháp Direct Clean Commit của vnchKey**: 
   1. vnchKey mở trực tiếp thiết bị kernel `/dev/uinput` thông qua `ioctl(fd, UI_DEV_CREATE, &uinput_setup)`.
@@ -612,4 +612,4 @@ Huy hiệu của **vnchKey** kết hợp hai yếu tố văn hóa và công ngh�
 
 - Dự án được phát hành dưới hình thức **Mã Nguồn Mở Tự Do 100%** theo các điều khoản của [Giấy Phép GNU General Public License v3.0 (GPLv3)](LICENSE).
 - Tôn chỉ giấy phép GPLv3 bảo đảm rằng **vnchKey** và tất cả các phiên bản phái sinh sẽ luôn luôn tự do, mở mã nguồn vĩnh viễn và không bao giờ bị biến tướng thành phần mềm đóng hay thương mại độc quyền.
-- Mọi đóng góp, báo cáo lỗi (issues) và yêu cầu kéo (pull requests) xin gửi về: [GitHub Repository](https://github.com/no-vici/fcitx5-vnchkey).
+- Mọi đóng góp, báo cáo lỗi (issues) và yêu cầu kéo (pull requests) xin gởi về: [GitHub Repository](https://github.com/no-vici/fcitx5-vnchkey).

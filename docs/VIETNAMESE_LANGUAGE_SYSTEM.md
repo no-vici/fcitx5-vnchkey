@@ -83,7 +83,7 @@ Theo khảo sát ngôn ngữ học dân gian miền Nam (nguồn *e-cadao.com*):
 
 | Tính năng | Giải pháp kỹ thuật trong vnchKey | Lợi ích cho người dùng |
 | :--- | :--- | :--- |
-| **Micro-Diff LCP Replacement** | Thuật toán so khớp tiền tố chung dài nhất (Longest Common Prefix). Chỉ gửi số lượng Backspace tối thiểu cho đúng hậu tố bị thay đổi. | Triệt tiêu hoàn toàn hiện tượng nhấp nháy chữ (flicker) trên Wayland/X11. |
+| **Micro-Diff LCP Replacement** | Thuật toán so khớp tiền tố chung dài nhất (Longest Common Prefix). Chỉ gởi số lượng Backspace tối thiểu cho đúng hậu tố bị thay đổi. | Triệt tiêu hoàn toàn hiện tượng nhấp nháy chữ (flicker) trên Wayland/X11. |
 | **Restore English Tức Thời** | Bộ từ điển ~360 từ khóa lập trình & thuật ngữ tiếng Anh thông dụng kết hợp kiểm tra luật ngữ âm. | Gõ `text`, `user`, `filters`, `windows` không bị biến thành `têt`, `úẻ`, `ưindoưs`. Tự khôi phục ngay trên màn hình. |
 | **Chánh Tả Tích Hợp** | ~6,750 âm tiết tiếng Việt nạp vào `OnceLock<HashSet<String>>` với độ phức tạp tra cứu $O(1)$. | Bắt lỗi chính tả tức thì mà không tiêu tốn bộ nhớ hay làm chậm máy. |
 | **100% Native Rust & C-ABI** | Lõi logic viết bằng Safe Rust (`forbid(unsafe_code)`), giao tiếp C-ABI siêu mỏng với Fcitx5 C++. | Khởi động tức thì (< 2ms), tiêu thụ RAM < 10MB, an toàn tuyệt đối trước memory leak. |

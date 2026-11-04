@@ -329,6 +329,11 @@ mod tests {
         assert_eq!(vni.feed("nuoc1").0, "nước");
         assert_eq!(vni.feed("viet65").0, "việt");
         assert_eq!(vni.feed("khong6").0, "không");
+        assert_eq!(vni.feed("dzia2").0, "dzìa");
+        assert_eq!(vni.feed("dzi1").0, "dzí");
+        assert_eq!(vni.feed("dzo6").0, "dzô");
+        assert_eq!(vni.feed("dzo61").0, "dzố");
+        assert_eq!(vni.feed("dzi5").0, "dzị");
     }
 
     #[test]

@@ -644,6 +644,7 @@ pub fn is_valid_vietnamese_onset(chars: &[char]) -> bool {
             | "ch"
             | "d"
             | "đ"
+            | "dz"
             | "g"
             | "gh"
             | "gi"
@@ -1037,6 +1038,10 @@ mod tests {
         assert_eq!(telex.feed("gowf").0, "gờ");
         assert_eq!(telex.feed("giowf").0, "giờ");
         assert_eq!(telex.feed("giofw").0, "giờ");
+        assert_eq!(telex.feed("dziaf").0, "dzìa");
+        assert_eq!(telex.feed("dzis").0, "dzí");
+        assert_eq!(telex.feed("dzoo").0, "dzô");
+        assert_eq!(telex.feed("dzij").0, "dzị");
     }
 
     #[test]
