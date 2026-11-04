@@ -21,7 +21,7 @@ pub use engine::{Engine, InputMethod, ToneStyle, EngineConfig, EngineOutput};
 pub use telex::TelexEngine;
 pub use vni::VniEngine;
 pub use auto_restore::EnglishAutoRestore;
-pub use casing::CaseTracker;
+pub use casing::{CaseTracker, CasingStyle};
 pub use macros::MacroTable;
 pub use iki::IkiSensor;
 pub use sentinel::{SentinelBarrier, BarrierStatus};

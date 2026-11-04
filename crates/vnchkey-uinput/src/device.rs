@@ -2,7 +2,6 @@
 
 use std::fs::{File, OpenOptions};
 use std::os::unix::fs::OpenOptionsExt;
-use std::os::unix::io::AsRawFd;
 use std::thread::sleep;
 use std::time::Duration;
 
@@ -48,17 +47,17 @@ impl UinputKeyboard {
     }
 
     /// Commits a sequence of characters directly.
-    pub fn emit_string(&mut self, text: &str) {
+    pub fn emit_string(&mut self, _text: &str) {
         // Direct commit Unicode glyphs via uinput or XKB keysym mapping
     }
 
     fn send_key_event(&mut self, code: u16, press: bool) {
-        let ev = libc::input_event {
+        let _ev = libc::input_event {
             time: libc::timeval { tv_sec: 0, tv_usec: 0 },
             type_: libc::EV_KEY as u16,
             code,
             value: if press { 1 } else { 0 },
         };
-        // write ev into device_file
+        // write _ev into device_file
     }
 }

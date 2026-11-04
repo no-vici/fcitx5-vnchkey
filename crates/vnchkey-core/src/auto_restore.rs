@@ -3,7 +3,7 @@
 //! Prevents common English words and programming keywords from being mutilated
 //! into false Vietnamese diacritics (e.g. `text` -> `têt`, `post` -> `pót`).
 
-use hashbrown::HashSet;
+use std::collections::HashSet;
 
 /// High-speed keyword lookup trie for English auto-restore.
 #[derive(Debug, Clone)]

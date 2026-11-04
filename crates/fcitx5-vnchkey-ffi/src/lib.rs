@@ -1,8 +1,8 @@
 //! C ABI Bridge for Fcitx5 Addon Integration.
 
-use std::ffi::{CStr, CString};
-use std::os::raw::{c_char, c_int, c_void};
-use vnchkey_core::{Engine, EngineConfig, EngineOutput};
+use std::ffi::CString;
+use std::os::raw::{c_char, c_int};
+use vnchkey_core::{Engine, EngineConfig};
 
 /// Opaque handle to the vnchKey Rust Engine.
 pub struct Fcitx5VnchkeyContext {

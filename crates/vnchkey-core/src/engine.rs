@@ -3,7 +3,7 @@
 use crate::telex::TelexEngine;
 use crate::vni::VniEngine;
 use crate::auto_restore::EnglishAutoRestore;
-use crate::casing::{CaseTracker, CasingStyle};
+use crate::casing::CaseTracker;
 use crate::macros::MacroTable;
 use crate::iki::IkiSensor;
 use crate::sentinel::SentinelBarrier;

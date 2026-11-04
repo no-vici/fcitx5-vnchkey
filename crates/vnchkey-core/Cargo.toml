@@ -8,7 +8,6 @@ description = "Pure safe Rust syllable state machine, Telex/VNI transformers, Go
 
 [dependencies]
 # Zero external heavy dependencies to guarantee sub-millisecond execution and wasm compatibility
-hashbrown = { version = "0.14", default-features = false }
 serde = { version = "1.0", optional = true, features = ["derive"] }
 
 [features]

@@ -1,6 +1,6 @@
 //! XKey Innovation: Rapid Shorthand Expansion (Gõ Tắt).
 
-use hashbrown::HashMap;
+use std::collections::HashMap;
 
 /// User shorthand expansion dictionary.
 #[derive(Debug, Clone)]

@@ -2,7 +2,6 @@
 
 use clap::Parser;
 use vnchkey_core::{Engine, EngineConfig, InputMethod, ToneStyle};
-use std::time::Instant;
 
 #[derive(Parser, Debug)]
 #[command(author, version, about = "vnchKey Vietnamese Input Daemon for Linux")]
@@ -53,7 +52,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         sentinel_enabled: true,
     };
 
-    let mut engine = Engine::new(config);
+    let mut _engine = Engine::new(config);
     println!("Daemon initialized successfully. Listening on compositor socket...");
 
     // Event loop interfacing with Wayland / X11 window focus and uinput
