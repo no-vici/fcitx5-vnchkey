@@ -28,17 +28,43 @@ pub const ALL_VIETNAMESE_SINGLE_VOWELS: &[&str] = &[
     "đ",
 ];
 
+/// Proper nouns, Tay Nguyen & ethnic minority place names, loan words, and rare Vietnamese syllables.
+pub const RARE_AND_PLACE_NAME_WORDS: &[&str] = &[
+    // Tay Nguyen provinces, cities, districts & communes
+    "đắk", "đăk", "lắk", "nông", "kon", "tum", "gia", "lai", "buôn", "ma", "thuột",
+    "pleiku", "plei", "ku", "bảo", "lộc", "yun", "pa", "krông", "nô", "búk", "pắk",
+    "ana", "bông", "năng", "cư", "m'gar", "gar", "kuin", "ea", "h'leo", "leo", "kar", "súp",
+    "m'đrắk", "đrắk", "mil", "glong", "đoa", "chư", "sê", "prông", "păh", "đức",
+    "cơ", "ia", "grai", "h'drai", "drai", "mơ", "rông", "đam", "di", "linh", "r'lấp",
+    "lấp", "nung",
+    // Popular locations and cities
+    "hcm", "tp.hcm", "sài", "gòn", "đà", "nẵng", "hà", "nội", "huế", "hải", "phòng",
+    "quảng", "ninh", "hạ", "long", "sa", "mộc", "châu", "điện", "biên", "phủ",
+    "sơn", "cao", "bằng", "lạng", "hội", "an", "quy", "nhơn", "nha", "trang", "phan",
+    "thiết", "ngãi", "tam", "kỳ", "đông", "vinh", "cần", "thơ", "vũng", "tàu", "hòa",
+    "mỹ", "tho", "bến", "tre", "xuyên", "rạch", "giá", "cà", "mau", "bạc", "liêu", "sóc",
+    // Rare Han-Viet words, classical and dialect words
+    "khuếch", "khuynh", "khoảnh", "ngoắt", "ngoèo", "nghễu", "nguầy", "huỳnh", "quỳnh",
+    "khuỷu", "khuấy", "khuây", "ngoáy", "nguậy", "quánh", "quạnh", "quắt", "quặp",
+    // Interjections, spoken and southern dialect words
+    "dzô", "dzậy", "hông", "hổng", "zị", "zi", "zia", "hén", "nghen", "tui", "mầy",
+    "tao", "chảnh", "xạo", "sẩy", "trời", "ơi",
+];
+
 static VIETNAMESE_WORD_SET: OnceLock<HashSet<String>> = OnceLock::new();
 
 /// Returns a reference to the globally initialized Vietnamese word dictionary.
 pub fn vietnamese_word_set() -> &'static HashSet<String> {
     VIETNAMESE_WORD_SET.get_or_init(|| {
-        let mut set = HashSet::with_capacity(7200);
+        let mut set = HashSet::with_capacity(7500);
         for word in VIETNAMESE_WORDS_STRING.split_whitespace() {
             set.insert(word.to_string());
         }
         for &v in ALL_VIETNAMESE_SINGLE_VOWELS {
             set.insert(v.to_string());
+        }
+        for &w in RARE_AND_PLACE_NAME_WORDS {
+            set.insert(w.to_string());
         }
         set
     })
@@ -149,6 +175,51 @@ mod tests {
         assert!(is_in_vietnamese_dictionary("gời"));
         assert!(!is_in_vietnamese_dictionary("têt"));
         assert!(!is_in_vietnamese_dictionary("windoư"));
+    }
+
+    #[test]
+    fn test_tay_nguyen_and_rare_words_dictionary() {
+        // Tay Nguyen & ethnic place names
+        let tay_nguyen_words = [
+            "đắk", "đăk", "lắk", "nông", "kon", "tum", "gia", "lai", "buôn", "ma", "thuột",
+            "pleiku", "krông", "nô", "búk", "pắk", "ana", "bông", "năng", "cư", "kuin",
+            "ea", "kar", "súp", "m'đrắk", "đrắk", "mil", "glong", "đoa", "chư", "sê",
+            "prông", "păh", "đức", "cơ", "ia", "grai", "drai", "mơ", "rông", "đam", "di",
+            "linh", "r'lấp", "nung",
+        ];
+        for word in &tay_nguyen_words {
+            assert!(
+                is_in_vietnamese_dictionary(word),
+                "Expected '{}' to be in dictionary",
+                word
+            );
+        }
+
+        // Rare Han-Viet words
+        let rare_words = [
+            "khuếch", "khuynh", "khoảnh", "ngoắt", "ngoèo", "nghễu", "nguầy", "huỳnh", "quỳnh",
+            "khuỷu", "khuấy", "khuây", "ngoáy", "nguậy", "quánh", "quạnh", "quắt", "quặp",
+        ];
+        for word in &rare_words {
+            assert!(
+                is_in_vietnamese_dictionary(word),
+                "Expected '{}' to be in dictionary",
+                word
+            );
+        }
+
+        // Dialect & internet slang
+        let slang_words = [
+            "dzô", "dzậy", "hông", "hổng", "zị", "zi", "zia", "hén", "nghen", "tui", "mầy",
+            "tao", "chảnh", "xạo", "sẩy", "trời", "ơi",
+        ];
+        for word in &slang_words {
+            assert!(
+                is_in_vietnamese_dictionary(word),
+                "Expected '{}' to be in dictionary",
+                word
+            );
+        }
     }
 
     #[test]

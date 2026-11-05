@@ -5,8 +5,8 @@ use crate::casing::CaseTracker;
 use crate::macros::MacroTable;
 pub use crate::telex::W2UType;
 use crate::telex::{
-    extract_last_syllable_index, has_vietnamese_diacritic, is_valid_vietnamese_syllable,
-    TelexEngine,
+    extract_last_syllable_index, has_vietnamese_diacritic, is_valid_in_progress_syllable,
+    is_valid_vietnamese_syllable, TelexEngine,
 };
 use crate::vietnamese_dict::{has_phonology_violation, is_in_vietnamese_dictionary};
 use crate::vni::VniEngine;
@@ -541,8 +541,9 @@ impl Engine {
         let is_vni_word =
             has_digits || self.word_used_vni || self.config.method == InputMethod::Vni;
         let has_diacritic = has_vietnamese_diacritic(&new_word);
+        let new_chars: Vec<char> = new_word.chars().collect();
         let invalid_structure = has_diacritic
-            && (!is_valid_vietnamese_syllable(&new_word) || has_phonology_violation(&new_word));
+            && (!is_valid_in_progress_syllable(&new_chars) || has_phonology_violation(&new_word));
         let dict_match = !is_vni_word
             && has_diacritic
             && self.config.enable_dictionary
@@ -769,5 +770,47 @@ mod tests {
         assert_eq!(type_word(&mut engine, "ikhong61 "), "ikhống ");
         assert_eq!(type_word(&mut engine, "achinh1 "), "achính ");
         assert_eq!(type_word(&mut engine, "athuong72 "), "athường ");
+    }
+
+    #[test]
+    fn test_tay_nguyen_and_rare_words_engine() {
+        // Telex test with Spell Check and Auto Restore English enabled
+        let mut telex_engine = Engine::new(EngineConfig {
+            method: InputMethod::Telex,
+            auto_restore_english: true,
+            spell_check: true,
+            enable_dictionary: true,
+            ..EngineConfig::default()
+        });
+
+        assert_eq!(type_word(&mut telex_engine, "Ddawsk Lawsk "), "Đắk Lắk ");
+        assert_eq!(type_word(&mut telex_engine, "Kroong Noo "), "Krông Nô ");
+        assert_eq!(type_word(&mut telex_engine, "Buoon Ma Thuoojt "), "Buôn Ma Thuột ");
+        assert_eq!(type_word(&mut telex_engine, "Pleiku "), "Pleiku ");
+        assert_eq!(type_word(&mut telex_engine, "Ea H'leo "), "Ea H'leo ");
+        assert_eq!(type_word(&mut telex_engine, "M'Ddrawsk "), "M'Đrắk ");
+        assert_eq!(type_word(&mut telex_engine, "Ia Grai "), "Ia Grai ");
+        assert_eq!(type_word(&mut telex_engine, "Chuw Proong "), "Chư Prông ");
+        assert_eq!(type_word(&mut telex_engine, "Chuw Pawh "), "Chư Păh ");
+        assert_eq!(type_word(&mut telex_engine, "khueechs "), "khuếch ");
+        assert_eq!(type_word(&mut telex_engine, "nguaayf "), "nguầy ");
+        assert_eq!(type_word(&mut telex_engine, "nguaayj "), "nguậy ");
+        assert_eq!(type_word(&mut telex_engine, "dzaayj "), "dzậy ");
+        assert_eq!(type_word(&mut telex_engine, "zij "), "zị ");
+
+        // VNI test with Spell Check and Auto Restore English enabled
+        let mut vni_engine = Engine::new(EngineConfig {
+            method: InputMethod::Vni,
+            auto_restore_english: true,
+            spell_check: true,
+            enable_dictionary: true,
+            ..EngineConfig::default()
+        });
+
+        assert_eq!(type_word(&mut vni_engine, "D9a81k La81k "), "Đắk Lắk ");
+        assert_eq!(type_word(&mut vni_engine, "Kro6ng No6 "), "Krông Nô ");
+        assert_eq!(type_word(&mut vni_engine, "Buo6n Ma Thuo65t "), "Buôn Ma Thuột ");
+        assert_eq!(type_word(&mut vni_engine, "Chu7 Pro6ng "), "Chư Prông ");
+        assert_eq!(type_word(&mut vni_engine, "khue61ch "), "khuếch ");
     }
 }

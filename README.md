@@ -49,7 +49,7 @@ Thay vì phải chạy tiến trình daemon ngoài với quyền root để can 
 - **Lõi xử lý Tiếng Việt viết bằng Rust (`vnchkey-core`)**: Quản lý toàn bộ State Machine của âm tiết, kiểm tra luật ngữ âm, đặt dấu thanh và khôi phục từ tiếng Anh.
 - **Cầu nối C-ABI (`fcitx5-vnchkey-ffi`)**: Cung cấp giao diện hàm extern C an toàn, truyền nhận dữ liệu trực tiếp giữa Rust và C++.
 - **Module Fcitx5 Native Addon (`fcitx5-addon`)**: Plugin C++ biên dịch thành `fcitx5-vnchkey-addon.so`, nạp trực tiếp vào Fcitx5 Server, tương thích hoàn hảo với cả Wayland (Sway, Hyprland, GNOME, KDE) và X11.
-- **Ứng dụng Cài Đặt đồ họa (`vnchkey-settings`)**: 100% Rust viết bằng thư viện đồ hoạ `egui` / `eframe`, khởi động tức thì, tinh tế và đồng bộ trực tiếp với file cấu hình Fcitx5.
+- **Ứng dụng thiết lập các tính năng (`vnchkey-settings`)**: 100% Rust viết bằng thư viện đồ hoạ `egui` / `eframe`, khởi động tức thì, tinh tế và đồng bộ trực tiếp với file cấu hình Fcitx5.
 
 ---
 
@@ -103,21 +103,21 @@ fcitx5-vnchkey/
 - Khi biến đổi âm tiết (ví dụ: `toan` + `s` $\to$ `toán`), thay vì xóa toàn bộ từ rồi gõ lại từ đầu, engine tìm **Tiền Tố Chung Dài Nhất (Longest Common Prefix)**:
   - Chỉ xóa lùi chính xác $1$ ký tự `n` (`backspaces = 1`).
   - Gởi tiếp chuỗi `án` (`commit_text = "án"`).
-- **Kết quả**: Triệt tiêu hoàn toàn hiện tượng nhấp nháy chữ và giật lag con trỏ trong các trình soạn thảo hiện đại (VS Code, Cursor, Zed, Sublime Text).
+- **Kết quả**: Triệt tiêu hoàn toàn hiện tượng nhấp nháy chữ và giật lag con trỏ trong editor hiện đại (VS Code, Cursor, Zed, Sublime Text).
 
 ---
 
 ### 3.2. Tách Âm Tiết Cuối Tối Ưu Cho Neovim / WezTerm / Vim
-Một vấn đề cố hữu của các bộ gõ trên terminal emulator là các phím lệnh Normal mode (như `ci"`, `cw`, `i`, `a`, `jk`) hoặc các ký tự đứng sát trước con trỏ dễ bị kẹt trong bộ đệm từ, làm hỏng việc bỏ dấu VNI:
+Một vấn đề cố hữu của các bộ gõ trên terminal emulator là các phím lệnh Normal mode (như `ci"`, `cw`, `i`, `a`, `jk`) hoặc các ký tự đứng sát trước con trỏ dễ bị kẹt trong bộ đệm từ, phá vỡ việc bỏ dấu VNI:
 - **Giải pháp của vnchKey**: Tích hợp hàm `extract_last_syllable_index()`:
-  - Khi gõ chuỗi phím số VNI (như `biet61`), engine tự động bóc tách âm tiết tiếng Việt hợp lệ đứng cuối cùng (`biet`) để áp dụng dấu thành `biết`.
+  - Khi gõ chuỗi phím số VNI (như `biet61`), engine tự động bóc tách âm tiết Tiếng Việt hợp lệ đứng cuối cùng (`biet`) để áp dụng dấu thành `biết`.
   - Giữ nguyên vẹn văn bản đứng trước, gõ mượt mà ngay cả khi con trỏ đứng sát dấu ngoặc kép `""` hoặc sau các lệnh vim.
-  - Tự động khóa khôi phục tiếng Anh đối với từ gõ phím số VNI khi thoát Insert mode bằng phím tắt `jk`.
+  - Tự động khóa khôi phục Tiếng Anh đối với từ gõ phím số VNI khi thoát Insert mode bằng phím tắt `jk`.
 
 ---
 
 ### 3.3. Bộ Kiểm Tra Chánh Tả & Ngữ Âm Học Tiếng Việt (6.750+ Từ Gốc)
-Tích hợp sẵn danh mục ~6.750 từ đơn gốc tiếng Việt và bộ luật ngữ âm học nghiêm ngặt:
+Tích hợp sẵn danh mục ~6.750 từ đơn gốc Tiếng Việt và bộ luật ngữ âm học nghiêm ngặt:
 - **Kiểm soát âm cuối tắc (`-c, -ch, -p, -t`)**: Chỉ cho phép mang thanh Sắc hoặc thanh Nặng. Ngăn chặn các âm tiết vô lý như `bạc` mang dấu hỏi (`bacr`) hoặc dấu huyền (`bacf`).
 - **Phát hiện xung đột ngữ âm**: Loại bỏ các kết hợp phụ âm / nguyên âm sai quy tắc như `ce`, `ci`, `cy`, `ge`, `giê`, `nge`, `ngi`.
 - **Hỗ trợ từ ngữ Nam Bộ & khẩu ngữ**: Công nhận các âm tiết phương ngữ và biến âm tự nhiên (`dzìa`, `dzô`, `dzí`, `gởi`, `chánh`...).
@@ -126,8 +126,8 @@ Tích hợp sẵn danh mục ~6.750 từ đơn gốc tiếng Việt và bộ lu�
 
 ### 3.4. Tự Động Khôi Phục Tiếng Anh (Restore English)
 Kế thừa thuật toán từ điển tĩnh từ **GoNhanh**:
-- Khi gõ các từ vựng lập trình hoặc tiếng Anh phổ biến (`text`, `post`, `struct`, `general`, `filter`, `return`, `window`, `user`...):
-- Khi vừa hoàn thành từ (bằng phím Space hoặc dấu câu), engine nhận diện từ không phải tiếng Việt hoặc trùng với từ điển tiếng Anh và lập tức khôi phục về dạng ký tự thô nguyên bản.
+- Khi gõ các từ vựng lập trình hoặc Tiếng Anh phổ biến (`text`, `post`, `struct`, `general`, `filter`, `return`, `window`, `user`...):
+- Khi vừa hoàn thành từ (bằng phím Space hoặc dấu câu), engine nhận diện từ không phải Tiếng Việt hoặc trùng với từ điển Tiếng Anh và lập tức khôi phục về dạng ký tự thô nguyên bản.
 
 ---
 
@@ -214,7 +214,7 @@ Huy hiệu của **vnchKey** kết hợp hai yếu tố văn hóa và công ngh�
 ## 7. Lời Cảm Ơn / Ghi Chú Phát Triển
 
 - Dự án được xây dựng và tối ưu hoá với sự đồng hành của **Google Gemini** trong vai trò AI pair programmer (hỗ trợ phân tích kiến trúc, gỡ lỗi và kiểm thử tự động).
-- Chân thành cảm ơn cộng đồng mã nguồn mở [Fcitx5](https://github.com/fcitx/fcitx5) và các bộ gõ Tiếng Việt đi trước.
+- Chân thành cảm các developers của dự án [Fcitx5](https://github.com/fcitx/fcitx5) và các bộ gõ Tiếng Việt đi trước.
 
 ---
 

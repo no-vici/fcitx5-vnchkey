@@ -668,6 +668,34 @@ pub fn is_valid_vietnamese_onset(chars: &[char]) -> bool {
             | "tr"
             | "v"
             | "x"
+            // Tay Nguyen & ethnic minority loan / dialect onsets:
+            | "kr"
+            | "pl"
+            | "pr"
+            | "gr"
+            | "dr"
+            | "đr"
+            | "gl"
+            | "br"
+            | "kl"
+            | "bl"
+            | "kn"
+            | "ml"
+            | "mr"
+            | "sr"
+            | "sl"
+            | "fl"
+            | "z"
+            // Onsets with apostrophe:
+            | "m'"
+            | "h'"
+            | "r'"
+            | "d'"
+            | "m'đ"
+            | "m'đr"
+            | "m'dr"
+            | "h'd"
+            | "h'dr"
     )
 }
 
@@ -676,7 +704,19 @@ pub fn is_valid_vietnamese_coda(chars: &[char]) -> bool {
     let s: String = chars.iter().flat_map(|c| c.to_lowercase()).collect();
     matches!(
         s.as_str(),
-        "" | "c" | "ch" | "m" | "n" | "ng" | "nh" | "p" | "t"
+        "" | "c"
+            | "ch"
+            | "m"
+            | "n"
+            | "ng"
+            | "nh"
+            | "p"
+            | "t"
+            // Tay Nguyen & ethnic minority loan codas (Đắk, Lắk, Păh, Kar, Mil):
+            | "k"
+            | "h"
+            | "r"
+            | "l"
     )
 }
 
@@ -723,24 +763,25 @@ pub fn is_valid_vietnamese_syllable(word: &str) -> bool {
         return false;
     }
 
-    // Reject impossible vowel combinations in Vietnamese (e.g. 'ae' in 'case', 'ea', 'ei', 'ey', 'ou', 'yo', 'yu')
+    // Reject impossible vowel combinations in Vietnamese (e.g. 'ae' in 'case', 'ey', 'ou', 'yo', 'yu')
+    // Note: 'ea' (as in 'Ea H\'leo', 'Ea Kar') and 'ei' (as in 'Pleiku') are preserved for proper names.
     let vowel_bases: String = letters[first_v..=last_v]
         .iter()
         .filter_map(|&c| decompose_vowel(c).map(|(b, _, _)| b))
         .collect();
     if matches!(
         vowel_bases.as_str(),
-        "ae" | "aê" | "ea" | "êa" | "ei" | "ey" | "ou" | "ôu" | "ơu" | "yo" | "yu" | "aa" | "ee" | "oo"
+        "ae" | "aê" | "êa" | "ey" | "ou" | "ôu" | "ơu" | "yo" | "yu" | "aa" | "ee" | "oo"
     ) {
         return false;
     }
 
-    // Phonotactic check: stop codas (c, ch, p, t) cannot take Huyền (2), Hỏi (3), or Ngã (4)
+    // Phonotactic check: stop codas (c, ch, p, t, k) cannot take Huyền (2), Hỏi (3), or Ngã (4)
     let coda: String = letters[last_v + 1..]
         .iter()
         .map(|c| c.to_ascii_lowercase())
         .collect();
-    if matches!(coda.as_str(), "c" | "ch" | "p" | "t") {
+    if matches!(coda.as_str(), "c" | "ch" | "p" | "t" | "k") {
         let tone = extract_tone(&letters);
         if matches!(tone, 2 | 3 | 4) {
             return false;
@@ -1255,5 +1296,32 @@ mod tests {
         let telex_always = TelexEngine::with_options(ToneStyle::Modern, W2UType::Always, false);
         assert_eq!(telex_always.feed("w").0, "ư");
         assert_eq!(telex_always.feed("ww").0, "w");
+    }
+
+    #[test]
+    fn test_telex_tay_nguyen_and_rare_words() {
+        let telex = TelexEngine::new(ToneStyle::Modern);
+        // Tay Nguyen loan onsets & codas
+        assert_eq!(telex.feed("kroong").0, "krông");
+        assert_eq!(telex.feed("kroongf").0, "krồng");
+        assert_eq!(telex.feed("ddawsk").0, "đắk");
+        assert_eq!(telex.feed("ddawk").0, "đăk");
+        assert_eq!(telex.feed("lawsk").0, "lắk");
+        assert_eq!(telex.feed("pawsk").0, "pắk");
+        assert_eq!(telex.feed("busk").0, "búk");
+        assert_eq!(telex.feed("proong").0, "prông");
+        assert_eq!(telex.feed("pawh").0, "păh");
+        assert_eq!(telex.feed("ddrawsk").0, "đrắk");
+
+        // Rare words & dialect
+        assert_eq!(telex.feed("khueechs").0, "khuếch");
+        assert_eq!(telex.feed("khuynh").0, "khuynh");
+        assert_eq!(telex.feed("nguaayf").0, "nguầy");
+        assert_eq!(telex.feed("nguaayj").0, "nguậy");
+        assert_eq!(telex.feed("maayf").0, "mầy");
+        assert_eq!(telex.feed("quawst").0, "quắt");
+        assert_eq!(telex.feed("quawjp").0, "quặp");
+        assert_eq!(telex.feed("quasnh").0, "quánh");
+        assert_eq!(telex.feed("zij").0, "zị");
     }
 }
