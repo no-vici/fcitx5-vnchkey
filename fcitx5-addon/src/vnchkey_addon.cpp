@@ -289,20 +289,6 @@ void VnchkeyEngine::activate(const fcitx::InputMethodEntry &entry, fcitx::InputC
     if (ic) {
         updateActionState();
         ic->statusArea().clearGroup(fcitx::StatusGroup::InputMethod);
-        if (statusAction_) ic->statusArea().addAction(fcitx::StatusGroup::InputMethod, statusAction_.get());
-        if (actionAutoRestore_) ic->statusArea().addAction(fcitx::StatusGroup::InputMethod, actionAutoRestore_.get());
-        if (actionMacro_) ic->statusArea().addAction(fcitx::StatusGroup::InputMethod, actionMacro_.get());
-        if (actionSpellCheck_) ic->statusArea().addAction(fcitx::StatusGroup::InputMethod, actionSpellCheck_.get());
-        if (actionDictionary_) ic->statusArea().addAction(fcitx::StatusGroup::InputMethod, actionDictionary_.get());
-        if (actionSettings_) ic->statusArea().addAction(fcitx::StatusGroup::InputMethod, actionSettings_.get());
-
-        if (statusAction_) statusAction_->update(ic);
-        if (actionAutoRestore_) actionAutoRestore_->update(ic);
-        if (actionMacro_) actionMacro_->update(ic);
-        if (actionSpellCheck_) actionSpellCheck_->update(ic);
-        if (actionDictionary_) actionDictionary_->update(ic);
-        if (actionSettings_) actionSettings_->update(ic);
-
         ic->updateUserInterface(fcitx::UserInterfaceComponent::StatusArea);
     }
 }
@@ -317,24 +303,6 @@ void VnchkeyEngine::deactivate(const fcitx::InputMethodEntry &entry, fcitx::Inpu
         ic->statusArea().clearGroup(fcitx::StatusGroup::InputMethod);
         ic->updateUserInterface(fcitx::UserInterfaceComponent::StatusArea);
     }
-}
-
-std::string VnchkeyEngine::subMode(const fcitx::InputMethodEntry &entry, fcitx::InputContext &inputContext) {
-    FCITX_UNUSED(entry);
-    FCITX_UNUSED(inputContext);
-    return config_method_;
-}
-
-std::string VnchkeyEngine::subModeIconImpl(const fcitx::InputMethodEntry &entry, fcitx::InputContext &ic) {
-    FCITX_UNUSED(entry);
-    FCITX_UNUSED(ic);
-    return "vnchkey";
-}
-
-std::string VnchkeyEngine::subModeLabelImpl(const fcitx::InputMethodEntry &entry, fcitx::InputContext &ic) {
-    FCITX_UNUSED(entry);
-    FCITX_UNUSED(ic);
-    return config_method_;
 }
 
 void VnchkeyEngine::loadConfig() {

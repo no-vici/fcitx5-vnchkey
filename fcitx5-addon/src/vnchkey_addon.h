@@ -60,10 +60,6 @@ public:
     void deactivate(const fcitx::InputMethodEntry &entry, fcitx::InputContextEvent &event) override;
     void reloadConfig() override;
 
-    std::string subMode(const fcitx::InputMethodEntry &entry, fcitx::InputContext &inputContext) override;
-    std::string subModeIconImpl(const fcitx::InputMethodEntry &entry, fcitx::InputContext &ic) override;
-    std::string subModeLabelImpl(const fcitx::InputMethodEntry &entry, fcitx::InputContext &ic) override;
-
 private:
     void* getContext(const std::string& entryName);
     void loadConfig();
