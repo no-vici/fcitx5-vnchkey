@@ -289,6 +289,18 @@ void VnchkeyEngine::activate(const fcitx::InputMethodEntry &entry, fcitx::InputC
     if (ic) {
         updateActionState();
         ic->statusArea().clearGroup(fcitx::StatusGroup::InputMethod);
+        if (actionAutoRestore_) ic->statusArea().addAction(fcitx::StatusGroup::InputMethod, actionAutoRestore_.get());
+        if (actionMacro_) ic->statusArea().addAction(fcitx::StatusGroup::InputMethod, actionMacro_.get());
+        if (actionSpellCheck_) ic->statusArea().addAction(fcitx::StatusGroup::InputMethod, actionSpellCheck_.get());
+        if (actionDictionary_) ic->statusArea().addAction(fcitx::StatusGroup::InputMethod, actionDictionary_.get());
+        if (actionSettings_) ic->statusArea().addAction(fcitx::StatusGroup::InputMethod, actionSettings_.get());
+
+        if (actionAutoRestore_) actionAutoRestore_->update(ic);
+        if (actionMacro_) actionMacro_->update(ic);
+        if (actionSpellCheck_) actionSpellCheck_->update(ic);
+        if (actionDictionary_) actionDictionary_->update(ic);
+        if (actionSettings_) actionSettings_->update(ic);
+
         ic->updateUserInterface(fcitx::UserInterfaceComponent::StatusArea);
     }
 }
