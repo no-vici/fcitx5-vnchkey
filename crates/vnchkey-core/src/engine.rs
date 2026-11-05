@@ -4,7 +4,10 @@ use crate::auto_restore::EnglishAutoRestore;
 use crate::casing::CaseTracker;
 use crate::macros::MacroTable;
 pub use crate::telex::W2UType;
-use crate::telex::{has_vietnamese_diacritic, is_valid_vietnamese_syllable, TelexEngine};
+use crate::telex::{
+    extract_last_syllable_index, has_vietnamese_diacritic, is_valid_vietnamese_syllable,
+    TelexEngine,
+};
 use crate::vietnamese_dict::{has_phonology_violation, is_in_vietnamese_dictionary};
 use crate::vni::VniEngine;
 
@@ -26,7 +29,7 @@ pub enum InputMethod {
 pub enum ToneStyle {
     /// Modern standard: đặt dấu trên nguyên âm chính (hoà, uỷ, hoè)
     Modern,
-    /// Classic standard: đặt dấu kiểu cũ (hòa, ủy, hòe)
+    /// Classic standard: đặt dấu theo style cũ (hòa, ủy, hòe)
     Classic,
 }
 
@@ -321,7 +324,10 @@ impl Engine {
         }
 
         // If this word was already restored/locked as English, pass subsequent letters through untouched
-        if self.english_locked {
+        if self.english_locked
+            && !(ch.is_ascii_digit()
+                && matches!(self.config.method, InputMethod::Vni | InputMethod::Auto))
+        {
             self.raw_strokes.push(ch);
             self.current_word.push(ch);
             self.casing.track(ch);
@@ -364,6 +370,31 @@ impl Engine {
                     let (new_word, was_transformed, was_undo) =
                         self.vni.apply_key(&self.current_word, ch);
                     if !was_transformed {
+                        let split_idx = extract_last_syllable_index(&self.current_word);
+                        let char_count = self.current_word.chars().count();
+                        if split_idx > 0 && split_idx < char_count {
+                            let tail: String = self.current_word.chars().skip(split_idx).collect();
+                            let (new_tail, tail_transformed, tail_undo) =
+                                self.vni.apply_key(&tail, ch);
+                            if tail_transformed {
+                                self.word_used_vni = true;
+                                self.english_locked = false;
+                                self.manual_undo |= tail_undo;
+                                self.raw_strokes = format!("{}{}", tail, ch);
+                                let (backspaces, commit_text) =
+                                    compare_and_split_strings(&tail, &new_tail);
+                                self.current_word = new_tail;
+                                let consumed = backspaces > 0 || commit_text != ch.to_string();
+                                return EngineOutput {
+                                    backspaces,
+                                    commit_text,
+                                    consumed,
+                                    auto_restored: false,
+                                    macro_expanded: false,
+                                    adaptive_delay_ms: 0,
+                                };
+                            }
+                        }
                         self.reset();
                         return EngineOutput {
                             backspaces: 0,
@@ -375,6 +406,7 @@ impl Engine {
                         };
                     }
                     self.word_used_vni = true;
+                    self.english_locked = false;
                     self.manual_undo |= was_undo;
                     self.raw_strokes.push(ch);
                     let (backspaces, commit_text) =
@@ -404,6 +436,31 @@ impl Engine {
                     let (new_word, was_transformed, was_undo) =
                         self.vni.apply_key(&self.current_word, ch);
                     if !was_transformed {
+                        let split_idx = extract_last_syllable_index(&self.current_word);
+                        let char_count = self.current_word.chars().count();
+                        if split_idx > 0 && split_idx < char_count {
+                            let tail: String = self.current_word.chars().skip(split_idx).collect();
+                            let (new_tail, tail_transformed, tail_undo) =
+                                self.vni.apply_key(&tail, ch);
+                            if tail_transformed {
+                                self.word_used_vni = true;
+                                self.english_locked = false;
+                                self.manual_undo |= tail_undo;
+                                self.raw_strokes = format!("{}{}", tail, ch);
+                                let (backspaces, commit_text) =
+                                    compare_and_split_strings(&tail, &new_tail);
+                                self.current_word = new_tail;
+                                let consumed = backspaces > 0 || commit_text != ch.to_string();
+                                return EngineOutput {
+                                    backspaces,
+                                    commit_text,
+                                    consumed,
+                                    auto_restored: false,
+                                    macro_expanded: false,
+                                    adaptive_delay_ms: 0,
+                                };
+                            }
+                        }
                         self.reset();
                         return EngineOutput {
                             backspaces: 0,
@@ -415,6 +472,7 @@ impl Engine {
                         };
                     }
                     self.word_used_vni = true;
+                    self.english_locked = false;
                     self.manual_undo |= was_undo;
                     self.raw_strokes.push(ch);
                     let (backspaces, commit_text) =
@@ -477,29 +535,50 @@ impl Engine {
         // 1. If the syllable has Vietnamese marks and violates Vietnamese phonology/structure
         //    (e.g. 'text' -> 'tẽt', 'general' -> 'gểna', 'center' -> 'cẻnt', 'case' -> 'cáe'),
         //    or matches a known English word in the User Dictionary, immediately restore to raw_strokes!
+        //    Never auto-restore VNI digit sequences (e.g. "biet61" followed by Neovim's `jk` escape mapping).
         let mut auto_restored = false;
+        let has_digits = self.raw_strokes.chars().any(|c| c.is_ascii_digit());
+        let is_vni_word =
+            has_digits || self.word_used_vni || self.config.method == InputMethod::Vni;
         let has_diacritic = has_vietnamese_diacritic(&new_word);
-        let invalid_structure =
-            has_diacritic && (!is_valid_vietnamese_syllable(&new_word) || has_phonology_violation(&new_word));
-        let dict_match = has_diacritic
+        let invalid_structure = has_diacritic
+            && (!is_valid_vietnamese_syllable(&new_word) || has_phonology_violation(&new_word));
+        let dict_match = !is_vni_word
+            && has_diacritic
             && self.config.enable_dictionary
             && self
                 .auto_restore
                 .should_restore(&self.raw_strokes, &new_word, true);
 
         if !self.manual_undo
+            && !is_vni_word
             && ((self.config.auto_restore_english && invalid_structure) || dict_match)
         {
             new_word = self.raw_strokes.clone();
             self.english_locked = true;
             auto_restored = true;
-        } else if self.config.spell_check && !self.manual_undo && was_transformed && invalid_structure {
+        } else if self.config.spell_check && !self.manual_undo && was_transformed && invalid_structure
+        {
             // If Chánh Tả is enabled (even when Restore English is disabled), prevent invalid Vietnamese syllable marks
             new_word = format!("{}{}", self.current_word, ch);
         }
 
         let (backspaces, commit_text) = compare_and_split_strings(&self.current_word, &new_word);
         self.current_word = new_word;
+
+        // If a VNI word already has diacritics and a subsequent character (such as Neovim's `jk` escape
+        // or the start of an adjacent word) breaks the syllable structure, keep the committed Vietnamese
+        // word intact on screen and advance the buffer to the new trailing syllable.
+        if is_vni_word && !was_transformed && invalid_structure {
+            let split_idx = extract_last_syllable_index(&self.current_word);
+            if split_idx > 0 {
+                let tail: String = self.current_word.chars().skip(split_idx).collect();
+                self.current_word = tail.clone();
+                self.raw_strokes = tail;
+                self.word_used_vni = false;
+                self.manual_undo = false;
+            }
+        }
 
         // Only consume the key event if earlier characters were modified or the committed character differs from `ch`
         let consumed =
@@ -661,5 +740,34 @@ mod tests {
         // Valid Southern & Standard Vietnamese words pass Chánh Tả check
         assert_eq!(type_word(&mut engine, "chanhs "), "chánh ");
         assert_eq!(type_word(&mut engine, "tar "), "tả ");
+    }
+
+    #[test]
+    fn test_vni_neovim_ci_quote_and_preceding_chars() {
+        let mut engine = Engine::new(EngineConfig {
+            method: InputMethod::Vni,
+            auto_restore_english: true,
+            spell_check: false,
+            enable_dictionary: true,
+            ..EngineConfig::default()
+        });
+
+        // 1. Typing "biet61" inside "" followed by Neovim's `jk` -> <ESC> mapping
+        // must NOT auto-restore "biết" back to "biet61"!
+        assert_eq!(type_word(&mut engine, "biet61jk"), "biếtjk");
+        engine.reset();
+
+        // 2. Typing VNI words immediately after Vim Normal-mode commands (`i`, `a`, `cw`, `ciw`, `jk`)
+        // or adjacent characters without a space delimiter (extract_last_syllable_index)
+        assert_eq!(type_word(&mut engine, "ibiet61 "), "ibiết ");
+        assert_eq!(type_word(&mut engine, "abiet61 "), "abiết ");
+        assert_eq!(type_word(&mut engine, "cwbiet61 "), "cwbiết ");
+        assert_eq!(type_word(&mut engine, "ciwbiet61 "), "ciwbiết ");
+        assert_eq!(type_word(&mut engine, "jkbiet61 "), "jkbiết ");
+        assert_eq!(type_word(&mut engine, "bvibiet61 "), "bvibiết ");
+        assert_eq!(type_word(&mut engine, "ibie6t1 "), "ibiết ");
+        assert_eq!(type_word(&mut engine, "ikhong61 "), "ikhống ");
+        assert_eq!(type_word(&mut engine, "achinh1 "), "achính ");
+        assert_eq!(type_word(&mut engine, "athuong72 "), "athường ");
     }
 }

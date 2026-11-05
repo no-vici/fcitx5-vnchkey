@@ -282,6 +282,9 @@ void VnchkeyEngine::updateActionState() {
 
 void VnchkeyEngine::activate(const fcitx::InputMethodEntry &entry, fcitx::InputContextEvent &event) {
     FCITX_UNUSED(entry);
+    if (ctx_auto_) fcitx5_vnchkey_reset(ctx_auto_);
+    if (ctx_telex_) fcitx5_vnchkey_reset(ctx_telex_);
+    if (ctx_vni_) fcitx5_vnchkey_reset(ctx_vni_);
     auto* ic = event.inputContext();
     if (ic) {
         updateActionState();
@@ -306,6 +309,9 @@ void VnchkeyEngine::activate(const fcitx::InputMethodEntry &entry, fcitx::InputC
 
 void VnchkeyEngine::deactivate(const fcitx::InputMethodEntry &entry, fcitx::InputContextEvent &event) {
     FCITX_UNUSED(entry);
+    if (ctx_auto_) fcitx5_vnchkey_reset(ctx_auto_);
+    if (ctx_telex_) fcitx5_vnchkey_reset(ctx_telex_);
+    if (ctx_vni_) fcitx5_vnchkey_reset(ctx_vni_);
     auto* ic = event.inputContext();
     if (ic) {
         ic->statusArea().clearGroup(fcitx::StatusGroup::InputMethod);

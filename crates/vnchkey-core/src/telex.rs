@@ -750,6 +750,173 @@ pub fn is_valid_vietnamese_syllable(word: &str) -> bool {
     true
 }
 
+/// Checks if `letters` can be a valid in-progress Vietnamese syllable (either an onset prefix
+/// or an onset + valid vowel nucleus + optional coda).
+pub fn is_valid_in_progress_syllable(letters: &[char]) -> bool {
+    if letters.is_empty() {
+        return true;
+    }
+    if letters.len() == 1 && (letters[0] == 'đ' || letters[0] == 'Đ') {
+        return true;
+    }
+
+    let first_v = match letters.iter().position(|&c| is_vietnamese_vowel(c)) {
+        Some(idx) => idx,
+        None => return is_valid_vietnamese_onset(letters),
+    };
+    let last_v = letters.iter().rposition(|&c| is_vietnamese_vowel(c)).unwrap();
+
+    if !can_modify_syllable(letters) {
+        return false;
+    }
+
+    let word_str: String = letters.iter().collect();
+    if crate::vietnamese_dict::has_phonology_violation(&word_str) {
+        return false;
+    }
+
+    let has_coda = last_v + 1 < letters.len();
+
+    // 'qu' cannot take a coda without a following main vowel
+    if first_v == 1
+        && last_v == 1
+        && letters[0].eq_ignore_ascii_case(&'q')
+        && has_coda
+    {
+        return false;
+    }
+
+    let mut effective_start = first_v;
+    if last_v > first_v && first_v == 1 {
+        let first_char = letters[0].to_ascii_lowercase();
+        if let Some((second_base, _, _)) = decompose_vowel(letters[1]) {
+            let fam = vowel_family(second_base);
+            if (first_char == 'g' && fam == 'i') || (first_char == 'q' && fam == 'u') {
+                effective_start = 2;
+            }
+        }
+    }
+
+    let eff_families: Vec<char> = letters[effective_start..=last_v]
+        .iter()
+        .filter_map(|&c| decompose_vowel(c).map(|(b, _, _)| vowel_family(b)))
+        .collect();
+
+    match eff_families.len() {
+        0 | 1 => {}
+        2 => {
+            let pair = (eff_families[0], eff_families[1]);
+            let valid_diphthong = matches!(
+                pair,
+                ('a', 'i' | 'o' | 'u' | 'y')
+                    | ('e', 'o' | 'u')
+                    | ('i', 'a' | 'e' | 'u')
+                    | ('o', 'a' | 'e' | 'i' | 'o')
+                    | ('u', 'a' | 'e' | 'i' | 'o' | 'u' | 'y')
+                    | ('y', 'e')
+            );
+            if !valid_diphthong {
+                return false;
+            }
+            if has_coda {
+                let valid_closed = matches!(
+                    pair,
+                    ('i', 'e')
+                        | ('y', 'e')
+                        | ('u', 'o')
+                        | ('o', 'a')
+                        | ('o', 'e')
+                        | ('u', 'a')
+                        | ('u', 'e')
+                        | ('u', 'y')
+                        | ('o', 'o')
+                );
+                if !valid_closed {
+                    return false;
+                }
+            }
+        }
+        3 => {
+            let triple = (eff_families[0], eff_families[1], eff_families[2]);
+            if has_coda {
+                if triple != ('u', 'y', 'e') {
+                    return false;
+                }
+            } else {
+                let valid_triphthong = matches!(
+                    triple,
+                    ('i', 'e', 'u')
+                        | ('y', 'e', 'u')
+                        | ('o', 'a', 'i' | 'o' | 'y')
+                        | ('o', 'e', 'o')
+                        | ('u', 'a', 'y')
+                        | ('u', 'o', 'i' | 'u')
+                        | ('u', 'y', 'a' | 'e' | 'u')
+                );
+                if !valid_triphthong {
+                    return false;
+                }
+            }
+        }
+        _ => return false,
+    }
+
+    if has_coda {
+        let coda: String = letters[last_v + 1..]
+            .iter()
+            .map(|c| c.to_ascii_lowercase())
+            .collect();
+        if matches!(coda.as_str(), "c" | "ch" | "p" | "t") {
+            let tone = extract_tone(letters);
+            if matches!(tone, 2 | 3 | 4) {
+                return false;
+            }
+        }
+    }
+
+    true
+}
+
+/// Extracts the starting character index of the last valid Vietnamese syllable in `word`
+/// (equivalent to `extractLastSyllable` in `fcitx5-lilypad` / `bamboo-core`).
+/// When preceding characters (e.g. Vim normal-mode commands `i`, `a`, `cw`, `ciw`, `jk`, or
+/// an adjacent word prefix) are attached to the buffer, this returns the index where the
+/// trailing Vietnamese syllable begins.
+pub fn extract_last_syllable_index(word: &str) -> usize {
+    let chars: Vec<char> = word.chars().collect();
+    let mut from_idx = 0;
+
+    for i in 0..chars.len() {
+        if !is_valid_in_progress_syllable(&chars[from_idx..=i]) {
+            let prev_slice = &chars[from_idx..i];
+            let min_start = if let Some(last_v_rel) =
+                prev_slice.iter().rposition(|&c| is_vietnamese_vowel(c))
+            {
+                let last_v = from_idx + last_v_rel;
+                if !is_vietnamese_vowel(chars[i]) && last_v + 1 < i {
+                    // Consonant typed after an existing consonant coda (e.g. "ath" -> "th", "bietk" -> "k")
+                    last_v + 1
+                } else {
+                    from_idx + 1
+                }
+            } else {
+                from_idx + 1
+            };
+
+            let mut next_from = i + 1;
+            for k in min_start..=i {
+                if is_valid_in_progress_syllable(&chars[k..=i]) {
+                    next_from = k;
+                    break;
+                }
+            }
+            from_idx = next_from;
+        }
+    }
+
+    from_idx
+}
+
 /// Checks if `s` contains any transformed Vietnamese character (accented vowel or `đ`/`Đ`).
 pub fn has_vietnamese_diacritic(s: &str) -> bool {
     s.chars().any(|c| {

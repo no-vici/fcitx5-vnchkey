@@ -6,7 +6,7 @@
 
 **Bộ Gõ Tiếng Việt Hiệu Năng Cao, Tuyệt Đối An Toàn Bộ Nhớ Cho Linux (Fcitx5 / Wayland / X11)**  
 *Được viết lại hoàn toàn bằng 100% Safe Rust từ dự án fcitx5-lilypad.*  
-*Hội tụ tinh hoa công nghệ từ **OpenViet IME**, **GoNhanh** và **XKey**.*  
+*Hội tụ tinh hoa công nghệ từ **OpenViet IME**, **OpenKey**, **GoNhanh** và **XKey**.*  
 *Mang đậm tinh thần Tự Do và Di sản Cờ Vàng Ba Sọc Đỏ.*
 
 [![Rust](https://img.shields.io/badge/Rust-1.80%2B-orange.svg?style=flat-square&logo=rust)](https://www.rust-lang.org)
@@ -18,6 +18,8 @@
 </div>
 
 ---
+
+*Nếu bạn hông thích biểu tượng của bộ gõ thì hãy bỏ qua và lựa chọn những bộ khác với những tính năng vượt trội tương tự như [fcitx5-lilypad](https://github.com/chiconcota/fcitx5-lilypad) (chiconcota). Xin đừng vì sự khác biệt về ý thức hệ hay quan điểm chánh trị mà report đứa con tinh thần của một coding learner thật sự yêu tự do trong những ký tự anh ta gõ xuống.*
 
 ## 📖 Mục Lục Chi Tiết
 
