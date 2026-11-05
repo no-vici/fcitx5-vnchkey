@@ -20,8 +20,7 @@ impl MacroTable {
         entries.insert("cv".to_string(), "công việc".to_string());
         entries.insert("cx".to_string(), "cũng".to_string());
         entries.insert("dc".to_string(), "được".to_string());
-        entries.insert("dma".to_string(), "đụ má".to_string());
-        entries.insert("dmm".to_string(), "đụ má mày".to_string());
+        entries.insert("hn".to_string(), "hôm nay".to_string());
         entries.insert("hp".to_string(), "Hạnh Phúc".to_string());
         entries.insert("idk".to_string(), "tui hông biết".to_string());
         entries.insert("kbi".to_string(), "không biết".to_string());
@@ -29,11 +28,11 @@ impl MacroTable {
         entries.insert("ko".to_string(), "không".to_string());
         entries.insert("kt".to_string(), "kinh tế".to_string());
         entries.insert("mb".to_string(), "Miền Bắc".to_string());
-        entries.insert("md".to_string(), "mất dạy".to_string());
         entries.insert("mn".to_string(), "Miền Nam".to_string());
         entries.insert("mng".to_string(), "mọi người".to_string());
         entries.insert("mst".to_string(), "mã số thuế".to_string());
         entries.insert("mt".to_string(), "Miền Tây".to_string());
+        entries.insert("ng".to_string(), "người".to_string());
         entries.insert("nk".to_string(), "nhập khẩu".to_string());
         entries.insert("nt".to_string(), "nhắn tin".to_string());
         entries.insert("nv".to_string(), "Người Việt".to_string());
