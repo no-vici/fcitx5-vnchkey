@@ -610,8 +610,17 @@ Huy hiệu của **vnchKey** kết hợp hai yếu tố văn hóa và công ngh�
 
 ---
 
+## 11. Lời Cảm Ơn / Ghi Chú Phát Triển
+
+- Dự án được xây dựng và tối ưu hoá với sự đồng hành của **Google Gemini** trong vai trò AI pair programmer (hỗ trợ phân tích kiến trúc, gỡ lỗi và kiểm thử tự động).
+- Chân thành cảm ơn cộng đồng mã nguồn mở [Fcitx5](https://github.com/fcitx/fcitx5) và các bộ gõ tiếng Việt đi trước.
+
+---
+
 ## 📄 Bản Quyền & Giấy Phép
 
 - Dự án được phát hành dưới hình thức **Mã Nguồn Mở Tự Do 100%** theo các điều khoản của [Giấy Phép GNU General Public License v3.0 (GPLv3)](LICENSE).
 - Tôn chỉ giấy phép GPLv3 bảo đảm rằng **vnchKey** và tất cả các phiên bản phái sinh sẽ luôn luôn tự do, mở mã nguồn vĩnh viễn và không bao giờ bị biến tướng thành phần mềm đóng hay thương mại độc quyền.
 - Mọi đóng góp, báo cáo lỗi (issues) và yêu cầu kéo (pull requests) xin gởi về: [GitHub Repository](https://github.com/no-vici/fcitx5-vnchkey).
+
+[![AI-Assisted](https://img.shields.io/badge/AI%20Assisted-Google%20Gemini-8E75C2?logo=google-gemini&logoColor=white)](https://gemini.google.com)
