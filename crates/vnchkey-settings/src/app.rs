@@ -521,6 +521,12 @@ impl SettingsApp {
             &mut self.config.remember_app_mode,
             "Tự động nhớ chế độ xuất chữ cho từng ứng dụng (Direct / Preedit)",
         );
+        ui.add_space(8.0);
+
+        ui.checkbox(
+            &mut self.config.preedit_tooltip,
+            "Khung chữ nổi khi gõ gạch chân (Floating Preedit Tooltip - khuyên dùng cho Google Docs)",
+        );
 
         self.render_group_header(ui, "Typing");
 

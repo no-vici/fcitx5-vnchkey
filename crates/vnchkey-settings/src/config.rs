@@ -14,6 +14,7 @@ pub struct VnchkeyConfig {
     pub output_charset: String,
     pub output_mode: String,
     pub remember_app_mode: bool,
+    pub preedit_tooltip: bool,
     pub type_w_to_u: String,
     pub bracket_transform: String,
     pub modern_style: bool,
@@ -40,6 +41,7 @@ impl Default for VnchkeyConfig {
             output_charset: "Unicode".to_string(),
             output_mode: "Direct".to_string(),
             remember_app_mode: true,
+            preedit_tooltip: true,
             type_w_to_u: "Non-Start".to_string(),
             bracket_transform: "Disabled".to_string(),
             modern_style: true,
@@ -124,6 +126,7 @@ impl ConfigManager {
             if let Some(v) = map.get("OutputCharset") { cfg.output_charset = v.clone(); }
             if let Some(v) = map.get("OutputMode") { cfg.output_mode = v.clone(); }
             if let Some(v) = map.get("RememberAppMode") { cfg.remember_app_mode = v.eq_ignore_ascii_case("true"); }
+            if let Some(v) = map.get("PreeditTooltip") { cfg.preedit_tooltip = v.eq_ignore_ascii_case("true"); }
             if let Some(v) = map.get("TypeW2U") { cfg.type_w_to_u = v.clone(); }
             if let Some(v) = map.get("BracketTransform") { cfg.bracket_transform = v.clone(); }
             if let Some(v) = map.get("ModernStyle") { cfg.modern_style = v.eq_ignore_ascii_case("true"); }
@@ -158,6 +161,7 @@ impl ConfigManager {
         lines.push(format!("OutputCharset={}", cfg.output_charset));
         lines.push(format!("OutputMode={}", cfg.output_mode));
         lines.push(format!("RememberAppMode={}", if cfg.remember_app_mode { "True" } else { "False" }));
+        lines.push(format!("PreeditTooltip={}", if cfg.preedit_tooltip { "True" } else { "False" }));
         lines.push(format!("TypeW2U={}", cfg.type_w_to_u));
         lines.push(format!("BracketTransform={}", cfg.bracket_transform));
         lines.push(format!("ModernStyle={}", if cfg.modern_style { "True" } else { "False" }));

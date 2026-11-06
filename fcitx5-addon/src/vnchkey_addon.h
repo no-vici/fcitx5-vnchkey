@@ -88,6 +88,7 @@ private:
     std::string config_charset_ = "Unicode";
     std::string config_output_mode_ = "Direct";
     bool config_remember_app_mode_ = true;
+    bool config_preedit_tooltip_ = true;
     std::unordered_map<std::string, std::string> app_output_modes_;
 
     bool config_auto_restore_ = true;
@@ -107,6 +108,7 @@ private:
 
     std::unique_ptr<fcitx::SimpleAction> actionOutputModeDirect_;
     std::unique_ptr<fcitx::SimpleAction> actionOutputModePreedit_;
+    std::unique_ptr<fcitx::SimpleAction> actionPreeditTooltip_;
 
     std::unique_ptr<fcitx::SimpleAction> actionCharsetUnicode_;
 

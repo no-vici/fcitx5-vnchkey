@@ -26,6 +26,7 @@ VnchkeyEngine::VnchkeyEngine(fcitx::AddonManager* manager)
         if (statusAction_) uiMgr.registerAction("vnchkey-status", statusAction_.get());
         if (actionOutputModeDirect_) uiMgr.registerAction("vnchkey-mode-direct", actionOutputModeDirect_.get());
         if (actionOutputModePreedit_) uiMgr.registerAction("vnchkey-mode-preedit", actionOutputModePreedit_.get());
+        if (actionPreeditTooltip_) uiMgr.registerAction("vnchkey-preedit-tooltip", actionPreeditTooltip_.get());
         if (actionAutoRestore_) uiMgr.registerAction("vnchkey-autorestore", actionAutoRestore_.get());
         if (actionMacro_) uiMgr.registerAction("vnchkey-macro", actionMacro_.get());
         if (actionSpellCheck_) uiMgr.registerAction("vnchkey-spellcheck", actionSpellCheck_.get());
@@ -40,6 +41,7 @@ VnchkeyEngine::~VnchkeyEngine() {
         if (statusAction_) uiMgr.unregisterAction(statusAction_.get());
         if (actionOutputModeDirect_) uiMgr.unregisterAction(actionOutputModeDirect_.get());
         if (actionOutputModePreedit_) uiMgr.unregisterAction(actionOutputModePreedit_.get());
+        if (actionPreeditTooltip_) uiMgr.unregisterAction(actionPreeditTooltip_.get());
         if (actionAutoRestore_) uiMgr.unregisterAction(actionAutoRestore_.get());
         if (actionMacro_) uiMgr.unregisterAction(actionMacro_.get());
         if (actionSpellCheck_) uiMgr.unregisterAction(actionSpellCheck_.get());
@@ -161,11 +163,26 @@ void VnchkeyEngine::setupStatusMenu() {
         if (ic) {
             if (actionOutputModeDirect_) actionOutputModeDirect_->update(ic);
             if (actionOutputModePreedit_) actionOutputModePreedit_->update(ic);
+            if (actionPreeditTooltip_) actionPreeditTooltip_->update(ic);
             if (statusAction_) statusAction_->update(ic);
             ic->updateUserInterface(fcitx::UserInterfaceComponent::StatusArea);
         }
     }));
     statusMenu_->addAction(actionOutputModePreedit_.get());
+
+    actionPreeditTooltip_ = std::make_unique<fcitx::SimpleAction>();
+    actionPreeditTooltip_->setCheckable(true);
+    actionPreeditTooltip_->setLongText("Khung chữ nổi khi gõ gạch chân (Floating Preedit Tooltip)");
+    connections_.push_back(actionPreeditTooltip_->connect<fcitx::SimpleAction::Activated>([this](fcitx::InputContext* ic) {
+        config_preedit_tooltip_ = !config_preedit_tooltip_;
+        updateActionState(ic);
+        saveConfig();
+        if (ic) {
+            if (actionPreeditTooltip_) actionPreeditTooltip_->update(ic);
+            ic->updateUserInterface(fcitx::UserInterfaceComponent::StatusArea);
+        }
+    }));
+    statusMenu_->addAction(actionPreeditTooltip_.get());
 
     // 2. Output Charset (Pure standard Unicode only - TCVN3 removed as requested)
     actionCharsetUnicode_ = std::make_unique<fcitx::SimpleAction>();
@@ -301,6 +318,10 @@ void VnchkeyEngine::updateActionState(fcitx::InputContext* ic) {
         actionOutputModePreedit_->setChecked(isPreedit);
         actionOutputModePreedit_->setShortText(std::string(isPreedit ? "✔ " : "   ") + "Gõ Gạch Chân (Preedit)");
     }
+    if (actionPreeditTooltip_) {
+        actionPreeditTooltip_->setChecked(config_preedit_tooltip_);
+        actionPreeditTooltip_->setShortText(std::string(config_preedit_tooltip_ ? "✔ " : "✖ ") + "Khung Nổi (Tooltip)");
+    }
 
     if (actionCharsetUnicode_) {
         actionCharsetUnicode_->setChecked(true);
@@ -337,6 +358,7 @@ void VnchkeyEngine::activate(const fcitx::InputMethodEntry &entry, fcitx::InputC
         ic->statusArea().clearGroup(fcitx::StatusGroup::InputMethod);
         if (actionOutputModeDirect_) ic->statusArea().addAction(fcitx::StatusGroup::InputMethod, actionOutputModeDirect_.get());
         if (actionOutputModePreedit_) ic->statusArea().addAction(fcitx::StatusGroup::InputMethod, actionOutputModePreedit_.get());
+        if (actionPreeditTooltip_) ic->statusArea().addAction(fcitx::StatusGroup::InputMethod, actionPreeditTooltip_.get());
         if (actionAutoRestore_) ic->statusArea().addAction(fcitx::StatusGroup::InputMethod, actionAutoRestore_.get());
         if (actionMacro_) ic->statusArea().addAction(fcitx::StatusGroup::InputMethod, actionMacro_.get());
         if (actionSpellCheck_) ic->statusArea().addAction(fcitx::StatusGroup::InputMethod, actionSpellCheck_.get());
@@ -345,6 +367,7 @@ void VnchkeyEngine::activate(const fcitx::InputMethodEntry &entry, fcitx::InputC
 
         if (actionOutputModeDirect_) actionOutputModeDirect_->update(ic);
         if (actionOutputModePreedit_) actionOutputModePreedit_->update(ic);
+        if (actionPreeditTooltip_) actionPreeditTooltip_->update(ic);
         if (actionAutoRestore_) actionAutoRestore_->update(ic);
         if (actionMacro_) actionMacro_->update(ic);
         if (actionSpellCheck_) actionSpellCheck_->update(ic);
@@ -490,6 +513,8 @@ void VnchkeyEngine::loadConfig() {
                 }
             } else if (line.rfind("RememberAppMode=", 0) == 0) {
                 config_remember_app_mode_ = (line.find("False") == std::string::npos);
+            } else if (line.rfind("PreeditTooltip=", 0) == 0) {
+                config_preedit_tooltip_ = (line.find("False") == std::string::npos);
             } else if (line.rfind("AutoRestoreEnglish=", 0) == 0) {
                 config_auto_restore_ = (line.find("False") == std::string::npos);
             } else if (line.rfind("EnableMacro=", 0) == 0) {
@@ -535,6 +560,7 @@ void VnchkeyEngine::saveConfig() {
                     l.rfind("OutputCharset=", 0) != 0 &&
                     l.rfind("OutputMode=", 0) != 0 &&
                     l.rfind("RememberAppMode=", 0) != 0 &&
+                    l.rfind("PreeditTooltip=", 0) != 0 &&
                     l.rfind("AutoRestoreEnglish=", 0) != 0 &&
                     l.rfind("EnableMacro=", 0) != 0 &&
                     l.rfind("SpellCheck=", 0) != 0 &&
@@ -554,6 +580,7 @@ void VnchkeyEngine::saveConfig() {
         out << "OutputCharset=Unicode\n";
         out << "OutputMode=" << config_output_mode_ << "\n";
         out << "RememberAppMode=" << (config_remember_app_mode_ ? "True" : "False") << "\n";
+        out << "PreeditTooltip=" << (config_preedit_tooltip_ ? "True" : "False") << "\n";
         out << "AutoRestoreEnglish=" << (config_auto_restore_ ? "True" : "False") << "\n";
         out << "EnableMacro=" << (config_macro_ ? "True" : "False") << "\n";
         out << "SpellCheck=" << (config_spell_check_ ? "True" : "False") << "\n";
@@ -673,6 +700,9 @@ void VnchkeyEngine::keyEvent(const fcitx::InputMethodEntry &entry, fcitx::KeyEve
                 if (cur && cur[0] != '\0') {
                     fcitx::Text text(cur, fcitx::TextFormatFlag::Underline);
                     ic->inputPanel().setClientPreedit(text);
+                    if (config_preedit_tooltip_) {
+                        ic->inputPanel().setPreedit(text);
+                    }
                     ic->updatePreedit();
                     ic->updateUserInterface(fcitx::UserInterfaceComponent::InputPanel);
                     fcitx5_vnchkey_free_string(cur);
@@ -733,6 +763,9 @@ void VnchkeyEngine::keyEvent(const fcitx::InputMethodEntry &entry, fcitx::KeyEve
             if (cur && cur[0] != '\0') {
                 fcitx::Text text(cur, fcitx::TextFormatFlag::Underline);
                 ic->inputPanel().setClientPreedit(text);
+                if (config_preedit_tooltip_) {
+                    ic->inputPanel().setPreedit(text);
+                }
                 ic->updatePreedit();
                 ic->updateUserInterface(fcitx::UserInterfaceComponent::InputPanel);
                 fcitx5_vnchkey_free_string(cur);
