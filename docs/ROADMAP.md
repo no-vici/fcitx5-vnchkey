@@ -13,10 +13,10 @@
   • Safe Rust Core Engine                                • Chế độ Kép: Direct & Preedit                     • GNOME Wayland gnome-shell Guard
   • Micro-diff LCP Algorithm                             • Floating Preedit Tooltip                         • Allowlist WPS Office (hidesPreedit)
   • Ngữ âm học ~6.750 từ gốc                             • Per-App Mode Memory                              • Dọn dẹp Sheets (deleteAfterChars)
-  • Native Rust Settings GUI (egui)                      • Địa danh Tây Nguyên & Dấu nháy '                 • BlindWrites Auto-fallback (Cursor)
+  • Native Rust Settings GUI (egui)                      • Địa danh Tây Nguyên & Dấu nháy '                 • Next-Gen Syllable Parser (Bamboo)
                                                          • Persistent Context Guard (Java IDEs/Wine)        • Phím tắt Lật Từ (Ctrl+Shift+Z)
-                                                         • Adaptive Micro-Pause Engine (Direct on Web)      • Re-open âm tiết sau Backspace
-                                                         • System App Picker & Mode Grid
+                                                         • Adaptive Micro-Pause Engine (Direct on Web)      • Macro Undo & Loop Suppression
+                                                         • System App Picker & Mode Grid                    • Re-open âm tiết sau Backspace
 ```
 
 ---
@@ -94,6 +94,20 @@
   - Cho phép người dùng hoặc lập trình viên hoán đổi tức thì giữa từ tiếng Việt và chuỗi ký tự thô ban đầu (`mas` $\leftrightarrow$ `má`), tiện lợi tuyệt đối khi gõ mã nguồn mà không cần Backspace gõ lại.
 - [ ] **Khôi Phục Âm Tiết Sau Backspace (`adoptWordBeforeBackspace`)**:
   - Khi xóa dấu cách sau một từ đã hoàn tất, tự động đọc lại âm tiết trước con trỏ vào bộ nhớ đệm để người dùng có thể gõ tiếp phím dấu sửa đổi (ví dụ: `phủ` ␣ ⌫ `s` $\to$ `phú`).
+
+#### 3. Nâng Cấp Ngữ Âm Thế Hệ Mới: Bộ Bóc Tách Âm Tiết Chuyên Sâu (Kế thừa tinh hoa từ Bamboo-Core)
+- [ ] **Kiến Trúc Bóc Tách Âm Tiết 4 Thành Phần (`syllable_parser.rs`)**:
+  - Phân rã từ theo cấu trúc âm tiết chuẩn tiếng Việt: $\text{Syllable} = \text{Onset (Âm đầu)} + \text{Glide (Âm đệm)} + \text{Nucleus (Âm chính)} + \text{Coda (Âm cuối)} + \text{Tone (Dấu thanh)}$.
+  - Nhận diện toàn diện các cặp phụ âm ghép (`ngh, ng, ch, gh, kh, nh, ph, th, tr, qu, gi`) và tổ hợp nguyên âm đôi/ba (`ia/iê, ya/yê, ua/uô, ưa/ươ, iêu, oai, uay, ươu`...).
+- [ ] **Cơ Chế Dời Dấu Thanh Động (Dynamic Tone Shifting)**:
+  - Tự động di chuyển dấu thanh tới nguyên âm tối ưu nhất khi người dùng gõ thêm nguyên âm mới (ví dụ: `ho` + `s` $\to$ `hó`, gõ tiếp `a` $\to$ tự dời thành `hoá` thay vì kẹt lại ở `hóa`).
+  - Hỗ trợ chuyển đổi mượt mà giữa quy tắc đặt dấu mới (`hoá, thuỷ`) và quy tắc đặt dấu cũ (`hóa, thủy`) theo cấu hình người dùng.
+- [ ] **Mở Rộng Gõ Dấu Tự Do Tuyệt Đối (Full Free-Marking Flexibility)**:
+  - Cho phép người dùng bỏ dấu thanh hoặc phím biến âm (`w, a, e, o, d`) ở bất kỳ vị trí nào trong từ mà không làm biến dạng từ (ví dụ: `duongwf` $\to$ `đường`, `toans` $\to$ `toán`, `ddawfng` $\to$ `đằng`).
+- [ ] **Tự Động Hoàn Tác Khi Vi Phạm Ngữ Âm (Phonetic Auto-Undo & Spell Revert)**:
+  - Ngăn chặn biến âm sai hoặc tự động phục hồi phím gốc khi tổ hợp phím vi phạm luật âm vị học tiếng Việt (ví dụ: phụ âm cuối `-c, -p, -t, -ch` chỉ đi với dấu Sắc/Nặng; phụ âm `k, gh, ngh` chỉ đi với nguyên âm dòng trước `i, e, ê`).
+- [ ] **Thừa Hưởng Toàn Bộ Test Suite Thực Chiến Của Bamboo**:
+  - Chuyển ngữ hàng trăm test cases thực tế từ `bamboo_test.go` của tác giả Lương Thanh Lam sang bộ kiểm thử tự động `#[test]` trong Rust để đảm bảo tỷ lệ bao phủ và độ chính xác ngữ âm 100%.
 
 ---
 
