@@ -636,7 +636,8 @@ pub fn place_tone(letters: &mut [char], tone: usize, tone_style: ToneStyle) {
 
 /// Checks if a slice of characters is a valid Vietnamese onset consonant cluster.
 pub fn is_valid_vietnamese_onset(chars: &[char]) -> bool {
-    let s: String = chars.iter().flat_map(|c| c.to_lowercase()).collect();
+    let raw: String = chars.iter().flat_map(|c| c.to_lowercase()).collect();
+    let s = crate::vietnamese_dict::normalize_apostrophe(&raw);
     matches!(
         s.as_str(),
         "" | "b"
