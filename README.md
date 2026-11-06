@@ -36,9 +36,10 @@
    - [3.8. Bảng Gõ Tắt Mở Rộng Tức Thì (Macro Expansion & Undo)](#38-bảng-gõ-tắt-mở-rộng-tức-thì-macro-expansion--undo)
 4. [Giao Diện Cài Đặt Trực Quan (Rust + egui GUI)](#4-giao-diện-cài-đặt-trực-quan-rust--egui-gui)
 5. [Hướng Dẫn Cài Đặt Cho Arch Linux](#5-hướng-dẫn-cài-đặt-cho-arch-linux)
-6. [Ý Nghĩa Biểu Tượng & Di Sản Tự Do](#6-ý-nghĩa-biểu-tượng--di-sản-tự-do)
-7. [Lời Cảm Ơn / Ghi Chú Phát Triển](#7-lời-cảm-ơn--ghi-chú-phát-triển)
-8. [Bản Quyền & Giấy Phép](#8-bản-quyền--giấy-phép)
+6. [Lộ Trình Phát Triển & Tài Liệu Kỹ Thuật (Roadmap & Docs)](#6-lộ-trình-phát-triển--tài-liệu-kỹ-thuật-roadmap--docs)
+7. [Ý Nghĩa Biểu Tượng & Di Sản Tự Do](#7-ý-nghĩa-biểu-tượng--di-sản-tự-do)
+8. [Lời Cảm Ơn / Ghi Chú Phát Triển](#8-lời-cảm-ơn--ghi-chú-phát-triển)
+9. [Bản Quyền & Giấy Phép](#9-bản-quyền--giấy-phép)
 
 ---
 
@@ -216,7 +217,14 @@ makepkg -si
 
 ---
 
-## 6. Ý Nghĩa Biểu Tượng & Di Sản Tự Do
+## 6. Lộ Trình Phát Triển & Tài Liệu Kỹ Thuật (Roadmap & Docs)
+
+- 📌 **[Lộ Trình Phát Triển (Project Roadmap)](docs/ROADMAP.md)**: Theo dõi tiến độ chi tiết của các mốc phát hành **v0.1.0** (Nền tảng kiến trúc), **v0.2.0** (Chế độ Kép, Persistent Context Guard, Adaptive Micro-Pause) và kế hoạch tương lai cho **v0.3.0** (Smart Context Auto-Bypass, Wayland deep integration, AUR/PPA packaging).
+- 🔬 **[Phân Tích Kỹ Thuật Cơ Chế Non-Preedit UniKey vs Wayland](docs/NON_PREEDIT_WAYLAND_ANALYSIS.md)**: Phân tích chuyên sâu về sự khác biệt kiến trúc xử lý bàn phím giữa Windows và Linux Wayland, nguyên nhân gốc rễ gây lỗi nhảy chữ trên Web DOM và giải pháp toàn diện của vnchKey.
+
+---
+
+## 7. Ý Nghĩa Biểu Tượng & Di Sản Tự Do
 
 Huy hiệu của **vnchKey** kết hợp hai yếu tố văn hóa và công nghệ:
 1. **Nền Tròn Cờ Vàng Ba Sọc Đỏ (Hoàng Long & Ba Sọc Đỏ)**:
@@ -227,14 +235,14 @@ Huy hiệu của **vnchKey** kết hợp hai yếu tố văn hóa và công ngh�
 
 ---
 
-## 7. Lời Cảm Ơn / Ghi Chú Phát Triển
+## 8. Lời Cảm Ơn / Ghi Chú Phát Triển
 
 - Dự án được xây dựng và tối ưu hoá với sự đồng hành của **Google Gemini** trong vai trò AI pair programmer (hỗ trợ phân tích kiến trúc, gỡ lỗi và kiểm thử tự động).
 - Chân thành cảm các developers của dự án [Fcitx5](https://github.com/fcitx/fcitx5) và các bộ gõ Tiếng Việt đi trước.
 
 ---
 
-## 8. Bản Quyền & Giấy Phép
+## 9. Bản Quyền & Giấy Phép
 
 - Dự án được phát hành dưới hình thức **Mã Nguồn Mở Tự Do 100%** theo các điều khoản của [Giấy Phép GNU General Public License v3.0 (GPLv3)](LICENSE).
 - Mọi đóng góp, báo cáo lỗi và thảo luận xin gởi về: [GitHub Repository](https://github.com/no-vici/fcitx5-vnchkey).
