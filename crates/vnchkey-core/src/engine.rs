@@ -112,6 +112,7 @@ pub struct Engine {
     english_locked: bool,
     last_completed_word: Option<String>,
     last_macro: Option<LastMacroExpansion>,
+    suppressed_macro: Option<String>,
 }
 
 /// Tracks the most recent macro expansion for one-step undo on Backspace.
@@ -147,6 +148,7 @@ impl Engine {
             english_locked: false,
             last_completed_word: None,
             last_macro: None,
+            suppressed_macro: None,
         }
     }
 
@@ -255,6 +257,7 @@ impl Engine {
         self.manual_undo = false;
         self.english_locked = false;
         self.last_completed_word = None;
+        self.suppressed_macro = None;
     }
 
     /// Handles physical Backspace pressed by the user.
@@ -332,6 +335,7 @@ impl Engine {
             // 1 delimiter character + all characters of the expansion
             let delete_count = 1 + macro_state.expansion.chars().count();
             let commit = macro_state.trigger.clone();
+            self.suppressed_macro = Some(macro_state.trigger.clone());
             self.current_word = macro_state.trigger;
             self.raw_strokes = self.current_word.clone();
             self.manual_undo = false;
@@ -352,8 +356,9 @@ impl Engine {
         // Word delimiter check (Space, Enter, Punctuation)
         if !ch.is_alphanumeric() && !is_bracket {
             if !self.current_word.is_empty() {
-                // 1. Macro expansion check
-                if self.config.enable_macro {
+                // 1. Macro expansion check (suppressed if this word was just reverted via Backspace)
+                let is_suppressed = self.suppressed_macro.as_deref() == Some(&self.current_word);
+                if self.config.enable_macro && !is_suppressed {
                     if let Some(expansion) = self.macro_table.expand(&self.current_word) {
                         let target = format!("{}{}", expansion, ch);
                         let (backspaces, commit_text) =
@@ -977,6 +982,20 @@ mod tests {
 
         // Subsequent Backspace has no more macro to undo
         assert!(engine.undo_macro_expansion().is_none());
+
+        // Pressing Space right after undoing does NOT re-trigger macro (prevents infinite loop!)
+        let space_out = engine.process_key(' ', 0.0);
+        assert!(!space_out.macro_expanded);
+        assert_eq!(space_out.commit_text, " ");
+        assert_eq!(engine.last_completed_word(), Some("vn "));
+
+        // Future typing of 'vn ' in subsequent words will expand normally
+        for ch in ['v', 'n'] {
+            engine.process_key(ch, 0.0);
+        }
+        let out_future = engine.process_key(' ', 0.0);
+        assert!(out_future.macro_expanded);
+        assert_eq!(out_future.commit_text, "Việt Nam ");
 
         // Test 2: Typing another key cancels macro undo
         for ch in ['v', 'n', ' '] {
