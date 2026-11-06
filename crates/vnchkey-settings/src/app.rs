@@ -671,6 +671,7 @@ impl SettingsApp {
             // Left App List Column (240px wide)
             ui.vertical(|ui| {
                 ui.set_width(240.0);
+                ui.set_min_height(ui.available_height());
 
                 // Search box
                 ui.add(
@@ -682,17 +683,22 @@ impl SettingsApp {
 
                 // Application Items List
                 let query = self.app_search.trim().to_lowercase();
-                let scroll_height = (ui.available_height() - 52.0).max(180.0);
+                // Reserved for bottom buttons: 8.0 + 32.0 (+ Add App) + 4.0 + 30.0 (Remove) = 74.0
+                let scroll_height = (ui.available_height() - 76.0).max(220.0);
                 egui::ScrollArea::vertical()
+                    .min_scrolled_height(scroll_height)
                     .max_height(scroll_height)
                     .auto_shrink([false, false])
                     .show(ui, |ui| {
+                        ui.set_width(240.0);
                         ui.spacing_mut().item_spacing = egui::vec2(0.0, 4.0);
 
+                        let mut visible_count = 0;
                         for (idx, (app, mode)) in self.app_modes.iter().enumerate() {
                             if !query.is_empty() && !app.to_lowercase().contains(&query) {
                                 continue;
                             }
+                            visible_count += 1;
 
                             let is_selected = self.selected_app_idx == Some(idx);
                             let glyph = crate::system_apps::SystemAppEntry::guess_glyph(app, app);
@@ -706,7 +712,7 @@ impl SettingsApp {
 
                             // Custom selectable card matching lilypad style
                             let (rect, res) = ui.allocate_exact_size(
-                                egui::vec2(ui.available_width(), 48.0),
+                                egui::vec2(240.0, 48.0),
                                 egui::Sense::click(),
                             );
 
@@ -769,48 +775,74 @@ impl SettingsApp {
                                 self.selected_app_idx = Some(idx);
                             }
                         }
+
+                        if self.app_modes.is_empty() {
+                            ui.add_space(30.0);
+                            ui.vertical_centered(|ui| {
+                                ui.label(
+                                    egui::RichText::new("Chưa có ứng dụng tùy chỉnh")
+                                        .size(12.0)
+                                        .color(egui::Color32::from_rgb(0x7f, 0x84, 0x9c)),
+                                );
+                                ui.add_space(6.0);
+                                ui.label(
+                                    egui::RichText::new("Nhấn '+ Add Application' bên dưới để thêm")
+                                        .size(11.0)
+                                        .color(egui::Color32::from_rgb(0x58, 0x5b, 0x70)),
+                                );
+                            });
+                        } else if visible_count == 0 && !query.is_empty() {
+                            ui.add_space(30.0);
+                            ui.vertical_centered(|ui| {
+                                ui.label(
+                                    egui::RichText::new("Không tìm thấy ứng dụng")
+                                        .size(12.0)
+                                        .color(egui::Color32::from_rgb(0x7f, 0x84, 0x9c)),
+                                );
+                            });
+                        }
                     });
 
                 ui.add_space(8.0);
 
-                // Bottom buttons: Add Application & Remove
-                ui.horizontal(|ui| {
-                    if ui
-                        .add_sized(
-                            egui::vec2(140.0, 32.0),
-                            egui::Button::new("+ Add Application"),
-                        )
-                        .clicked()
-                    {
-                        if self.cached_system_apps.is_empty() {
-                            self.cached_system_apps = crate::system_apps::scan_system_applications();
-                        }
-                        self.show_add_app_dialog = true;
-                        self.add_app_search.clear();
-                        self.selected_sys_app_idx = None;
+                // Bottom buttons: stacked full-width like Lilypad
+                if ui
+                    .add_sized(
+                        egui::vec2(240.0, 32.0),
+                        egui::Button::new("+ Add Application"),
+                    )
+                    .clicked()
+                {
+                    if self.cached_system_apps.is_empty() {
+                        self.cached_system_apps = crate::system_apps::scan_system_applications();
                     }
+                    self.show_add_app_dialog = true;
+                    self.add_app_search.clear();
+                    self.selected_sys_app_idx = None;
+                }
 
-                    let has_selection = self.selected_app_idx.is_some()
-                        && self.selected_app_idx.unwrap() < self.app_modes.len();
-                    if ui
-                        .add_enabled(
-                            has_selection,
-                            egui::Button::new("Remove").min_size(egui::vec2(80.0, 32.0)),
-                        )
-                        .clicked()
-                    {
-                        if let Some(idx) = self.selected_app_idx {
-                            if idx < self.app_modes.len() {
-                                self.app_modes.remove(idx);
-                                if self.app_modes.is_empty() {
-                                    self.selected_app_idx = None;
-                                } else if idx >= self.app_modes.len() {
-                                    self.selected_app_idx = Some(self.app_modes.len() - 1);
-                                }
+                ui.add_space(4.0);
+
+                let has_selection = self.selected_app_idx.is_some()
+                    && self.selected_app_idx.unwrap() < self.app_modes.len();
+                if ui
+                    .add_enabled(
+                        has_selection,
+                        egui::Button::new("Remove").min_size(egui::vec2(240.0, 30.0)),
+                    )
+                    .clicked()
+                {
+                    if let Some(idx) = self.selected_app_idx {
+                        if idx < self.app_modes.len() {
+                            self.app_modes.remove(idx);
+                            if self.app_modes.is_empty() {
+                                self.selected_app_idx = None;
+                            } else if idx >= self.app_modes.len() {
+                                self.selected_app_idx = Some(self.app_modes.len() - 1);
                             }
                         }
                     }
-                });
+                }
             });
 
             ui.add_space(16.0);
@@ -939,7 +971,7 @@ impl SettingsApp {
                                         };
 
                                         let (card_rect, card_res) = col.allocate_exact_size(
-                                            egui::vec2(col.available_width(), 70.0),
+                                            egui::vec2(col.available_width(), 76.0),
                                             egui::Sense::click(),
                                         );
 
@@ -979,16 +1011,16 @@ impl SettingsApp {
                                             },
                                         );
 
-                                        // Draw description
-                                        let desc_rect = egui::Rect::from_min_max(
-                                            egui::pos2(card_rect.min.x + 12.0, card_rect.min.y + 32.0),
-                                            egui::pos2(card_rect.max.x - 12.0, card_rect.max.y - 6.0),
-                                        );
-                                        col.painter().text(
-                                            desc_rect.left_top(),
-                                            egui::Align2::LEFT_TOP,
-                                            *mode_desc,
+                                        // Draw description with wrapping
+                                        let galley = col.painter().layout(
+                                            mode_desc.to_string(),
                                             egui::FontId::proportional(11.0),
+                                            egui::Color32::from_rgb(0x7f, 0x84, 0x9c),
+                                            card_rect.width() - 24.0,
+                                        );
+                                        col.painter().galley(
+                                            egui::pos2(card_rect.min.x + 12.0, card_rect.min.y + 32.0),
+                                            galley,
                                             egui::Color32::from_rgb(0x7f, 0x84, 0x9c),
                                         );
 
