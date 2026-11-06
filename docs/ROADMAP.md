@@ -58,6 +58,11 @@
   - Cho phép người dùng gõ **Direct Mode (Non-preedit) ngay trên trình duyệt web**.
   - Tự động áp dụng khoảng dừng thích ứng $4\text{ms}$ giữa lúc nhả phím `Backspace` và lúc bắn `commitString`, tạo "thời gian vàng" cho JavaScript Event Loop của trình duyệt cập nhật lại DOM cursor, chống chèn đè chữ.
   - Cung cấp thanh trượt tùy chỉnh $0 - 20\text{ms}$ trong Bảng Cài Đặt.
+- [x] **Trình Quản Lý Ứng Dụng & Bộ Chọn Thông Minh Từ Hệ Thống (System App Picker & Mode Manager)**:
+  - Thiết kế lại trang **Applications** theo phong cách hiện đại với bố cục 2 cột trực quan:
+    - **Cột Sidebar**: Danh sách ứng dụng đã cấu hình, ô tìm kiếm thời gian thực, icon glyph danh mục, tên ứng dụng và trạng thái chế độ.
+    - **Cột Chi Tiết**: Header ứng dụng nổi bật cùng lưới **Mode Cards** trực quan (Direct, Preedit, Bypass, Default) cho phép đổi chế độ chỉ bằng một cú nhấp chuột.
+  - **Hộp thoại Thêm Ứng Dụng (Add Application Modal)**: Tự động quét và liệt kê toàn bộ ứng dụng cài đặt trong hệ thống (`/usr/share/applications/*.desktop`, `~/.local/share/applications`, Flatpak) và các tiến trình người dùng đang chạy (`/proc`), cho phép tìm kiếm và nhấp đúp để thêm ngay thay vì phải nhập tên thủ công. Hỗ trợ tab nhập thủ công cho các script/binary riêng biệt.
 
 ---
 
@@ -90,3 +95,4 @@
 Mọi ý tưởng đóng góp, phản hồi trải nghiệm gõ hoặc đề xuất tính năng mới đều được hoan nghênh nồng nhiệt!
 - **Báo lỗi & Thảo luận**: Mở Issue hoặc Pull Request tại [GitHub Repository](https://github.com/no-vici/fcitx5-vnchkey).
 - **Mã nguồn**: Tuân thủ giấy phép tự do **GNU GPLv3**.
+

@@ -1,5 +1,6 @@
 mod app;
 mod config;
+pub mod system_apps;
 
 use app::SettingsApp;
 use eframe::egui;

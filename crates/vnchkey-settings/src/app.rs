@@ -31,6 +31,18 @@ pub struct SettingsApp {
     new_dict_word: String,
     dict_search: String,
 
+    // Applications page state
+    selected_app_idx: Option<usize>,
+    app_search: String,
+
+    // Add Application Dialog state
+    show_add_app_dialog: bool,
+    add_app_tab: usize, // 0 = System/Running Apps, 1 = Manual Input
+    add_app_search: String,
+    add_app_manual_name: String,
+    cached_system_apps: Vec<crate::system_apps::SystemAppEntry>,
+    selected_sys_app_idx: Option<usize>,
+
     // Logo texture
     logo_texture: Option<egui::TextureHandle>,
 }
@@ -85,16 +97,26 @@ impl SettingsApp {
 
         // Load logo texture
         let logo_texture = Self::load_logo_texture(&cc.egui_ctx);
+        let app_modes = ConfigManager::load_app_modes();
+        let selected_app_idx = if !app_modes.is_empty() { Some(0) } else { None };
 
         Self {
             current_page: TabPage::General,
             config: ConfigManager::load_config(),
             macros: ConfigManager::load_macros(),
             dictionary: ConfigManager::load_dictionary(),
-            app_modes: ConfigManager::load_app_modes(),
+            app_modes,
             status_message: None,
             new_dict_word: String::new(),
             dict_search: String::new(),
+            selected_app_idx,
+            app_search: String::new(),
+            show_add_app_dialog: false,
+            add_app_tab: 0,
+            add_app_search: String::new(),
+            add_app_manual_name: String::new(),
+            cached_system_apps: Vec::new(),
+            selected_sys_app_idx: None,
             logo_texture,
         }
     }
@@ -259,26 +281,39 @@ impl eframe::App for SettingsApp {
             .frame(
                 egui::Frame::new()
                     .fill(egui::Color32::from_rgb(0x1e, 0x1e, 0x2d))
-                    .inner_margin(egui::Margin::symmetric(36, 24)),
+                    .inner_margin(if self.current_page == TabPage::Applications {
+                        egui::Margin::symmetric(20, 16)
+                    } else {
+                        egui::Margin::symmetric(36, 24)
+                    }),
             )
             .show(ctx, |ui| {
-                egui::ScrollArea::vertical()
-                    .auto_shrink([false, false])
-                    .show(ui, |ui| {
-                        match self.current_page {
-                            TabPage::General => self.show_general_page(ui),
-                            TabPage::Typing => self.show_typing_page(ui),
-                            TabPage::Applications => self.show_applications_page(ui),
-                            TabPage::Macros => self.show_macros_page(ui),
-                            TabPage::Dictionary => self.show_dictionary_page(ui),
-                            TabPage::Keymap => self.show_keymap_page(ui),
-                            TabPage::Shortcuts => self.show_shortcuts_page(ui),
-                            TabPage::Appearance => self.show_appearance_page(ui),
-                            TabPage::Backup => self.show_backup_page(ui),
-                            TabPage::About => self.show_about_page(ui),
-                        }
-                    });
+                if self.current_page == TabPage::Applications {
+                    self.show_applications_page(ui);
+                } else {
+                    egui::ScrollArea::vertical()
+                        .auto_shrink([false, false])
+                        .show(ui, |ui| {
+                            match self.current_page {
+                                TabPage::General => self.show_general_page(ui),
+                                TabPage::Typing => self.show_typing_page(ui),
+                                TabPage::Applications => unreachable!(),
+                                TabPage::Macros => self.show_macros_page(ui),
+                                TabPage::Dictionary => self.show_dictionary_page(ui),
+                                TabPage::Keymap => self.show_keymap_page(ui),
+                                TabPage::Shortcuts => self.show_shortcuts_page(ui),
+                                TabPage::Appearance => self.show_appearance_page(ui),
+                                TabPage::Backup => self.show_backup_page(ui),
+                                TabPage::About => self.show_about_page(ui),
+                            }
+                        });
+                }
             });
+
+        // Add Application Modal Dialog (rendered on top)
+        if self.show_add_app_dialog {
+            self.show_add_app_dialog_window(ctx);
+        }
     }
 }
 
@@ -632,54 +667,609 @@ impl SettingsApp {
 
     // 3. Applications Page
     fn show_applications_page(&mut self, ui: &mut egui::Ui) {
-        self.render_header(ui, "Applications", "Configure per-application input behaviors and bypass exclusions.");
+        ui.horizontal(|ui| {
+            // Left App List Column (240px wide)
+            ui.vertical(|ui| {
+                ui.set_width(240.0);
 
-        egui::Frame::new()
-            .fill(egui::Color32::from_rgb(0x18, 0x18, 0x25))
-            .stroke(egui::Stroke::new(1.0_f32, egui::Color32::from_rgb(0x28, 0x2a, 0x36)))
-            .corner_radius(egui::CornerRadius::same(8))
-            .inner_margin(egui::Margin::same(12))
-            .show(ui, |ui| {
-                ui.horizontal(|ui| {
-                    ui.label(egui::RichText::new("Ứng Dụng (App Name)").strong().color(egui::Color32::from_rgb(0x89, 0xb4, 0xfa)));
-                    ui.add_space(180.0);
-                    ui.label(egui::RichText::new("Chế Độ (Mode)").strong().color(egui::Color32::from_rgb(0x89, 0xb4, 0xfa)));
-                });
-                ui.separator();
+                // Search box
+                ui.add(
+                    egui::TextEdit::singleline(&mut self.app_search)
+                        .hint_text("Search applications...")
+                        .desired_width(240.0),
+                );
+                ui.add_space(8.0);
 
-                let mut to_remove = None;
-                for (idx, (app, mode)) in self.app_modes.iter_mut().enumerate() {
-                    ui.horizontal(|ui| {
-                        ui.add(egui::TextEdit::singleline(app).desired_width(220.0));
-                        ui.add_space(10.0);
-                        let display_text = match mode.as_str() {
-                            "Preedit" => "Gạch Chân (Preedit)",
-                            "Direct" => "Trực Tiếp (Direct)",
-                            "Bypass (Raw English)" => "Bypass (Raw English)",
-                            other => other,
-                        };
-                        egui::ComboBox::from_id_salt(format!("app_mode_{}", idx))
-                            .selected_text(display_text)
-                            .width(180.0)
-                            .show_ui(ui, |ui| {
-                                ui.selectable_value(mode, "Direct".to_string(), "Trực Tiếp (Direct)");
-                                ui.selectable_value(mode, "Preedit".to_string(), "Gạch Chân (Preedit)");
-                                ui.selectable_value(mode, "Bypass (Raw English)".to_string(), "Bypass (Raw English)");
-                            });
-                        if ui.button("🗑").clicked() {
-                            to_remove = Some(idx);
+                // Application Items List
+                let query = self.app_search.trim().to_lowercase();
+                let scroll_height = (ui.available_height() - 52.0).max(180.0);
+                egui::ScrollArea::vertical()
+                    .max_height(scroll_height)
+                    .auto_shrink([false, false])
+                    .show(ui, |ui| {
+                        ui.spacing_mut().item_spacing = egui::vec2(0.0, 4.0);
+
+                        for (idx, (app, mode)) in self.app_modes.iter().enumerate() {
+                            if !query.is_empty() && !app.to_lowercase().contains(&query) {
+                                continue;
+                            }
+
+                            let is_selected = self.selected_app_idx == Some(idx);
+                            let glyph = crate::system_apps::SystemAppEntry::guess_glyph(app, app);
+
+                            let mode_label = match mode.as_str() {
+                                "Direct" => "Direct (Micro-diff)",
+                                "Preedit" => "Preedit (Gạch Chân)",
+                                "Bypass (Raw English)" => "Bypass (OFF)",
+                                other => other,
+                            };
+
+                            // Custom selectable card matching lilypad style
+                            let (rect, res) = ui.allocate_exact_size(
+                                egui::vec2(ui.available_width(), 48.0),
+                                egui::Sense::click(),
+                            );
+
+                            let bg_color = if is_selected {
+                                egui::Color32::from_rgb(0x4b, 0x44, 0x63)
+                            } else if res.hovered() {
+                                egui::Color32::from_rgb(0x28, 0x28, 0x3d)
+                            } else {
+                                egui::Color32::from_rgb(0x18, 0x18, 0x25)
+                            };
+
+                            let border_stroke = if is_selected {
+                                egui::Stroke::new(1.5_f32, egui::Color32::from_rgb(0x89, 0xb4, 0xfa))
+                            } else {
+                                egui::Stroke::new(1.0_f32, egui::Color32::from_rgb(0x28, 0x2a, 0x36))
+                            };
+
+                            ui.painter().rect(
+                                rect,
+                                egui::CornerRadius::same(6),
+                                bg_color,
+                                border_stroke,
+                                egui::StrokeKind::Inside,
+                            );
+
+                            // Draw Glyph
+                            let glyph_rect = egui::Rect::from_min_size(
+                                egui::pos2(rect.min.x + 8.0, rect.min.y + 10.0),
+                                egui::vec2(28.0, 28.0),
+                            );
+                            ui.painter().text(
+                                glyph_rect.center(),
+                                egui::Align2::CENTER_CENTER,
+                                glyph,
+                                egui::FontId::proportional(20.0),
+                                egui::Color32::from_rgb(0xcd, 0xd6, 0xf4),
+                            );
+
+                            // Draw App Name
+                            let text_pos = egui::pos2(rect.min.x + 42.0, rect.min.y + 8.0);
+                            ui.painter().text(
+                                text_pos,
+                                egui::Align2::LEFT_TOP,
+                                app,
+                                egui::FontId::proportional(13.5),
+                                egui::Color32::from_rgb(0xcd, 0xd6, 0xf4),
+                            );
+
+                            // Draw Mode Label
+                            let mode_pos = egui::pos2(rect.min.x + 42.0, rect.min.y + 26.0);
+                            ui.painter().text(
+                                mode_pos,
+                                egui::Align2::LEFT_TOP,
+                                mode_label,
+                                egui::FontId::proportional(11.0),
+                                egui::Color32::from_rgb(0x7f, 0x84, 0x9c),
+                            );
+
+                            if res.clicked() {
+                                self.selected_app_idx = Some(idx);
+                            }
                         }
                     });
-                }
 
-                if let Some(idx) = to_remove {
-                    self.app_modes.remove(idx);
-                }
+                ui.add_space(8.0);
+
+                // Bottom buttons: Add Application & Remove
+                ui.horizontal(|ui| {
+                    if ui
+                        .add_sized(
+                            egui::vec2(140.0, 32.0),
+                            egui::Button::new("+ Add Application"),
+                        )
+                        .clicked()
+                    {
+                        if self.cached_system_apps.is_empty() {
+                            self.cached_system_apps = crate::system_apps::scan_system_applications();
+                        }
+                        self.show_add_app_dialog = true;
+                        self.add_app_search.clear();
+                        self.selected_sys_app_idx = None;
+                    }
+
+                    let has_selection = self.selected_app_idx.is_some()
+                        && self.selected_app_idx.unwrap() < self.app_modes.len();
+                    if ui
+                        .add_enabled(
+                            has_selection,
+                            egui::Button::new("Remove").min_size(egui::vec2(80.0, 32.0)),
+                        )
+                        .clicked()
+                    {
+                        if let Some(idx) = self.selected_app_idx {
+                            if idx < self.app_modes.len() {
+                                self.app_modes.remove(idx);
+                                if self.app_modes.is_empty() {
+                                    self.selected_app_idx = None;
+                                } else if idx >= self.app_modes.len() {
+                                    self.selected_app_idx = Some(self.app_modes.len() - 1);
+                                }
+                            }
+                        }
+                    }
+                });
             });
 
-        ui.add_space(10.0);
-        if ui.button("+ Thêm Ứng Dụng").clicked() {
-            self.app_modes.push(("".to_string(), "Bypass (Raw English)".to_string()));
+            ui.add_space(16.0);
+            ui.separator();
+            ui.add_space(16.0);
+
+            // Right Detail Column
+            ui.vertical(|ui| {
+                ui.label(
+                    egui::RichText::new("Applications")
+                        .size(22.0)
+                        .color(egui::Color32::from_rgb(0xcd, 0xd6, 0xf4)),
+                );
+                ui.add_space(12.0);
+
+                // Global Default Mode Card
+                egui::Frame::new()
+                    .fill(egui::Color32::from_rgb(0x18, 0x18, 0x25))
+                    .stroke(egui::Stroke::new(1.0_f32, egui::Color32::from_rgb(0x28, 0x2a, 0x36)))
+                    .corner_radius(egui::CornerRadius::same(8))
+                    .inner_margin(egui::Margin::symmetric(14, 10))
+                    .show(ui, |ui| {
+                        ui.horizontal(|ui| {
+                            ui.label(
+                                egui::RichText::new("Global Default Mode:")
+                                    .color(egui::Color32::from_rgb(0xcd, 0xd6, 0xf4)),
+                            );
+                            ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                                let cur_label = if self.config.output_mode == "Preedit" {
+                                    "Preedit (Gạch Chân)"
+                                } else {
+                                    "Direct (Micro-diff)"
+                                };
+                                egui::ComboBox::from_id_salt("global_default_mode")
+                                    .selected_text(cur_label)
+                                    .width(200.0)
+                                    .show_ui(ui, |ui| {
+                                        ui.selectable_value(
+                                            &mut self.config.output_mode,
+                                            "Direct".to_string(),
+                                            "Direct (Micro-diff)",
+                                        );
+                                        ui.selectable_value(
+                                            &mut self.config.output_mode,
+                                            "Preedit".to_string(),
+                                            "Preedit (Gạch Chân)",
+                                        );
+                                    });
+                            });
+                        });
+                    });
+
+                ui.add_space(14.0);
+
+                // Selected Application Settings Card
+                if let Some(sel_idx) = self.selected_app_idx {
+                    if sel_idx < self.app_modes.len() {
+                        let (app_name, current_mode) = self.app_modes[sel_idx].clone();
+
+                        egui::Frame::new()
+                            .fill(egui::Color32::from_rgb(0x18, 0x18, 0x25))
+                            .stroke(egui::Stroke::new(1.0_f32, egui::Color32::from_rgb(0x28, 0x2a, 0x36)))
+                            .corner_radius(egui::CornerRadius::same(8))
+                            .inner_margin(egui::Margin::same(16))
+                            .show(ui, |ui| {
+                                // App Header: Big glyph + Name
+                                ui.horizontal(|ui| {
+                                    let glyph = crate::system_apps::SystemAppEntry::guess_glyph(
+                                        &app_name, &app_name,
+                                    );
+                                    ui.label(egui::RichText::new(glyph).size(32.0));
+                                    ui.add_space(8.0);
+                                    ui.vertical(|ui| {
+                                        ui.label(
+                                            egui::RichText::new(&app_name)
+                                                .size(18.0)
+                                                .strong()
+                                                .color(egui::Color32::from_rgb(0xcd, 0xd6, 0xf4)),
+                                        );
+                                        ui.label(
+                                            egui::RichText::new(format!(
+                                                "Cấu hình phương thức xuất chữ riêng cho {}",
+                                                app_name
+                                            ))
+                                            .size(11.5)
+                                            .color(egui::Color32::from_rgb(0x7f, 0x84, 0x9c)),
+                                        );
+                                    });
+                                });
+
+                                ui.add_space(16.0);
+                                ui.separator();
+                                ui.add_space(14.0);
+
+                                // Mode selection grid (4 mode cards)
+                                let modes = [
+                                    (
+                                        "Direct",
+                                        "Direct (Micro-diff)",
+                                        "Gõ trực tiếp như UniKey, tối ưu Terminal/Editor (Neovim, VS Code, WezTerm)",
+                                    ),
+                                    (
+                                        "Preedit",
+                                        "Preedit (Gạch Chân)",
+                                        "Đặc trị dứt điểm 100% lỗi nhảy chữ Google Docs, Chrome, Firefox, Slack",
+                                    ),
+                                    (
+                                        "Bypass (Raw English)",
+                                        "Bypass (OFF)",
+                                        "Tắt bộ gõ hoàn toàn, chỉ gửi phím tiếng Anh thô cho Game hoặc Terminal",
+                                    ),
+                                    (
+                                        "Default",
+                                        "Default Typing",
+                                        "Kế thừa chế độ mặc định chung của hệ thống (Global Default)",
+                                    ),
+                                ];
+
+                                ui.columns(2, |cols| {
+                                    for (i, (mode_key, mode_title, mode_desc)) in modes.iter().enumerate() {
+                                        let col = &mut cols[i % 2];
+                                        let is_active = if *mode_key == "Default" {
+                                            current_mode == "Default" || current_mode.is_empty()
+                                        } else {
+                                            current_mode == *mode_key
+                                        };
+
+                                        let (card_rect, card_res) = col.allocate_exact_size(
+                                            egui::vec2(col.available_width(), 70.0),
+                                            egui::Sense::click(),
+                                        );
+
+                                        let card_bg = if is_active {
+                                            egui::Color32::from_rgb(0x4b, 0x44, 0x63)
+                                        } else if card_res.hovered() {
+                                            egui::Color32::from_rgb(0x28, 0x28, 0x3d)
+                                        } else {
+                                            egui::Color32::from_rgb(0x1e, 0x1e, 0x2d)
+                                        };
+
+                                        let card_stroke = if is_active {
+                                            egui::Stroke::new(1.5_f32, egui::Color32::from_rgb(0x89, 0xb4, 0xfa))
+                                        } else {
+                                            egui::Stroke::new(1.0_f32, egui::Color32::from_rgb(0x31, 0x32, 0x44))
+                                        };
+
+                                        col.painter().rect(
+                                            card_rect,
+                                            egui::CornerRadius::same(8),
+                                            card_bg,
+                                            card_stroke,
+                                            egui::StrokeKind::Inside,
+                                        );
+
+                                        // Draw title
+                                        let title_pos = egui::pos2(card_rect.min.x + 12.0, card_rect.min.y + 10.0);
+                                        col.painter().text(
+                                            title_pos,
+                                            egui::Align2::LEFT_TOP,
+                                            *mode_title,
+                                            egui::FontId::proportional(14.0),
+                                            if is_active {
+                                                egui::Color32::from_rgb(0x89, 0xb4, 0xfa)
+                                            } else {
+                                                egui::Color32::from_rgb(0xcd, 0xd6, 0xf4)
+                                            },
+                                        );
+
+                                        // Draw description
+                                        let desc_rect = egui::Rect::from_min_max(
+                                            egui::pos2(card_rect.min.x + 12.0, card_rect.min.y + 32.0),
+                                            egui::pos2(card_rect.max.x - 12.0, card_rect.max.y - 6.0),
+                                        );
+                                        col.painter().text(
+                                            desc_rect.left_top(),
+                                            egui::Align2::LEFT_TOP,
+                                            *mode_desc,
+                                            egui::FontId::proportional(11.0),
+                                            egui::Color32::from_rgb(0x7f, 0x84, 0x9c),
+                                        );
+
+                                        if card_res.clicked() {
+                                            self.app_modes[sel_idx].1 = mode_key.to_string();
+                                        }
+
+                                        col.add_space(8.0);
+                                    }
+                                });
+                            });
+                    }
+                } else {
+                    // Empty placeholder
+                    egui::Frame::new()
+                        .fill(egui::Color32::from_rgb(0x18, 0x18, 0x25))
+                        .stroke(egui::Stroke::new(1.0_f32, egui::Color32::from_rgb(0x28, 0x2a, 0x36)))
+                        .corner_radius(egui::CornerRadius::same(8))
+                        .inner_margin(egui::Margin::same(30))
+                        .show(ui, |ui| {
+                            ui.vertical_centered(|ui| {
+                                ui.label(egui::RichText::new("📱").size(40.0));
+                                ui.add_space(8.0);
+                                ui.label(
+                                    egui::RichText::new("Chưa chọn ứng dụng")
+                                        .size(16.0)
+                                        .strong()
+                                        .color(egui::Color32::from_rgb(0xcd, 0xd6, 0xf4)),
+                                );
+                                ui.label(
+                                    egui::RichText::new(
+                                        "Chọn một ứng dụng từ danh sách bên trái hoặc bấm '+ Add Application' để bắt đầu cấu hình.",
+                                    )
+                                    .size(12.0)
+                                    .color(egui::Color32::from_rgb(0x7f, 0x84, 0x9c)),
+                                );
+                            });
+                        });
+                }
+            });
+        });
+    }
+
+    fn show_add_app_dialog_window(&mut self, ctx: &egui::Context) {
+        let mut is_open = true;
+        let mut should_close = false;
+        let mut app_to_add: Option<(String, String)> = None;
+
+        egui::Window::new("Thêm Ứng Dụng (Add Application)")
+            .open(&mut is_open)
+            .collapsible(false)
+            .resizable(true)
+            .default_size([580.0, 480.0])
+            .anchor(egui::Align2::CENTER_CENTER, egui::vec2(0.0, 0.0))
+            .frame(
+                egui::Frame::window(&ctx.style())
+                    .fill(egui::Color32::from_rgb(0x1e, 0x1e, 0x2d))
+                    .stroke(egui::Stroke::new(1.5_f32, egui::Color32::from_rgb(0x89, 0xb4, 0xfa))),
+            )
+            .show(ctx, |ui| {
+                ui.label(
+                    egui::RichText::new("Chọn ứng dụng từ hệ thống hoặc nhập thủ công để gán chế độ gõ riêng.")
+                        .size(12.5)
+                        .color(egui::Color32::from_rgb(0x7f, 0x84, 0x9c)),
+                );
+                ui.add_space(8.0);
+
+                // Tab selection
+                ui.horizontal(|ui| {
+                    if ui.selectable_label(self.add_app_tab == 0, "Ứng Dụng Hệ Thống & Đang Chạy").clicked() {
+                        self.add_app_tab = 0;
+                    }
+                    if ui.selectable_label(self.add_app_tab == 1, "Nhập Thủ Công (Manual Input)").clicked() {
+                        self.add_app_tab = 1;
+                    }
+                });
+                ui.separator();
+                ui.add_space(6.0);
+
+                if self.add_app_tab == 0 {
+                    // System apps search & refresh
+                    ui.horizontal(|ui| {
+                        ui.add(
+                            egui::TextEdit::singleline(&mut self.add_app_search)
+                                .hint_text("Tìm kiếm ứng dụng (vd: chrome, code, nvim, wezterm)...")
+                                .desired_width(ui.available_width() - 85.0),
+                        );
+                        if ui.button("🔄 Làm mới").clicked() {
+                            self.cached_system_apps = crate::system_apps::scan_system_applications();
+                        }
+                    });
+                    ui.add_space(8.0);
+
+                    let query = self.add_app_search.trim().to_lowercase();
+                    let filtered: Vec<(usize, crate::system_apps::SystemAppEntry)> = self
+                        .cached_system_apps
+                        .iter()
+                        .enumerate()
+                        .filter(|(_, app)| {
+                            query.is_empty()
+                                || app.display_name.to_lowercase().contains(&query)
+                                || app.exec_name.to_lowercase().contains(&query)
+                        })
+                        .map(|(idx, app)| (idx, app.clone()))
+                        .collect();
+
+                    egui::ScrollArea::vertical()
+                        .max_height(270.0)
+                        .auto_shrink([false, false])
+                        .show(ui, |ui| {
+                            ui.spacing_mut().item_spacing = egui::vec2(0.0, 3.0);
+                            for (orig_idx, app) in filtered {
+                                let is_selected = self.selected_sys_app_idx == Some(orig_idx);
+                                let (rect, res) = ui.allocate_exact_size(
+                                    egui::vec2(ui.available_width(), 44.0),
+                                    egui::Sense::click(),
+                                );
+
+                                let bg = if is_selected {
+                                    egui::Color32::from_rgb(0x4b, 0x44, 0x63)
+                                } else if res.hovered() {
+                                    egui::Color32::from_rgb(0x28, 0x28, 0x3d)
+                                } else {
+                                    egui::Color32::from_rgb(0x18, 0x18, 0x25)
+                                };
+
+                                let stroke = if is_selected {
+                                    egui::Stroke::new(1.5_f32, egui::Color32::from_rgb(0x89, 0xb4, 0xfa))
+                                } else {
+                                    egui::Stroke::new(1.0_f32, egui::Color32::from_rgb(0x28, 0x2a, 0x36))
+                                };
+
+                                ui.painter().rect(rect, egui::CornerRadius::same(6), bg, stroke, egui::StrokeKind::Inside);
+
+                                // Glyph
+                                ui.painter().text(
+                                    egui::pos2(rect.min.x + 20.0, rect.center().y),
+                                    egui::Align2::CENTER_CENTER,
+                                    app.glyph,
+                                    egui::FontId::proportional(18.0),
+                                    egui::Color32::from_rgb(0xcd, 0xd6, 0xf4),
+                                );
+
+                                // App Display Name
+                                ui.painter().text(
+                                    egui::pos2(rect.min.x + 40.0, rect.min.y + 7.0),
+                                    egui::Align2::LEFT_TOP,
+                                    &app.display_name,
+                                    egui::FontId::proportional(13.5),
+                                    egui::Color32::from_rgb(0xcd, 0xd6, 0xf4),
+                                );
+
+                                // Exec identifier
+                                ui.painter().text(
+                                    egui::pos2(rect.min.x + 40.0, rect.min.y + 24.0),
+                                    egui::Align2::LEFT_TOP,
+                                    format!("Binary: {}", app.exec_name),
+                                    egui::FontId::proportional(11.0),
+                                    egui::Color32::from_rgb(0x7f, 0x84, 0x9c),
+                                );
+
+                                if res.clicked() {
+                                    self.selected_sys_app_idx = Some(orig_idx);
+                                }
+
+                                if res.double_clicked() {
+                                    self.selected_sys_app_idx = Some(orig_idx);
+                                    let mode = Self::suggest_initial_mode(&app.exec_name);
+                                    app_to_add = Some((app.exec_name.clone(), mode));
+                                }
+                            }
+                        });
+                } else {
+                    // Manual input tab
+                    ui.label("Nhập tên binary thực thi hoặc định danh process của ứng dụng:");
+                    ui.add_space(8.0);
+                    ui.add(
+                        egui::TextEdit::singleline(&mut self.add_app_manual_name)
+                            .hint_text("Ví dụ: discord, wezterm-gui, nvim, steam...")
+                            .desired_width(ui.available_width()),
+                    );
+                    ui.add_space(12.0);
+                    ui.label(
+                        egui::RichText::new("Mẹo: Bạn có thể kiểm tra tên process bằng lệnh 'ps aux' hoặc 'pgrep -l'.")
+                            .size(11.5)
+                            .color(egui::Color32::from_rgb(0x7f, 0x84, 0x9c)),
+                    );
+                }
+
+                ui.add_space(12.0);
+                ui.separator();
+                ui.add_space(8.0);
+
+                // Footer action buttons
+                ui.horizontal(|ui| {
+                    let selected_name = if self.add_app_tab == 0 {
+                        self.selected_sys_app_idx
+                            .and_then(|idx| self.cached_system_apps.get(idx))
+                            .map(|a| a.exec_name.clone())
+                    } else {
+                        let trimmed = self.add_app_manual_name.trim();
+                        if !trimmed.is_empty() {
+                            Some(trimmed.to_string())
+                        } else {
+                            None
+                        }
+                    };
+
+                    if let Some(ref name) = selected_name {
+                        ui.label(
+                            egui::RichText::new(format!("Đã chọn: {}", name))
+                                .color(egui::Color32::from_rgb(0x89, 0xb4, 0xfa)),
+                        );
+                    } else {
+                        ui.label(
+                            egui::RichText::new("Chưa chọn ứng dụng")
+                                .color(egui::Color32::from_rgb(0x7f, 0x84, 0x9c)),
+                        );
+                    }
+
+                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                        let can_add = selected_name.is_some();
+                        if ui
+                            .add_enabled(
+                                can_add,
+                                egui::Button::new("+ Thêm Ứng Dụng").min_size(egui::vec2(130.0, 30.0)),
+                            )
+                            .clicked()
+                        {
+                            if let Some(name) = selected_name {
+                                let mode = Self::suggest_initial_mode(&name);
+                                app_to_add = Some((name, mode));
+                            }
+                        }
+
+                        if ui.add(egui::Button::new("Huỷ").min_size(egui::vec2(70.0, 30.0))).clicked() {
+                            should_close = true;
+                        }
+                    });
+                });
+            });
+
+        if let Some((app, mode)) = app_to_add {
+            // Check if app already exists in list
+            if let Some(pos) = self.app_modes.iter().position(|(a, _)| a == &app) {
+                self.selected_app_idx = Some(pos);
+            } else {
+                self.app_modes.push((app, mode));
+                self.selected_app_idx = Some(self.app_modes.len() - 1);
+            }
+            should_close = true;
+        }
+
+        if !is_open || should_close {
+            self.show_add_app_dialog = false;
+        }
+    }
+
+    fn suggest_initial_mode(app_name: &str) -> String {
+        let lower = app_name.to_lowercase();
+        if lower.contains("chrome")
+            || lower.contains("firefox")
+            || lower.contains("browser")
+            || lower.contains("brave")
+            || lower.contains("edge")
+            || lower.contains("opera")
+            || lower.contains("slack")
+            || lower.contains("discord")
+            || lower.contains("electron")
+        {
+            "Preedit".to_string()
+        } else if lower.contains("nvim")
+            || lower.contains("vim")
+            || lower.contains("term")
+            || lower.contains("code")
+            || lower.contains("idea")
+            || lower.contains("studio")
+        {
+            "Direct".to_string()
+        } else {
+            "Direct".to_string()
         }
     }
 
