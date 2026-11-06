@@ -826,6 +826,41 @@ void VnchkeyEngine::keyEvent(const fcitx::InputMethodEntry &entry, fcitx::KeyEve
         if (rawKey.isVirtual()) {
             return;
         }
+
+        // Macro Undo (OpenViet style): if previous action was a macro expansion and user presses Backspace immediately,
+        // revert the expansion back to the original abbreviation strokes.
+        size_t undo_bs = 0;
+        char* undo_commit = nullptr;
+        if (fcitx5_vnchkey_undo_macro(ctx, &undo_bs, &undo_commit)) {
+            if (ic) {
+                if (undo_bs > 0) {
+                    if (ic->capabilityFlags().test(fcitx::CapabilityFlag::SurroundingText) &&
+                        ic->surroundingText().isValid()) {
+                        ic->deleteSurroundingText(-static_cast<int>(undo_bs), undo_bs);
+                    } else {
+                        is_forwarding_ = true;
+                        for (size_t i = 0; i < undo_bs; ++i) {
+                            ic->forwardKey(fcitx::Key(FcitxKey_BackSpace));
+                        }
+                        is_forwarding_ = false;
+                    }
+                }
+                if (isPreeditMode) {
+                    ic->inputPanel().reset();
+                    ic->updatePreedit();
+                    ic->updateUserInterface(fcitx::UserInterfaceComponent::InputPanel);
+                }
+                if (undo_commit && undo_commit[0] != '\0') {
+                    ic->commitString(undo_commit);
+                }
+            }
+            if (undo_commit) {
+                fcitx5_vnchkey_free_string(undo_commit);
+            }
+            keyEvent.filterAndAccept();
+            return;
+        }
+
         if (isPreeditMode && ic && fcitx5_vnchkey_has_active_word(ctx)) {
             fcitx5_vnchkey_handle_backspace(ctx);
             if (fcitx5_vnchkey_has_active_word(ctx)) {

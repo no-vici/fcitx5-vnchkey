@@ -168,6 +168,32 @@ pub unsafe extern "C" fn fcitx5_vnchkey_flip_word(
     }
 }
 
+/// Attempts to undo the last macro expansion on Backspace.
+/// Returns 1 if reverted, and writes the required backspaces and trigger string to out_commit.
+#[no_mangle]
+pub unsafe extern "C" fn fcitx5_vnchkey_undo_macro(
+    ctx: *mut Fcitx5VnchkeyContext,
+    out_backspaces: *mut usize,
+    out_commit: *mut *mut c_char,
+) -> c_int {
+    if ctx.is_null() {
+        return 0;
+    }
+    let ctx = &mut *ctx;
+    if let Some((backspaces, commit)) = ctx.engine.undo_macro_expansion() {
+        if !out_backspaces.is_null() {
+            *out_backspaces = backspaces;
+        }
+        if !out_commit.is_null() {
+            let c_str = CString::new(commit).unwrap_or_default();
+            *out_commit = c_str.into_raw();
+        }
+        1
+    } else {
+        0
+    }
+}
+
 /// Loads custom macros from a configuration file.
 #[no_mangle]
 pub unsafe extern "C" fn fcitx5_vnchkey_load_macros(

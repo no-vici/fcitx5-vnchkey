@@ -57,6 +57,7 @@ extern "C" {
     char* fcitx5_vnchkey_get_completed_word(void* ctx);
     bool fcitx5_vnchkey_has_active_word(void* ctx);
     int fcitx5_vnchkey_flip_word(void* ctx, size_t* out_backspaces, char** out_commit);
+    int fcitx5_vnchkey_undo_macro(void* ctx, size_t* out_backspaces, char** out_commit);
 }
 
 class VnchkeyEngine : public fcitx::InputMethodEngineV2 {

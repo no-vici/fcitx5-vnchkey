@@ -111,6 +111,18 @@ pub struct Engine {
     manual_undo: bool,
     english_locked: bool,
     last_completed_word: Option<String>,
+    last_macro: Option<LastMacroExpansion>,
+}
+
+/// Tracks the most recent macro expansion for one-step undo on Backspace.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct LastMacroExpansion {
+    /// The original abbreviation keystroke sequence (e.g. "tvi")
+    pub trigger: String,
+    /// The expanded replacement string (e.g. "Tiếng Việt")
+    pub expansion: String,
+    /// The delimiter character that triggered expansion (e.g. ' ')
+    pub delimiter: char,
 }
 
 impl Engine {
@@ -134,6 +146,7 @@ impl Engine {
             manual_undo: false,
             english_locked: false,
             last_completed_word: None,
+            last_macro: None,
         }
     }
 
@@ -311,10 +324,30 @@ impl Engine {
         })
     }
 
+    /// Checks if the last action was a macro expansion and reverts it on Backspace.
+    /// Returns (backspaces_to_send, text_to_commit) if reverted.
+    pub fn undo_macro_expansion(&mut self) -> Option<(usize, String)> {
+        if let Some(macro_state) = self.last_macro.take() {
+            // To revert "Expansion + Delimiter" back to "Trigger":
+            // 1 delimiter character + all characters of the expansion
+            let delete_count = 1 + macro_state.expansion.chars().count();
+            let commit = macro_state.trigger.clone();
+            self.current_word = macro_state.trigger;
+            self.raw_strokes = self.current_word.clone();
+            self.manual_undo = false;
+            Some((delete_count, commit))
+        } else {
+            None
+        }
+    }
+
     /// Process a key press event.
     pub fn process_key(&mut self, ch: char, _timestamp_ms: f64) -> EngineOutput {
         self.last_completed_word = None;
         let is_bracket = self.config.bracket_transform && matches!(ch, '[' | ']' | '{' | '}');
+
+        // Any new keypress (other than Backspace) cancels pending macro undo state
+        self.last_macro = None;
 
         // Word delimiter check (Space, Enter, Punctuation)
         if !ch.is_alphanumeric() && !is_bracket {
@@ -325,7 +358,13 @@ impl Engine {
                         let target = format!("{}{}", expansion, ch);
                         let (backspaces, commit_text) =
                             compare_and_split_strings(&self.current_word, &target);
+                        let trigger = self.current_word.clone();
                         self.reset();
+                        self.last_macro = Some(LastMacroExpansion {
+                            trigger,
+                            expansion: expansion.clone(),
+                            delimiter: ch,
+                        });
                         self.last_completed_word = Some(target);
                         return EngineOutput {
                             backspaces,
@@ -906,5 +945,44 @@ mod tests {
         assert_eq!(engine.current_word(), "má");
         assert_eq!(out2.backspaces, 2);
         assert_eq!(out2.commit_text, "á");
+    }
+
+    #[test]
+    fn test_macro_undo_on_backspace() {
+        let mut engine = Engine::new(EngineConfig {
+            method: InputMethod::Telex,
+            enable_macro: true,
+            ..EngineConfig::default()
+        });
+
+        // 'vn' is a default macro expanding to 'Việt Nam'
+        for ch in ['v', 'n'] {
+            engine.process_key(ch, 0.0);
+        }
+        assert_eq!(engine.current_word(), "vn");
+
+        // Type space to trigger macro expansion
+        let out = engine.process_key(' ', 0.0);
+        assert!(out.macro_expanded);
+        assert_eq!(out.commit_text, "Việt Nam ");
+
+        // User immediately presses Backspace: macro expansion is undone!
+        let undo = engine.undo_macro_expansion();
+        assert!(undo.is_some());
+        let (bs, commit) = undo.unwrap();
+        // 1 (space) + 8 ("Việt Nam".chars().count()) = 9 backspaces
+        assert_eq!(bs, 9);
+        assert_eq!(commit, "vn");
+        assert_eq!(engine.current_word(), "vn");
+
+        // Subsequent Backspace has no more macro to undo
+        assert!(engine.undo_macro_expansion().is_none());
+
+        // Test 2: Typing another key cancels macro undo
+        for ch in ['v', 'n', ' '] {
+            engine.process_key(ch, 0.0);
+        }
+        engine.process_key('a', 0.0);
+        assert!(engine.undo_macro_expansion().is_none());
     }
 }
