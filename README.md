@@ -171,10 +171,18 @@ Kế thừa thuật toán từ điển tĩnh từ **GoNhanh**:
 
 ## 4. Giao Diện Cài Đặt Trực Quan (Rust + egui GUI)
 
-Cung cấp ứng dụng cài đặt độc lập **`fcitx5-vnchkey-settings`** viết 100% bằng Rust:
-- Khởi động tức thì trong mili-giây, giao diện Dark Theme hiện đại.
-- Hỗ trợ đầy đủ các tab cấu hình: **General**, **Typing**, **Applications**, **Macros**, **Dictionary**, **Keymap**, **Appearance**, **Backup**, **About**.
-- Tự động đồng bộ và nạp lại cấu hình vào Fcitx5 ngay khi lưu.
+Cung cấp công cụ cấu hình đồ họa native độc lập **`fcitx5-vnchkey-settings`** được viết 100% bằng Rust (`egui` / `eframe`):
+- **Khởi động tức thì trong mili-giây**: Tiêu thụ cực ít tài nguyên, giao diện Dark Theme Catppuccin chuẩn mực.
+- **Quản Lý Ứng Dụng Thông Minh (Applications Mode Manager)**:
+  - **Bố cục 2 cột hiện đại**: Sidebar bên trái quản lý danh sách ứng dụng kèm ô tìm kiếm thời gian thực và icon danh mục (`🌐 Browser`, `💻 Terminal`, `📝 Editor`, `💬 Chat`, `🎮 Game`...).
+  - **Bộ Chọn Ứng Dụng Tự Động (System App Picker)**: Tự động quét toàn bộ ứng dụng hệ thống (`/usr/share/applications`, `~/.local/share/applications`, Flatpak) và các tiến trình người dùng đang chạy (`/proc`). Bạn chỉ cần tìm kiếm và **nhấp đúp chuột (Double-click)** để thêm ngay ứng dụng vào danh sách quy tắc mà không cần nhớ hay gõ tay tên binary. Hỗ trợ tab nhập thủ công cho các script hoặc portable binary riêng biệt.
+  - **Lưới Thẻ Chế Độ 1-Click (Mode Cards Grid)**: Trực quan hóa việc chuyển đổi chế độ xuất chữ cho từng ứng dụng với các thẻ bấm lớn nổi bật:
+    - **`Direct (Micro-diff)`**: Gõ trực tiếp như UniKey Windows, tối ưu cho Terminal, Neovim, VS Code, WezTerm với độ trễ bằng 0.
+    - **`Preedit (Gạch Chân)`**: Gom từ nguyên tử, đặc trị triệt để 100% lỗi nhảy chữ, lặp chữ trên Google Docs, Chrome, Firefox, Slack, Discord.
+    - **`Bypass (OFF)`**: Tắt bộ gõ hoàn toàn, chỉ gửi phím tiếng Anh thô cho Game hoặc Terminal đặc thù.
+    - **`Default Typing`**: Kế thừa chế độ mặc định toàn cục của hệ thống (Global Default).
+- **Hỗ trợ toàn diện 9 Tab chuyên sâu**: **General**, **Typing**, **Applications**, **Macros**, **Dictionary**, **Keymap**, **Appearance**, **Backup**, **About**.
+- **Tự động đồng bộ**: Nạp lại cấu hình tức thì vào Fcitx5 ngay khi bấm Áp Dụng.
 
 ```bash
 # Mở bảng cài đặt từ terminal:
