@@ -101,6 +101,10 @@ impl ConfigManager {
     }
 
     pub fn app_modes_path() -> PathBuf {
+        Self::config_dir().join("vnchkey-apps.conf")
+    }
+
+    pub fn legacy_app_modes_path() -> PathBuf {
         Self::config_dir().join("vnchkey-app-modes.conf")
     }
 
@@ -290,17 +294,22 @@ impl ConfigManager {
 
     pub fn load_app_modes() -> Vec<(String, String)> {
         let path = Self::app_modes_path();
-        if !path.exists() {
+        let legacy_path = Self::legacy_app_modes_path();
+        let target_path = if path.exists() {
+            path
+        } else if legacy_path.exists() {
+            legacy_path
+        } else {
             return vec![
                 ("alacritty".to_string(), "Bypass (Raw English)".to_string()),
                 ("kitty".to_string(), "Bypass (Raw English)".to_string()),
                 ("steam".to_string(), "Bypass (Raw English)".to_string()),
-                ("code".to_string(), "Direct Commit (Smooth)".to_string()),
+                ("code".to_string(), "Direct".to_string()),
             ];
-        }
+        };
 
         let mut res = Vec::new();
-        if let Ok(content) = fs::read_to_string(&path) {
+        if let Ok(content) = fs::read_to_string(&target_path) {
             for line in content.lines() {
                 let line = line.trim();
                 if line.is_empty() || line.starts_with('#') {
@@ -326,7 +335,9 @@ impl ConfigManager {
             }
         }
 
-        fs::write(Self::app_modes_path(), lines.join("\n") + "\n")?;
+        let content = lines.join("\n") + "\n";
+        fs::write(Self::app_modes_path(), &content)?;
+        let _ = fs::write(Self::legacy_app_modes_path(), &content);
         Self::reload_fcitx5();
         Ok(())
     }
@@ -336,6 +347,7 @@ impl ConfigManager {
         let _ = fs::remove_file(Self::macro_path());
         let _ = fs::remove_file(Self::dict_path());
         let _ = fs::remove_file(Self::app_modes_path());
+        let _ = fs::remove_file(Self::legacy_app_modes_path());
         Self::reload_fcitx5();
     }
 

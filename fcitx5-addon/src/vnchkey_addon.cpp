@@ -2,6 +2,7 @@
 #include <fcitx-utils/keysym.h>
 #include <fcitx-utils/key.h>
 #include <fcitx/inputcontext.h>
+#include <fcitx/inputcontextmanager.h>
 #include <fcitx/statusarea.h>
 #include <fcitx/userinterfacemanager.h>
 #include <fcitx/instance.h>
@@ -144,12 +145,16 @@ void VnchkeyEngine::setupStatusMenu() {
     actionOutputModeDirect_->setCheckable(true);
     actionOutputModeDirect_->setLongText("Chế độ xuất: Trực tiếp (Direct - Editor/Terminal)");
     connections_.push_back(actionOutputModeDirect_->connect<fcitx::SimpleAction::Activated>([this](fcitx::InputContext* ic) {
+        if (!ic && manager_ && manager_->instance()) {
+            ic = manager_->instance()->inputContextManager().mostRecentInputContext();
+            if (!ic) ic = manager_->instance()->inputContextManager().lastFocusedInputContext();
+        }
         setOutputModeForContext(ic, "Direct");
         updateActionState(ic);
+        if (actionOutputModeDirect_) actionOutputModeDirect_->update(ic);
+        if (actionOutputModePreedit_) actionOutputModePreedit_->update(ic);
+        if (statusAction_) statusAction_->update(ic);
         if (ic) {
-            if (actionOutputModeDirect_) actionOutputModeDirect_->update(ic);
-            if (actionOutputModePreedit_) actionOutputModePreedit_->update(ic);
-            if (statusAction_) statusAction_->update(ic);
             ic->updateUserInterface(fcitx::UserInterfaceComponent::StatusArea);
         }
     }));
@@ -159,13 +164,17 @@ void VnchkeyEngine::setupStatusMenu() {
     actionOutputModePreedit_->setCheckable(true);
     actionOutputModePreedit_->setLongText("Chế độ xuất: Gạch chân (Preedit - Web/Google Docs)");
     connections_.push_back(actionOutputModePreedit_->connect<fcitx::SimpleAction::Activated>([this](fcitx::InputContext* ic) {
+        if (!ic && manager_ && manager_->instance()) {
+            ic = manager_->instance()->inputContextManager().mostRecentInputContext();
+            if (!ic) ic = manager_->instance()->inputContextManager().lastFocusedInputContext();
+        }
         setOutputModeForContext(ic, "Preedit");
         updateActionState(ic);
+        if (actionOutputModeDirect_) actionOutputModeDirect_->update(ic);
+        if (actionOutputModePreedit_) actionOutputModePreedit_->update(ic);
+        if (actionPreeditTooltip_) actionPreeditTooltip_->update(ic);
+        if (statusAction_) statusAction_->update(ic);
         if (ic) {
-            if (actionOutputModeDirect_) actionOutputModeDirect_->update(ic);
-            if (actionOutputModePreedit_) actionOutputModePreedit_->update(ic);
-            if (actionPreeditTooltip_) actionPreeditTooltip_->update(ic);
-            if (statusAction_) statusAction_->update(ic);
             ic->updateUserInterface(fcitx::UserInterfaceComponent::StatusArea);
         }
     }));
@@ -398,37 +407,47 @@ void VnchkeyEngine::loadAppModes() {
     app_output_modes_.clear();
     const char* home = getenv("HOME");
     if (!home) return;
-    std::string path = std::string(home) + "/.config/fcitx5/conf/vnchkey-apps.conf";
-    std::ifstream file(path);
-    if (!file.is_open()) return;
-    std::string line;
-    while (std::getline(file, line)) {
-        if (line.empty() || line[0] == '#') continue;
-        auto pos = line.find('=');
-        if (pos != std::string::npos) {
-            std::string app = line.substr(0, pos);
-            std::string mode = line.substr(pos + 1);
-            size_t a_start = app.find_first_not_of(" \t");
-            size_t a_end = app.find_last_not_of(" \t");
-            size_t m_start = mode.find_first_not_of(" \t");
-            size_t m_end = mode.find_last_not_of(" \t");
-            if (a_start != std::string::npos && m_start != std::string::npos) {
-                app_output_modes_[app.substr(a_start, a_end - a_start + 1)] = mode.substr(m_start, m_end - m_start + 1);
+
+    auto read_conf = [this](const std::string& path) {
+        std::ifstream file(path);
+        if (!file.is_open()) return;
+        std::string line;
+        while (std::getline(file, line)) {
+            if (line.empty() || line[0] == '#') continue;
+            auto pos = line.find('=');
+            if (pos != std::string::npos) {
+                std::string app = line.substr(0, pos);
+                std::string mode = line.substr(pos + 1);
+                size_t a_start = app.find_first_not_of(" \t");
+                size_t a_end = app.find_last_not_of(" \t");
+                size_t m_start = mode.find_first_not_of(" \t");
+                size_t m_end = mode.find_last_not_of(" \t");
+                if (a_start != std::string::npos && m_start != std::string::npos) {
+                    std::string a = app.substr(a_start, a_end - a_start + 1);
+                    std::string m = mode.substr(m_start, m_end - m_start + 1);
+                    app_output_modes_[a] = m;
+                }
             }
         }
-    }
+    };
+
+    read_conf(std::string(home) + "/.config/fcitx5/conf/vnchkey-apps.conf");
+    read_conf(std::string(home) + "/.config/fcitx5/conf/vnchkey-app-modes.conf");
 }
 
 void VnchkeyEngine::saveAppModes() {
     const char* home = getenv("HOME");
     if (!home) return;
-    std::string path = std::string(home) + "/.config/fcitx5/conf/vnchkey-apps.conf";
-    std::ofstream out(path);
-    if (!out.is_open()) return;
-    out << "# vnchKey Per-Application Modes\n";
-    for (const auto& pair : app_output_modes_) {
-        out << pair.first << "=" << pair.second << "\n";
-    }
+    auto write_conf = [this](const std::string& path) {
+        std::ofstream out(path);
+        if (!out.is_open()) return;
+        out << "# vnchKey Per-Application Modes\n";
+        for (const auto& pair : app_output_modes_) {
+            out << pair.first << "=" << pair.second << "\n";
+        }
+    };
+    write_conf(std::string(home) + "/.config/fcitx5/conf/vnchkey-apps.conf");
+    write_conf(std::string(home) + "/.config/fcitx5/conf/vnchkey-app-modes.conf");
 }
 
 static bool isWpsOffice(const std::string& prog) {
@@ -454,12 +473,31 @@ std::string VnchkeyEngine::getOutputModeForContext(fcitx::InputContext* ic) {
             return config_output_mode_;
         }
         if (config_remember_app_mode_ && !prog.empty()) {
+            // 1. Direct exact match in app_output_modes_
             auto it = app_output_modes_.find(prog);
             if (it != app_output_modes_.end()) {
                 return it->second;
             }
+
+            // 2. Basename & case-insensitive match against user configured app modes
             std::string lower_prog = prog;
+            auto last_slash = lower_prog.find_last_of('/');
+            if (last_slash != std::string::npos) {
+                lower_prog = lower_prog.substr(last_slash + 1);
+            }
             for (char& c : lower_prog) c = std::tolower(c);
+
+            for (const auto& [app, app_mode] : app_output_modes_) {
+                std::string lower_app = app;
+                for (char& c : lower_app) c = std::tolower(c);
+                if (lower_prog == lower_app ||
+                    lower_prog.find(lower_app) != std::string::npos ||
+                    lower_app.find(lower_prog) != std::string::npos) {
+                    return app_mode;
+                }
+            }
+
+            // 3. Built-in defaults only apply if the application is NOT configured by user
             if (lower_prog.find("chrome") != std::string::npos ||
                 lower_prog.find("firefox") != std::string::npos ||
                 lower_prog.find("chromium") != std::string::npos ||
@@ -494,7 +532,13 @@ void VnchkeyEngine::setOutputModeForContext(fcitx::InputContext* ic, const std::
     if (ic && config_remember_app_mode_) {
         std::string prog = ic->program();
         if (!prog.empty() && prog != "gnome-shell") {
+            std::string base_prog = prog;
+            auto last_slash = base_prog.find_last_of('/');
+            if (last_slash != std::string::npos) {
+                base_prog = base_prog.substr(last_slash + 1);
+            }
             app_output_modes_[prog] = mode;
+            app_output_modes_[base_prog] = mode;
             saveAppModes();
         }
     }
@@ -622,6 +666,7 @@ void VnchkeyEngine::saveConfig() {
 
 void VnchkeyEngine::reloadConfig() {
     loadConfig();
+    loadAppModes();
     updateActionState();
     if (ctx_auto_) fcitx5_vnchkey_reset(ctx_auto_);
     if (ctx_telex_) fcitx5_vnchkey_reset(ctx_telex_);
@@ -671,6 +716,9 @@ void VnchkeyEngine::keyEvent(const fcitx::InputMethodEntry &entry, fcitx::KeyEve
     }
 
     std::string mode = getOutputModeForContext(ic);
+    if (mode.rfind("Bypass", 0) == 0 || mode == "OFF") {
+        return;
+    }
     const bool isPreeditMode = (mode == "Preedit" || mode == "preedit");
 
     auto rawKey = keyEvent.rawKey();

@@ -667,30 +667,36 @@ impl SettingsApp {
 
     // 3. Applications Page
     fn show_applications_page(&mut self, ui: &mut egui::Ui) {
+        let full_height = ui.available_height();
+        let col_width = 240.0;
+
         ui.horizontal(|ui| {
-            // Left App List Column (240px wide)
+            ui.set_min_height(full_height);
+
+            // Left App List Column (240px wide) - extends full vertical height
             ui.vertical(|ui| {
-                ui.set_width(240.0);
-                ui.set_min_height(ui.available_height());
+                ui.set_width(col_width);
+                ui.set_min_height(full_height);
+                ui.set_max_height(full_height);
 
                 // Search box
                 ui.add(
                     egui::TextEdit::singleline(&mut self.app_search)
                         .hint_text("Search applications...")
-                        .desired_width(240.0),
+                        .desired_width(col_width),
                 );
                 ui.add_space(8.0);
 
-                // Application Items List
+                // Application Items List: occupies all space between search box and bottom buttons
+                // Overhead: Search box (28) + 8 + 8 + Add Button (32) + 6 + Remove Button (32) = 114
                 let query = self.app_search.trim().to_lowercase();
-                // Reserved for bottom buttons: 8.0 + 32.0 (+ Add App) + 4.0 + 30.0 (Remove) = 74.0
-                let scroll_height = (ui.available_height() - 76.0).max(220.0);
+                let scroll_height = (full_height - 116.0).max(280.0);
                 egui::ScrollArea::vertical()
                     .min_scrolled_height(scroll_height)
                     .max_height(scroll_height)
                     .auto_shrink([false, false])
                     .show(ui, |ui| {
-                        ui.set_width(240.0);
+                        ui.set_width(col_width);
                         ui.spacing_mut().item_spacing = egui::vec2(0.0, 4.0);
 
                         let mut visible_count = 0;
@@ -712,7 +718,7 @@ impl SettingsApp {
 
                             // Custom selectable card matching lilypad style
                             let (rect, res) = ui.allocate_exact_size(
-                                egui::vec2(240.0, 48.0),
+                                egui::vec2(col_width, 48.0),
                                 egui::Sense::click(),
                             );
 
@@ -805,10 +811,10 @@ impl SettingsApp {
 
                 ui.add_space(8.0);
 
-                // Bottom buttons: stacked full-width like Lilypad
+                // Bottom buttons: stacked full-width at the bottom like Lilypad
                 if ui
                     .add_sized(
-                        egui::vec2(240.0, 32.0),
+                        egui::vec2(col_width, 32.0),
                         egui::Button::new("+ Add Application"),
                     )
                     .clicked()
@@ -821,15 +827,15 @@ impl SettingsApp {
                     self.selected_sys_app_idx = None;
                 }
 
-                ui.add_space(4.0);
+                ui.add_space(6.0);
 
                 let has_selection = self.selected_app_idx.is_some()
                     && self.selected_app_idx.unwrap() < self.app_modes.len();
                 if ui
-                    .add_enabled(
-                        has_selection,
-                        egui::Button::new("Remove").min_size(egui::vec2(240.0, 30.0)),
-                    )
+                    .add_enabled_ui(has_selection, |ui| {
+                        ui.add_sized(egui::vec2(col_width, 32.0), egui::Button::new("🗑 Remove"))
+                    })
+                    .inner
                     .clicked()
                 {
                     if let Some(idx) = self.selected_app_idx {
