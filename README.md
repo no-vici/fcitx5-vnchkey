@@ -27,12 +27,13 @@
 2. [Cấu Trúc Workspace & Phân Tầng Mã Nguồn](#2-cấu-trúc-workspace--phân-tầng-mã-nguồn)
 3. [Các Tính Năng & Cơ Chế Hoạt Động Cốt Lõi](#3-các-tính-năng--cơ-chế-hoạt-động-cốt-lõi)
    - [3.1. Thuật Toán Micro-diff Minimal Replacement](#31-thuật-toán-micro-diff-minimal-replacement)
-   - [3.2. Tách Âm Tiết Cuối Tối Ưu Cho Neovim / WezTerm / Vim](#32-tách-âm-tiết-cuối-tối-ưu-cho-neovim--wezterm--vim)
-   - [3.3. Bộ Kiểm Tra Chánh Tả & Ngữ Âm Học Tiếng Việt (6.750+ Từ Gốc)](#33-bộ-kiểm-tra-chánh-tả--ngữ-âm-học-tiếng-việt-6750-từ-gốc)
-   - [3.4. Tự Động Khôi Phục Tiếng Anh (Restore English)](#34-tự-động-khôi-phục-tiếng-anh-restore-english)
-   - [3.5. Chế Độ Gõ Đa Năng: Auto, Telex, VNI](#35-chế-độ-gõ-đa-năng-auto-telex-vni)
-   - [3.6. Bảo Toàn Chữ Hoa Thông Minh (Smart Casing)](#36-bảo-toàn-chữ-hoa-thông-minh-smart-casing)
-   - [3.7. Bảng Gõ Tắt Mở Rộng Tức Thì (Macro Expansion & Undo)](#37-bảng-gõ-tắt-mở-rộng-tức-thì-macro-expansion--undo)
+   - [3.2. Chế Độ Xuất Chữ Kép: Direct Mode & Preedit Mode (Đặc Trị Google Docs & Web App)](#32-chế-độ-xuất-chữ-kép-direct-mode--preedit-mode-đặc-trị-google-docs--web-app)
+   - [3.3. Tách Âm Tiết Cuối Tối Ưu Cho Neovim / WezTerm / Vim](#33-tách-âm-tiết-cuối-tối-ưu-cho-neovim--wezterm--vim)
+   - [3.4. Bộ Kiểm Tra Chánh Tả, Ngữ Âm Học & Địa Danh Tây Nguyên](#34-bộ-kiểm-tra-chánh-tả-ngữ-âm-học--địa-danh-tây-nguyên)
+   - [3.5. Tự Động Khôi Phục Tiếng Anh (Restore English)](#35-tự-động-khôi-phục-tiếng-anh-restore-english)
+   - [3.6. Chế Độ Gõ Đa Năng: Auto, Telex, VNI](#36-chế-độ-gõ-đa-năng-auto-telex-vni)
+   - [3.7. Bảo Toàn Chữ Hoa Thông Minh (Smart Casing)](#37-bảo-toàn-chữ-hoa-thông-minh-smart-casing)
+   - [3.8. Bảng Gõ Tắt Mở Rộng Tức Thì (Macro Expansion & Undo)](#38-bảng-gõ-tắt-mở-rộng-tức-thì-macro-expansion--undo)
 4. [Giao Diện Cài Đặt Trực Quan (Rust + egui GUI)](#4-giao-diện-cài-đặt-trực-quan-rust--egui-gui)
 5. [Hướng Dẫn Cài Đặt Cho Arch Linux](#5-hướng-dẫn-cài-đặt-cho-arch-linux)
 6. [Ý Nghĩa Biểu Tượng & Di Sản Tự Do](#6-ý-nghĩa-biểu-tượng--di-sản-tự-do)
@@ -107,7 +108,21 @@ fcitx5-vnchkey/
 
 ---
 
-### 3.2. Tách Âm Tiết Cuối Tối Ưu Cho Neovim / WezTerm / Vim
+### 3.2. Chế Độ Xuất Chữ Kép: Direct Mode & Preedit Mode (Đặc Trị Google Docs & Web App)
+Giải quyết triệt để vấn đề kinh điển của các bộ gõ trên Linux: **lặp chữ và nhảy con trỏ** trên các ứng dụng nền tảng Canvas hoặc React/Vue (Google Docs, StackEdit, Sider.ai, Slack, Discord...).
+
+- **Chế độ Gõ Trực Tiếp (Direct Mode - Khuyên dùng cho Coding/Terminal/Editor)**:
+  - Sử dụng thuật toán Micro-diff: phát phím Backspace giả lập và commit phần đuôi biến đổi ngay tức thì.
+  - Tối ưu tuyệt đối cho độ trễ bằng $0$, mang lại cảm giác gõ mộc tự nhiên trên các editor chuyên nghiệp (Neovim, VS Code, Cursor, Zed, Alacritty, Kitty).
+- **Chế độ Gõ Gạch Chân (Preedit Mode - Khuyên dùng cho Web/Google Docs/Chat)**:
+  - Khắc phục tận gốc nguyên nhân gây lặp chữ: **Tuyệt đối không phát phím Backspace giả lập ra ứng dụng bên ngoài**.
+  - Từ đang soạn được hiển thị bằng nét gạch chân nội dòng (`setClientPreedit`) và được cam kết nguyên tử một lần duy nhất (`commitString`) khi người dùng bấm phím cách (Space), Enter hoặc dấu phân cách.
+  - **Khung chữ nổi (Floating Preedit Tooltip)**: Hiển thị từ đang gõ trong một ô nổi nhỏ ngay sát con trỏ chuột cho các ứng dụng tự vẽ Canvas như Google Docs (nơi trình duyệt không vẽ được nét gạch chân nội dòng). Đi kèm tùy chọn bật/tắt nhanh trên Menu hoặc Cài Đặt nếu người dùng muốn tránh phân tâm.
+  - **Tự động nhớ chế độ theo từng ứng dụng (Per-App Mode Memory)**: Tự động kích hoạt Preedit cho các trình duyệt web (`Chrome`, `Firefox`, `Brave`, `Edge`) và ứng dụng chat Electron (`Slack`, `Discord`, `Telegram`), đồng thời tự bật Direct khi quay lại Terminal/IDE.
+
+---
+
+### 3.3. Tách Âm Tiết Cuối Tối Ưu Cho Neovim / WezTerm / Vim
 Một vấn đề cố hữu của các bộ gõ trên terminal emulator là các phím lệnh Normal mode (như `ci"`, `cw`, `i`, `a`, `jk`) hoặc các ký tự đứng sát trước con trỏ dễ bị kẹt trong bộ đệm từ, phá vỡ việc bỏ dấu VNI:
 - **Giải pháp của vnchKey**: Tích hợp hàm `extract_last_syllable_index()`:
   - Khi gõ chuỗi phím số VNI (như `biet61`), engine tự động bóc tách âm tiết Tiếng Việt hợp lệ đứng cuối cùng (`biet`) để áp dụng dấu thành `biết`.
@@ -116,29 +131,30 @@ Một vấn đề cố hữu của các bộ gõ trên terminal emulator là cá
 
 ---
 
-### 3.3. Bộ Kiểm Tra Chánh Tả & Ngữ Âm Học Tiếng Việt (6.750+ Từ Gốc)
+### 3.4. Bộ Kiểm Tra Chánh Tả, Ngữ Âm Học & Địa Danh Tây Nguyên
 Tích hợp sẵn danh mục ~6.750 từ đơn gốc Tiếng Việt và bộ luật ngữ âm học nghiêm ngặt:
 - **Kiểm soát âm cuối tắc (`-c, -ch, -p, -t`)**: Chỉ cho phép mang thanh Sắc hoặc thanh Nặng. Ngăn chặn các âm tiết vô lý như `bạc` mang dấu hỏi (`bacr`) hoặc dấu huyền (`bacf`).
 - **Phát hiện xung đột ngữ âm**: Loại bỏ các kết hợp phụ âm / nguyên âm sai quy tắc như `ce`, `ci`, `cy`, `ge`, `giê`, `nge`, `ngi`.
+- **Hỗ trợ địa danh Tây Nguyên & ký tự đặc biệt**: Mở rộng nhận diện và bỏ qua kiểm tra âm học cho các địa danh đặc thù có cụm phụ âm lạ và dấu nháy đơn (`Đắk Lắk`, `Cư M'gar`, `Ea H'leo`, `M'Đrắk`, `Đắk Nông`, `Krông Nô`, `Pleiku`...). Tích hợp bộ chuẩn hóa dấu nháy đơn (curly quotes `’` / `‘` $\to$ `'`).
 - **Hỗ trợ từ ngữ Nam Bộ & khẩu ngữ**: Công nhận các âm tiết phương ngữ và biến âm tự nhiên (`dzìa`, `dzô`, `dzí`, `gởi`, `chánh`...).
 
 ---
 
-### 3.4. Tự Động Khôi Phục Tiếng Anh (Restore English)
+### 3.5. Tự Động Khôi Phục Tiếng Anh (Restore English)
 Kế thừa thuật toán từ điển tĩnh từ **GoNhanh**:
 - Khi gõ các từ vựng lập trình hoặc Tiếng Anh phổ biến (`text`, `post`, `struct`, `general`, `filter`, `return`, `window`, `user`...):
 - Khi vừa hoàn thành từ (bằng phím Space hoặc dấu câu), engine nhận diện từ không phải Tiếng Việt hoặc trùng với từ điển Tiếng Anh và lập tức khôi phục về dạng ký tự thô nguyên bản.
 
 ---
 
-### 3.5. Chế Độ Gõ Đa Năng: Auto, Telex, VNI
+### 3.6. Chế Độ Gõ Đa Năng: Auto, Telex, VNI
 - **Tự Động (Auto)**: Cho phép gõ đồng thời cả Telex (`s, f, r, x, j, w, aa, ee...`) và VNI (`1-9, 0`) trên cùng một phiên làm việc mà không cần bấm phím chuyển đổi.
 - **Telex & Simple Telex**: Hỗ trợ đầy đủ kiểu gõ Telex truyền thống, tùy chọn phím `w` thành `ư` (`w2u`) và uốn nguyên âm muộn (`khong` + `o` $\to$ `không`).
 - **VNI**: Hỗ trợ đầy đủ bảng quy ước VNI, đổi dấu nhanh (`gio72` + `1` $\to$ `giớ`), xóa dấu bằng phím `0` (`gio72` + `0` $\to$ `giơ`).
 
 ---
 
-### 3.6. Bảo Toàn Chữ Hoa Thông Minh (Smart Casing)
+### 3.7. Bảo Toàn Chữ Hoa Thông Minh (Smart Casing)
 - Khi gõ toàn bộ chữ hoa: `VIET` $\to$ `VIỆT` (không bị lỗi `VIệt` hoặc `ViỆt`).
 - Khi gõ hoa đầu từ: `Viet` $\to$ `Việt`.
 - Khi gõ hoa cụm từ: `CONG HOA` $\to$ `CỘNG HÒA`.
@@ -146,7 +162,7 @@ Kế thừa thuật toán từ điển tĩnh từ **GoNhanh**:
 
 ---
 
-### 3.7. Bảng Gõ Tắt Mở Rộng Tức Thì (Macro Expansion & Undo)
+### 3.8. Bảng Gõ Tắt Mở Rộng Tức Thì (Macro Expansion & Undo)
 - Tự động mở rộng từ viết tắt khi gõ phím phân cách (Space, dấu câu).
 - **Hoàn tác gõ tắt tức thì (Macro Undo)**: Nếu vừa mở rộng từ tắt mà nhấn ngay phím `Backspace`, engine sẽ xóa cụm từ đã bung và phục hồi lại đúng từ viết tắt ban đầu.
 
