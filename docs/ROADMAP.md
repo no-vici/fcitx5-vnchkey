@@ -1,7 +1,8 @@
 # Lộ Trình Phát Triển & Cột Mốc Dự Án vnchKey (Project Roadmap)
 
 > **Dự án**: vnchKey (Tự Do Edition)  
-> **Mục tiêu**: Xây dựng bộ gõ tiếng Việt hiệu năng cao, ổn định tuyệt đối, tôn trọng tự do và mang lại trải nghiệm gõ tốt nhất trên hệ điều hành Linux (Fcitx5 / Wayland / X11).
+> **Mục tiêu**: Xây dựng bộ gõ tiếng Việt hiệu năng cao, ổn định tuyệt đối, tôn trọng tự do và mang lại trải nghiệm gõ tốt nhất trên hệ điều hành Linux (Fcitx5 / Wayland / X11).  
+> **Tài liệu tham khảo**: Xem phân tích chuyên sâu và so sánh khách quan với Bamboo, UniKey, Lilypad tại [Báo Cáo So Sánh Kiến Trúc](BENCHMARK_AND_COMPARISON.md).
 
 ---
 
