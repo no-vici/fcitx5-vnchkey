@@ -17,6 +17,7 @@
 #include <fcitx-utils/textformatflags.h>
 #include <cstdint>
 #include <cstddef>
+#include <chrono>
 #include <string>
 #include <vector>
 #include <unordered_map>
@@ -89,7 +90,14 @@ private:
     std::string config_output_mode_ = "Direct";
     bool config_remember_app_mode_ = true;
     bool config_preedit_tooltip_ = true;
+    bool config_persistent_guard_ = true;
+    int config_direct_delay_ms_ = 0; // 0 = auto (0ms for editors, 4ms for web browsers)
     std::unordered_map<std::string, std::string> app_output_modes_;
+
+    // Grace Period Focus Tracker for Java IDEs & Wine
+    std::chrono::steady_clock::time_point last_focus_out_time_;
+    std::string last_focus_out_prog_;
+    std::string last_focus_out_entry_;
 
     bool config_auto_restore_ = true;
     bool config_macro_ = true;

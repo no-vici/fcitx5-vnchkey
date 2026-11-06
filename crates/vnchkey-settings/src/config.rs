@@ -15,6 +15,8 @@ pub struct VnchkeyConfig {
     pub output_mode: String,
     pub remember_app_mode: bool,
     pub preedit_tooltip: bool,
+    pub persistent_context_guard: bool,
+    pub direct_delay_ms: i32,
     pub type_w_to_u: String,
     pub bracket_transform: String,
     pub modern_style: bool,
@@ -42,6 +44,8 @@ impl Default for VnchkeyConfig {
             output_mode: "Direct".to_string(),
             remember_app_mode: true,
             preedit_tooltip: true,
+            persistent_context_guard: true,
+            direct_delay_ms: 0,
             type_w_to_u: "Non-Start".to_string(),
             bracket_transform: "Disabled".to_string(),
             modern_style: true,
@@ -127,6 +131,8 @@ impl ConfigManager {
             if let Some(v) = map.get("OutputMode") { cfg.output_mode = v.clone(); }
             if let Some(v) = map.get("RememberAppMode") { cfg.remember_app_mode = v.eq_ignore_ascii_case("true"); }
             if let Some(v) = map.get("PreeditTooltip") { cfg.preedit_tooltip = v.eq_ignore_ascii_case("true"); }
+            if let Some(v) = map.get("PersistentContextGuard") { cfg.persistent_context_guard = v.eq_ignore_ascii_case("true"); }
+            if let Some(v) = map.get("DirectDelayMs") { cfg.direct_delay_ms = v.parse().unwrap_or(0); }
             if let Some(v) = map.get("TypeW2U") { cfg.type_w_to_u = v.clone(); }
             if let Some(v) = map.get("BracketTransform") { cfg.bracket_transform = v.clone(); }
             if let Some(v) = map.get("ModernStyle") { cfg.modern_style = v.eq_ignore_ascii_case("true"); }
@@ -162,6 +168,8 @@ impl ConfigManager {
         lines.push(format!("OutputMode={}", cfg.output_mode));
         lines.push(format!("RememberAppMode={}", if cfg.remember_app_mode { "True" } else { "False" }));
         lines.push(format!("PreeditTooltip={}", if cfg.preedit_tooltip { "True" } else { "False" }));
+        lines.push(format!("PersistentContextGuard={}", if cfg.persistent_context_guard { "True" } else { "False" }));
+        lines.push(format!("DirectDelayMs={}", cfg.direct_delay_ms));
         lines.push(format!("TypeW2U={}", cfg.type_w_to_u));
         lines.push(format!("BracketTransform={}", cfg.bracket_transform));
         lines.push(format!("ModernStyle={}", if cfg.modern_style { "True" } else { "False" }));

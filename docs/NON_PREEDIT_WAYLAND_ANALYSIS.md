@@ -149,25 +149,28 @@ Thay vì cố chấp theo đuổi duy nhất một cơ chế cực đoan (hoặc
 
 ---
 
-## 6. Lộ Trình Nâng Cấp Kỹ Thuật Tiếp Theo Cho vnchKey
+## 6. Các Nâng Cấp Kỹ Thuật Đã Triển Khai Thành Công Cho vnchKey
 
-Từ nghiên cứu cơ chế của UniKey và các dự án như `fcitx5-lotus` / `ibus-bamboo`, vnchKey có thể tiếp tục bổ sung các tinh chỉnh chuyên sâu sau:
+Từ nghiên cứu cơ chế của UniKey và các dự án như `thanhpy2009/VMK`, `fcitx5-lotus` / `ibus-bamboo`, vnchKey đã tích hợp thành công hai tính năng cốt lõi:
 
-### 1. Tận dụng tối đa Surrounding Text Atomic Protocol
+### 1. Persistent Context Guard (Chống mất chữ trong IntelliJ / Android Studio / Wine)
+- Khắc phục triệt để hiện tượng mất kết nối của giao thức XIM và Java Swing.
+- Tích hợp **Grace Period Tracker**: Khi ứng dụng Java IDE (`idea`, `pycharm`, `clion`, `studio`, `java`) hoặc Wine (`wine`, `zalo`) phát sự kiện `InputContextFocusOut` do hiện popup autocomplete hoặc dialog con, vnchKey lưu giữ timestamp thay vì vội vàng reset bộ đệm.
+- Nếu người dùng tiếp tục gõ trong vòng $350\text{ms}$ từ cùng ứng dụng, bộ đệm từ được bảo toàn 100%, chấm dứt hoàn toàn hiện tượng gõ dở bị "gãy nhịp".
+
+### 2. Adaptive Micro-Pause Engine (Độ trễ thích ứng cho Direct Mode trên Web)
+- Đối với người dùng muốn gõ **Direct Mode (Non-preedit) ngay trên trình duyệt**:
+- Engine tự động nhận diện tiến trình Web/Electron (`Chrome`, `Firefox`, `Chromium`, `Brave`, `Edge`, `Slack`, `Discord`) và áp dụng một khoảng dừng siêu vi ($4\text{ms}$) giữa lúc nhả phím `Backspace` và lúc bắn `commitString`.
+- Khoảng dừng $4\text{ms}$ mắt người không cảm nhận được nhưng tạo ra "thời gian vàng" cho JavaScript Event Loop của trình duyệt cập nhật lại con trỏ DOM, triệt tiêu lỗi lặp chữ mà không bắt buộc phải bật Preedit.
+- Người dùng có thể tùy chỉnh hoặc tắt tính năng này thông qua thanh trượt `DirectDelayMs` trong bảng Cài Đặt.
+
+### 3. Tận dụng tối đa Surrounding Text Atomic Protocol
 - Khi ứng dụng hỗ trợ Surrounding Text (như các ứng dụng GTK4, Qt6 bản mới), thay vì dùng `forwardKey(Backspace)`, luôn gọi:
   ```cpp
   ic->deleteSurroundingText(-out_backspaces, out_backspaces);
   ic->commitString(out_commit);
   ```
 - Trên Wayland, hai lệnh này được đóng gói trong **cùng một transaction commit**, giúp thao tác chỉnh sửa mang tính nguyên tử ngay cả ở chế độ Direct Mode.
-
-### 2. Context Guard (Bảo vệ ngữ cảnh tự động)
-- Khi phát hiện con trỏ đang nằm trong thanh địa chỉ duyệt web (`URL`), email, hoặc các chuỗi ký tự định danh lập trình (`camelCase`, `snake_case`, `UPPER_CASE`):
-- Tự động chuyển về trạng thái gõ thô (Raw Bypass) để người dùng gõ URL, đường dẫn thư mục (`/home/user/...`) hay tên biến code mà không bị can thiệp dấu tiếng Việt hay xóa nhầm ký tự.
-
-### 3. Tinh chỉnh độ trễ thích ứng (Adaptive Timing Calibration)
-- Đối với các trường hợp người dùng vẫn muốn ép buộc dùng Direct Mode trên trình duyệt:
-- Nghiên cứu cơ chế micro-pause thích ứng (khoảng 2–4ms giữa sự kiện KeyUp của Backspace và `commitString`) dựa trên tốc độ gõ (Inter-Keystroke Interval - IKI) để trình duyệt web có cửa sổ thời gian cập nhật lại DOM cursor.
 
 ---
 

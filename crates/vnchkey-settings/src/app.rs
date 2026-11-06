@@ -527,6 +527,20 @@ impl SettingsApp {
             &mut self.config.preedit_tooltip,
             "Khung chữ nổi khi gõ gạch chân (Floating Preedit Tooltip - khuyên dùng cho Google Docs)",
         );
+        ui.add_space(8.0);
+
+        ui.checkbox(
+            &mut self.config.persistent_context_guard,
+            "Persistent Context Guard: Chống mất chữ khi hiện popup gợi ý trong IntelliJ / PyCharm / Wine",
+        );
+        ui.add_space(8.0);
+
+        ui.horizontal(|ui| {
+            ui.label(egui::RichText::new("Độ trễ khi gõ Direct trên Web (Direct Delay)").size(13.0));
+            ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                ui.add(egui::Slider::new(&mut self.config.direct_delay_ms, 0..=20).suffix(" ms (0 = Tự động 4ms)"));
+            });
+        });
 
         self.render_group_header(ui, "Typing");
 

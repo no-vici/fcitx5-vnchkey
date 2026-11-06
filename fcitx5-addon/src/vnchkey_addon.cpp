@@ -6,6 +6,7 @@
 #include <fcitx/userinterfacemanager.h>
 #include <fcitx/instance.h>
 #include <chrono>
+#include <thread>
 #include <string>
 #include <fstream>
 #include <cstdlib>
@@ -515,6 +516,14 @@ void VnchkeyEngine::loadConfig() {
                 config_remember_app_mode_ = (line.find("False") == std::string::npos);
             } else if (line.rfind("PreeditTooltip=", 0) == 0) {
                 config_preedit_tooltip_ = (line.find("False") == std::string::npos);
+            } else if (line.rfind("PersistentContextGuard=", 0) == 0) {
+                config_persistent_guard_ = (line.find("False") == std::string::npos);
+            } else if (line.rfind("DirectDelayMs=", 0) == 0) {
+                try {
+                    config_direct_delay_ms_ = std::stoi(line.substr(14));
+                } catch (...) {
+                    config_direct_delay_ms_ = 0;
+                }
             } else if (line.rfind("AutoRestoreEnglish=", 0) == 0) {
                 config_auto_restore_ = (line.find("False") == std::string::npos);
             } else if (line.rfind("EnableMacro=", 0) == 0) {
@@ -561,6 +570,8 @@ void VnchkeyEngine::saveConfig() {
                     l.rfind("OutputMode=", 0) != 0 &&
                     l.rfind("RememberAppMode=", 0) != 0 &&
                     l.rfind("PreeditTooltip=", 0) != 0 &&
+                    l.rfind("PersistentContextGuard=", 0) != 0 &&
+                    l.rfind("DirectDelayMs=", 0) != 0 &&
                     l.rfind("AutoRestoreEnglish=", 0) != 0 &&
                     l.rfind("EnableMacro=", 0) != 0 &&
                     l.rfind("SpellCheck=", 0) != 0 &&
@@ -581,6 +592,8 @@ void VnchkeyEngine::saveConfig() {
         out << "OutputMode=" << config_output_mode_ << "\n";
         out << "RememberAppMode=" << (config_remember_app_mode_ ? "True" : "False") << "\n";
         out << "PreeditTooltip=" << (config_preedit_tooltip_ ? "True" : "False") << "\n";
+        out << "PersistentContextGuard=" << (config_persistent_guard_ ? "True" : "False") << "\n";
+        out << "DirectDelayMs=" << config_direct_delay_ms_ << "\n";
         out << "AutoRestoreEnglish=" << (config_auto_restore_ ? "True" : "False") << "\n";
         out << "EnableMacro=" << (config_macro_ ? "True" : "False") << "\n";
         out << "SpellCheck=" << (config_spell_check_ ? "True" : "False") << "\n";
@@ -622,6 +635,22 @@ void VnchkeyEngine::keyEvent(const fcitx::InputMethodEntry &entry, fcitx::KeyEve
     }
 
     auto* ic = keyEvent.inputContext();
+
+    // Persistent Context Guard: check if returning from Java IDE / Wine temporary popup
+    if (config_persistent_guard_ && !last_focus_out_prog_.empty()) {
+        auto now = std::chrono::steady_clock::now();
+        auto diff_ms = std::chrono::duration_cast<std::chrono::milliseconds>(now - last_focus_out_time_).count();
+        if (ic && ic->program() == last_focus_out_prog_ && diff_ms <= 350) {
+            // Returned to same application within grace period -> keep active buffer!
+            last_focus_out_prog_.clear();
+        } else if (diff_ms > 350 || (ic && ic->program() != last_focus_out_prog_)) {
+            // Grace period expired or switched to a different window
+            void* prev_ctx = getContext(last_focus_out_entry_);
+            if (prev_ctx) fcitx5_vnchkey_reset(prev_ctx);
+            last_focus_out_prog_.clear();
+        }
+    }
+
     std::string mode = getOutputModeForContext(ic);
     const bool isPreeditMode = (mode == "Preedit" || mode == "preedit");
 
@@ -796,6 +825,29 @@ void VnchkeyEngine::keyEvent(const fcitx::InputMethodEntry &entry, fcitx::KeyEve
                             ic->forwardKey(fcitx::Key(FcitxKey_BackSpace));
                         }
                         is_forwarding_ = false;
+
+                        // Adaptive Micro-Pause: allow browser JavaScript event loop / DOM to settle
+                        int effective_delay = config_direct_delay_ms_;
+                        if (effective_delay <= 0) {
+                            std::string prog = ic->program();
+                            std::string lower_prog = prog;
+                            for (char& c : lower_prog) c = std::tolower(c);
+                            if (lower_prog.find("chrome") != std::string::npos ||
+                                lower_prog.find("firefox") != std::string::npos ||
+                                lower_prog.find("chromium") != std::string::npos ||
+                                lower_prog.find("brave") != std::string::npos ||
+                                lower_prog.find("edge") != std::string::npos ||
+                                lower_prog.find("opera") != std::string::npos ||
+                                lower_prog.find("vivaldi") != std::string::npos ||
+                                lower_prog.find("electron") != std::string::npos ||
+                                lower_prog.find("slack") != std::string::npos ||
+                                lower_prog.find("discord") != std::string::npos) {
+                                effective_delay = 4; // 4ms is ideal for web DOM cursor settlement
+                            }
+                        }
+                        if (effective_delay > 0) {
+                            std::this_thread::sleep_for(std::chrono::milliseconds(effective_delay));
+                        }
                     }
                 }
 
@@ -818,11 +870,34 @@ void VnchkeyEngine::reset(const fcitx::InputMethodEntry &entry, fcitx::InputCont
         return;
     }
     auto* ic = event.inputContext();
-    if (ic) {
-        ic->inputPanel().reset();
-        ic->updatePreedit();
-        ic->updateUserInterface(fcitx::UserInterfaceComponent::InputPanel);
+    if (!ic) return;
+
+    std::string prog = ic->program();
+    std::string lower_prog = prog;
+    for (char& c : lower_prog) c = std::tolower(c);
+
+    const bool is_java_or_wine = (
+        lower_prog.find("idea") != std::string::npos ||
+        lower_prog.find("pycharm") != std::string::npos ||
+        lower_prog.find("clion") != std::string::npos ||
+        lower_prog.find("studio") != std::string::npos ||
+        lower_prog.find("java") != std::string::npos ||
+        lower_prog.find("wine") != std::string::npos ||
+        lower_prog.find("zalo") != std::string::npos ||
+        lower_prog.find("notepad") != std::string::npos
+    );
+
+    if (config_persistent_guard_ && is_java_or_wine) {
+        last_focus_out_time_ = std::chrono::steady_clock::now();
+        last_focus_out_prog_ = prog;
+        last_focus_out_entry_ = entry.uniqueName();
+        return;
     }
+
+    ic->inputPanel().reset();
+    ic->updatePreedit();
+    ic->updateUserInterface(fcitx::UserInterfaceComponent::InputPanel);
+
     void* ctx = getContext(entry.uniqueName());
     if (ctx) {
         fcitx5_vnchkey_reset(ctx);
