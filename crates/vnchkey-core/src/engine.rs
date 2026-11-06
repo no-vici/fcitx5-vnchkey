@@ -275,6 +275,42 @@ impl Engine {
         self.last_completed_word.as_deref()
     }
 
+    /// Flips the current composing word between processed Vietnamese and raw input strokes.
+    /// Returns the minimal suffix replacement (backspaces and commit_text) to update the document.
+    pub fn flip_current_word(&mut self) -> Option<EngineOutput> {
+        if self.current_word.is_empty() || self.raw_strokes.is_empty() {
+            return None;
+        }
+
+        let is_currently_raw = self.current_word == self.raw_strokes;
+        let old_word = self.current_word.clone();
+
+        let new_word = if is_currently_raw {
+            // Re-transform raw strokes into Vietnamese
+            let strokes = self.raw_strokes.clone();
+            self.reset();
+            for ch in strokes.chars() {
+                self.process_key(ch, 0.0);
+            }
+            self.current_word.clone()
+        } else {
+            // Revert to raw strokes and lock English mode for this word
+            self.current_word = self.raw_strokes.clone();
+            self.english_locked = true;
+            self.current_word.clone()
+        };
+
+        let (backspaces, commit_text) = compare_and_split_strings(&old_word, &new_word);
+        Some(EngineOutput {
+            backspaces,
+            commit_text,
+            consumed: true,
+            auto_restored: false,
+            macro_expanded: false,
+            adaptive_delay_ms: 0,
+        })
+    }
+
     /// Process a key press event.
     pub fn process_key(&mut self, ch: char, _timestamp_ms: f64) -> EngineOutput {
         self.last_completed_word = None;
@@ -843,5 +879,32 @@ mod tests {
         assert_eq!(type_word(&mut vni_engine, "Buo6n Ma Thuo65t "), "Buôn Ma Thuột ");
         assert_eq!(type_word(&mut vni_engine, "Chu7 Pro6ng "), "Chư Prông ");
         assert_eq!(type_word(&mut vni_engine, "khue61ch "), "khuếch ");
+    }
+
+    #[test]
+    fn test_flip_current_word() {
+        let mut engine = Engine::new(EngineConfig {
+            method: InputMethod::Telex,
+            ..EngineConfig::default()
+        });
+
+        // Type 'mas' -> 'má'
+        for ch in ['m', 'a', 's'] {
+            engine.process_key(ch, 0.0);
+        }
+        assert_eq!(engine.current_word(), "má");
+        assert_eq!(engine.raw_strokes(), "mas");
+
+        // First flip: 'má' -> 'mas' (raw strokes)
+        let out1 = engine.flip_current_word().unwrap();
+        assert_eq!(engine.current_word(), "mas");
+        assert_eq!(out1.backspaces, 1);
+        assert_eq!(out1.commit_text, "as");
+
+        // Second flip: 'mas' -> 'má' (re-transformed)
+        let out2 = engine.flip_current_word().unwrap();
+        assert_eq!(engine.current_word(), "má");
+        assert_eq!(out2.backspaces, 2);
+        assert_eq!(out2.commit_text, "á");
     }
 }

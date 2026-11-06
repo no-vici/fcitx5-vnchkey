@@ -72,21 +72,21 @@
 ### Phiên bản 0.3.0: Tối Ưu Hóa Trải Nghiệm Thực Chiến Độc Quyền Cho Linux (Chắt lọc từ Funput & VMK)
 
 #### 1. Khắc Phục Các Góc Khuất Khắc Nghiệt Trên Linux & Wayland
-- [ ] **Bảo Vệ GNOME Wayland (`gnome-shell` Proxy Guard)**:
+- [x] **Bảo Vệ GNOME Wayland (`gnome-shell` Proxy Guard)**:
   - Loại trừ chuỗi proxy `"gnome-shell"` khi đọc `ic->program()` trên GNOME Wayland.
   - Ngăn ngừa hiện tượng một ứng dụng bị lỗi (như Cursor IDE) làm ô nhiễm bộ đệm gán chế độ của toàn bộ hệ điều hành.
-- [ ] **Đặc Trị WPS Office (`hidesClientPreedit` Allowlist)**:
+- [x] **Đặc Trị WPS Office (`hidesClientPreedit` Allowlist)**:
   - Tự động nhận diện danh sách bộ ứng dụng WPS Office (`wps`, `wpp`, `et`, `wpspdf`).
   - Ép Fcitx5 tự vẽ khung nổi (`panel.setPreedit(preedit)`), xóa bỏ hoàn toàn lỗi "gõ tàng hình" kinh niên do WPS khai báo hỗ trợ Preedit nhưng lại không tự vẽ gạch chân.
   - Ngăn chặn ép Non-preedit vào WPS vì engine của WPS không hỗ trợ `Qt::ImSurroundingText`.
-- [ ] **Dọn Dẹp Hậu Tố Gợi Ý Google Sheets (`deleteAfterChars`)**:
+- [x] **Dọn Dẹp Hậu Tố Gợi Ý Google Sheets (`deleteAfterChars`)**:
   - Tự động phát hiện vùng chọn autocomplete phía sau con trỏ (`surrounding.anchor() > surrounding.cursor()`) trong Google Sheets.
   - Xóa sạch phần gợi ý trước khi commit từ mới, chấm dứt hoàn toàn hiện tượng dính chữ kỳ quặc (`chư` + `ứ` $\to$ `chưứ`).
 - [ ] **Thuật Toán `BlindWrites` & Tự Động Lùi Về Preedit Cho Editor Cứng Đầu (Cursor / VS Code)**:
   - Giám sát phản hồi tài liệu: nếu app trả lời rỗng $2$ lần liên tiếp khi đang nhận lệnh sửa $\to$ nhận diện app đang nuốt lệnh xóa và tự động chuyển sang chế độ Preedit an toàn, chống triệt để lỗi `Phuú`.
 
 #### 2. Tính Năng Gõ Tiện Ích Đột Phá
-- [ ] **Phím Tắt Lật Từ Tức Thì (Flip Word — `Ctrl + Shift + Z`)**:
+- [x] **Phím Tắt Lật Từ Tức Thì (Flip Word — `Ctrl + Shift + Z`)**:
   - Cho phép người dùng hoặc lập trình viên hoán đổi tức thì giữa từ tiếng Việt và chuỗi ký tự thô ban đầu (`mas` $\leftrightarrow$ `má`), tiện lợi tuyệt đối khi gõ mã nguồn mà không cần Backspace gõ lại.
 - [ ] **Khôi Phục Âm Tiết Sau Backspace (`adoptWordBeforeBackspace`)**:
   - Khi xóa dấu cách sau một từ đã hoàn tất, tự động đọc lại âm tiết trước con trỏ vào bộ nhớ đệm để người dùng có thể gõ tiếp phím dấu sửa đổi (ví dụ: `phủ` ␣ ⌫ `s` $\to$ `phú`).

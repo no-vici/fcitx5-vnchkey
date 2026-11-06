@@ -142,6 +142,32 @@ pub unsafe extern "C" fn fcitx5_vnchkey_has_active_word(
     }
 }
 
+/// Flips the current composing word between processed Vietnamese and raw input strokes.
+/// Returns 1 if flipped, and writes the required backspaces and replacement string.
+#[no_mangle]
+pub unsafe extern "C" fn fcitx5_vnchkey_flip_word(
+    ctx: *mut Fcitx5VnchkeyContext,
+    out_backspaces: *mut usize,
+    out_commit: *mut *mut c_char,
+) -> c_int {
+    if ctx.is_null() {
+        return 0;
+    }
+    let ctx = &mut *ctx;
+    if let Some(output) = ctx.engine.flip_current_word() {
+        if !out_backspaces.is_null() {
+            *out_backspaces = output.backspaces;
+        }
+        if !out_commit.is_null() {
+            let c_str = CString::new(output.commit_text).unwrap_or_default();
+            *out_commit = c_str.into_raw();
+        }
+        1
+    } else {
+        0
+    }
+}
+
 /// Loads custom macros from a configuration file.
 #[no_mangle]
 pub unsafe extern "C" fn fcitx5_vnchkey_load_macros(

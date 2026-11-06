@@ -431,10 +431,29 @@ void VnchkeyEngine::saveAppModes() {
     }
 }
 
+static bool isWpsOffice(const std::string& prog) {
+    if (prog.empty()) return false;
+    std::string lower = prog;
+    const auto slash = lower.find_last_of('/');
+    if (slash != std::string::npos) {
+        lower = lower.substr(slash + 1);
+    }
+    for (char& c : lower) c = std::tolower(c);
+    return (lower == "wps" || lower == "wpp" || lower == "et" || lower == "wpspdf");
+}
+
 std::string VnchkeyEngine::getOutputModeForContext(fcitx::InputContext* ic) {
-    if (ic && config_remember_app_mode_) {
+    if (ic) {
         std::string prog = ic->program();
-        if (!prog.empty()) {
+        // WPS Office does not implement surrounding text editing and hides preedit
+        if (isWpsOffice(prog)) {
+            return "Preedit";
+        }
+        // GNOME Wayland proxy guard: do not pollute per-app cache with generic proxy name
+        if (prog == "gnome-shell") {
+            return config_output_mode_;
+        }
+        if (config_remember_app_mode_ && !prog.empty()) {
             auto it = app_output_modes_.find(prog);
             if (it != app_output_modes_.end()) {
                 return it->second;
@@ -474,7 +493,7 @@ std::string VnchkeyEngine::getOutputModeForContext(fcitx::InputContext* ic) {
 void VnchkeyEngine::setOutputModeForContext(fcitx::InputContext* ic, const std::string& mode) {
     if (ic && config_remember_app_mode_) {
         std::string prog = ic->program();
-        if (!prog.empty()) {
+        if (!prog.empty() && prog != "gnome-shell") {
             app_output_modes_[prog] = mode;
             saveAppModes();
         }
@@ -658,6 +677,43 @@ void VnchkeyEngine::keyEvent(const fcitx::InputMethodEntry &entry, fcitx::KeyEve
     auto states = rawKey.states();
     auto sym = rawKey.sym();
 
+    // Flip Word shortcut (Ctrl + Shift + Z): instantly toggle between Vietnamese and raw strokes
+    const bool isFlipWord = states.test(fcitx::KeyState::Ctrl) &&
+                            states.test(fcitx::KeyState::Shift) &&
+                            (sym == FcitxKey_Z || sym == FcitxKey_z);
+    if (isFlipWord && fcitx5_vnchkey_has_active_word(ctx)) {
+        size_t bs = 0;
+        char* commitText = nullptr;
+        if (fcitx5_vnchkey_flip_word(ctx, &bs, &commitText) != 0) {
+            std::string prog = ic ? ic->program() : "";
+            if (isPreeditMode && ic) {
+                char* cur = fcitx5_vnchkey_get_current_word(ctx);
+                if (cur && cur[0] != '\0') {
+                    fcitx::Text text(cur, fcitx::TextFormatFlag::Underline);
+                    ic->inputPanel().setClientPreedit(text);
+                    if (config_preedit_tooltip_ || isWpsOffice(prog)) {
+                        ic->inputPanel().setPreedit(text);
+                    }
+                    ic->updatePreedit();
+                    ic->updateUserInterface(fcitx::UserInterfaceComponent::InputPanel);
+                    fcitx5_vnchkey_free_string(cur);
+                }
+            } else if (ic) {
+                for (size_t i = 0; i < bs; ++i) {
+                    ic->forwardKey(fcitx::Key(FcitxKey_BackSpace));
+                }
+                if (commitText && commitText[0] != '\0') {
+                    ic->commitString(commitText);
+                }
+            }
+            if (commitText) {
+                fcitx5_vnchkey_free_string(commitText);
+            }
+            keyEvent.filterAndAccept();
+            return;
+        }
+    }
+
     // Pass through combination shortcuts (Ctrl, Alt, Super) and navigation/cursor keys
     if (states.test(fcitx::KeyState::Ctrl) ||
         states.test(fcitx::KeyState::Alt) ||
@@ -729,7 +785,7 @@ void VnchkeyEngine::keyEvent(const fcitx::InputMethodEntry &entry, fcitx::KeyEve
                 if (cur && cur[0] != '\0') {
                     fcitx::Text text(cur, fcitx::TextFormatFlag::Underline);
                     ic->inputPanel().setClientPreedit(text);
-                    if (config_preedit_tooltip_) {
+                    if (config_preedit_tooltip_ || isWpsOffice(ic->program())) {
                         ic->inputPanel().setPreedit(text);
                     }
                     ic->updatePreedit();
@@ -774,6 +830,17 @@ void VnchkeyEngine::keyEvent(const fcitx::InputMethodEntry &entry, fcitx::KeyEve
 
     int consumed = fcitx5_vnchkey_process_key(ctx, ch, timestamp_ms, &out_backspaces, &out_commit);
 
+    // Google Sheets / Autocomplete selection cleanup: if there is an active selection after caret, clear it
+    if (ic && ic->surroundingText().isValid()) {
+        const auto& surrounding = ic->surroundingText();
+        if (surrounding.cursor() < surrounding.anchor()) {
+            unsigned int deleteAfter = surrounding.anchor() - surrounding.cursor();
+            if (deleteAfter > 0) {
+                ic->deleteSurroundingText(0, deleteAfter);
+            }
+        }
+    }
+
     if (isPreeditMode && ic) {
         char* completed = fcitx5_vnchkey_get_completed_word(ctx);
         if (completed) {
@@ -792,7 +859,7 @@ void VnchkeyEngine::keyEvent(const fcitx::InputMethodEntry &entry, fcitx::KeyEve
             if (cur && cur[0] != '\0') {
                 fcitx::Text text(cur, fcitx::TextFormatFlag::Underline);
                 ic->inputPanel().setClientPreedit(text);
-                if (config_preedit_tooltip_) {
+                if (config_preedit_tooltip_ || isWpsOffice(ic->program())) {
                     ic->inputPanel().setPreedit(text);
                 }
                 ic->updatePreedit();
