@@ -110,6 +110,7 @@ pub struct Engine {
     word_used_vni: bool,
     manual_undo: bool,
     english_locked: bool,
+    last_completed_word: Option<String>,
 }
 
 impl Engine {
@@ -132,6 +133,7 @@ impl Engine {
             word_used_vni: false,
             manual_undo: false,
             english_locked: false,
+            last_completed_word: None,
         }
     }
 
@@ -239,6 +241,7 @@ impl Engine {
         self.word_used_vni = false;
         self.manual_undo = false;
         self.english_locked = false;
+        self.last_completed_word = None;
     }
 
     /// Handles physical Backspace pressed by the user.
@@ -252,8 +255,29 @@ impl Engine {
         }
     }
 
+    /// Returns the active composing word.
+    pub fn current_word(&self) -> &str {
+        &self.current_word
+    }
+
+    /// Returns the raw keystrokes sequence.
+    pub fn raw_strokes(&self) -> &str {
+        &self.raw_strokes
+    }
+
+    /// Returns whether the engine is currently composing an active word.
+    pub fn has_active_word(&self) -> bool {
+        !self.current_word.is_empty()
+    }
+
+    /// Returns the last completed word if a word boundary was just reached.
+    pub fn last_completed_word(&self) -> Option<&str> {
+        self.last_completed_word.as_deref()
+    }
+
     /// Process a key press event.
     pub fn process_key(&mut self, ch: char, _timestamp_ms: f64) -> EngineOutput {
+        self.last_completed_word = None;
         let is_bracket = self.config.bracket_transform && matches!(ch, '[' | ']' | '{' | '}');
 
         // Word delimiter check (Space, Enter, Punctuation)
@@ -266,6 +290,7 @@ impl Engine {
                         let (backspaces, commit_text) =
                             compare_and_split_strings(&self.current_word, &target);
                         self.reset();
+                        self.last_completed_word = Some(target);
                         return EngineOutput {
                             backspaces,
                             commit_text,
@@ -299,6 +324,7 @@ impl Engine {
                         let (backspaces, commit_text) =
                             compare_and_split_strings(&self.current_word, &target);
                         self.reset();
+                        self.last_completed_word = Some(target);
                         return EngineOutput {
                             backspaces,
                             commit_text,
@@ -312,7 +338,12 @@ impl Engine {
             }
 
             // No macro or auto-restore needed: reset word buffer and let delimiter pass through natively
+            let has_word = !self.current_word.is_empty();
+            let target = format!("{}{}", self.current_word, ch);
             self.reset();
+            if has_word {
+                self.last_completed_word = Some(target);
+            }
             return EngineOutput {
                 backspaces: 0,
                 commit_text: ch.to_string(),

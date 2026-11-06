@@ -496,6 +496,31 @@ impl SettingsApp {
                     });
             });
         });
+        ui.add_space(8.0);
+
+        ui.horizontal(|ui| {
+            ui.label(egui::RichText::new("Chế độ xuất chữ (Output Mode)").size(13.0));
+            ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                let current_label = if self.config.output_mode == "Preedit" {
+                    "Gạch Chân (Preedit - Web/Google Docs)"
+                } else {
+                    "Trực Tiếp (Direct - Terminal/Editor)"
+                };
+                egui::ComboBox::from_id_salt("output_mode")
+                    .selected_text(current_label)
+                    .width(260.0)
+                    .show_ui(ui, |ui| {
+                        ui.selectable_value(&mut self.config.output_mode, "Direct".to_string(), "Trực Tiếp (Direct - Terminal/Editor)");
+                        ui.selectable_value(&mut self.config.output_mode, "Preedit".to_string(), "Gạch Chân (Preedit - Web/Google Docs)");
+                    });
+            });
+        });
+        ui.add_space(8.0);
+
+        ui.checkbox(
+            &mut self.config.remember_app_mode,
+            "Tự động nhớ chế độ xuất chữ cho từng ứng dụng (Direct / Preedit)",
+        );
 
         self.render_group_header(ui, "Typing");
 
@@ -607,13 +632,19 @@ impl SettingsApp {
                     ui.horizontal(|ui| {
                         ui.add(egui::TextEdit::singleline(app).desired_width(220.0));
                         ui.add_space(10.0);
+                        let display_text = match mode.as_str() {
+                            "Preedit" => "Gạch Chân (Preedit)",
+                            "Direct" => "Trực Tiếp (Direct)",
+                            "Bypass (Raw English)" => "Bypass (Raw English)",
+                            other => other,
+                        };
                         egui::ComboBox::from_id_salt(format!("app_mode_{}", idx))
-                            .selected_text(mode.as_str())
+                            .selected_text(display_text)
                             .width(180.0)
                             .show_ui(ui, |ui| {
+                                ui.selectable_value(mode, "Direct".to_string(), "Trực Tiếp (Direct)");
+                                ui.selectable_value(mode, "Preedit".to_string(), "Gạch Chân (Preedit)");
                                 ui.selectable_value(mode, "Bypass (Raw English)".to_string(), "Bypass (Raw English)");
-                                ui.selectable_value(mode, "Direct Commit (Smooth)".to_string(), "Direct Commit (Smooth)");
-                                ui.selectable_value(mode, "Native Fcitx5".to_string(), "Native Fcitx5");
                             });
                         if ui.button("🗑").clicked() {
                             to_remove = Some(idx);

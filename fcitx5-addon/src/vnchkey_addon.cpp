@@ -24,6 +24,8 @@ VnchkeyEngine::VnchkeyEngine(fcitx::AddonManager* manager)
     if (manager_ && manager_->instance()) {
         auto& uiMgr = manager_->instance()->userInterfaceManager();
         if (statusAction_) uiMgr.registerAction("vnchkey-status", statusAction_.get());
+        if (actionOutputModeDirect_) uiMgr.registerAction("vnchkey-mode-direct", actionOutputModeDirect_.get());
+        if (actionOutputModePreedit_) uiMgr.registerAction("vnchkey-mode-preedit", actionOutputModePreedit_.get());
         if (actionAutoRestore_) uiMgr.registerAction("vnchkey-autorestore", actionAutoRestore_.get());
         if (actionMacro_) uiMgr.registerAction("vnchkey-macro", actionMacro_.get());
         if (actionSpellCheck_) uiMgr.registerAction("vnchkey-spellcheck", actionSpellCheck_.get());
@@ -36,6 +38,8 @@ VnchkeyEngine::~VnchkeyEngine() {
     if (manager_ && manager_->instance()) {
         auto& uiMgr = manager_->instance()->userInterfaceManager();
         if (statusAction_) uiMgr.unregisterAction(statusAction_.get());
+        if (actionOutputModeDirect_) uiMgr.unregisterAction(actionOutputModeDirect_.get());
+        if (actionOutputModePreedit_) uiMgr.unregisterAction(actionOutputModePreedit_.get());
         if (actionAutoRestore_) uiMgr.unregisterAction(actionAutoRestore_.get());
         if (actionMacro_) uiMgr.unregisterAction(actionMacro_.get());
         if (actionSpellCheck_) uiMgr.unregisterAction(actionSpellCheck_.get());
@@ -131,6 +135,33 @@ void VnchkeyEngine::setupStatusMenu() {
     actionSeparator1_ = std::make_unique<fcitx::SimpleAction>();
     actionSeparator1_->setSeparator(true);
     statusMenu_->addAction(actionSeparator1_.get());
+
+    // Output Mode (Direct vs Preedit)
+    actionOutputModeDirect_ = std::make_unique<fcitx::SimpleAction>();
+    actionOutputModeDirect_->setCheckable(true);
+    actionOutputModeDirect_->setLongText("Chế độ xuất: Trực tiếp (Direct - Editor/Terminal)");
+    connections_.push_back(actionOutputModeDirect_->connect<fcitx::SimpleAction::Activated>([this](fcitx::InputContext* ic) {
+        setOutputModeForContext(ic, "Direct");
+        updateActionState();
+        if (ic) {
+            if (statusAction_) statusAction_->update(ic);
+            ic->updateUserInterface(fcitx::UserInterfaceComponent::StatusArea);
+        }
+    }));
+    statusMenu_->addAction(actionOutputModeDirect_.get());
+
+    actionOutputModePreedit_ = std::make_unique<fcitx::SimpleAction>();
+    actionOutputModePreedit_->setCheckable(true);
+    actionOutputModePreedit_->setLongText("Chế độ xuất: Gạch chân (Preedit - Web/Google Docs)");
+    connections_.push_back(actionOutputModePreedit_->connect<fcitx::SimpleAction::Activated>([this](fcitx::InputContext* ic) {
+        setOutputModeForContext(ic, "Preedit");
+        updateActionState();
+        if (ic) {
+            if (statusAction_) statusAction_->update(ic);
+            ic->updateUserInterface(fcitx::UserInterfaceComponent::StatusArea);
+        }
+    }));
+    statusMenu_->addAction(actionOutputModePreedit_.get());
 
     // 2. Output Charset (Pure standard Unicode only - TCVN3 removed as requested)
     actionCharsetUnicode_ = std::make_unique<fcitx::SimpleAction>();
@@ -256,6 +287,16 @@ void VnchkeyEngine::updateActionState() {
         actionMethodVni_->setShortText(std::string(isVni ? "✔ " : "   ") + "VNI");
     }
 
+    const bool isPreedit = (config_output_mode_ == "Preedit" || config_output_mode_ == "preedit");
+    if (actionOutputModeDirect_) {
+        actionOutputModeDirect_->setChecked(!isPreedit);
+        actionOutputModeDirect_->setShortText(std::string(!isPreedit ? "✔ " : "   ") + "Gõ Trực Tiếp (Direct)");
+    }
+    if (actionOutputModePreedit_) {
+        actionOutputModePreedit_->setChecked(isPreedit);
+        actionOutputModePreedit_->setShortText(std::string(isPreedit ? "✔ " : "   ") + "Gõ Gạch Chân (Preedit)");
+    }
+
     if (actionCharsetUnicode_) {
         actionCharsetUnicode_->setChecked(true);
         actionCharsetUnicode_->setShortText("✔ Unicode");
@@ -312,9 +353,101 @@ void VnchkeyEngine::deactivate(const fcitx::InputMethodEntry &entry, fcitx::Inpu
     if (ctx_vni_) fcitx5_vnchkey_reset(ctx_vni_);
     auto* ic = event.inputContext();
     if (ic) {
+        ic->inputPanel().reset();
+        ic->updatePreedit();
+        ic->updateUserInterface(fcitx::UserInterfaceComponent::InputPanel);
         ic->statusArea().clearGroup(fcitx::StatusGroup::InputMethod);
         ic->updateUserInterface(fcitx::UserInterfaceComponent::StatusArea);
     }
+}
+
+void VnchkeyEngine::loadAppModes() {
+    app_output_modes_.clear();
+    const char* home = getenv("HOME");
+    if (!home) return;
+    std::string path = std::string(home) + "/.config/fcitx5/conf/vnchkey-apps.conf";
+    std::ifstream file(path);
+    if (!file.is_open()) return;
+    std::string line;
+    while (std::getline(file, line)) {
+        if (line.empty() || line[0] == '#') continue;
+        auto pos = line.find('=');
+        if (pos != std::string::npos) {
+            std::string app = line.substr(0, pos);
+            std::string mode = line.substr(pos + 1);
+            size_t a_start = app.find_first_not_of(" \t");
+            size_t a_end = app.find_last_not_of(" \t");
+            size_t m_start = mode.find_first_not_of(" \t");
+            size_t m_end = mode.find_last_not_of(" \t");
+            if (a_start != std::string::npos && m_start != std::string::npos) {
+                app_output_modes_[app.substr(a_start, a_end - a_start + 1)] = mode.substr(m_start, m_end - m_start + 1);
+            }
+        }
+    }
+}
+
+void VnchkeyEngine::saveAppModes() {
+    const char* home = getenv("HOME");
+    if (!home) return;
+    std::string path = std::string(home) + "/.config/fcitx5/conf/vnchkey-apps.conf";
+    std::ofstream out(path);
+    if (!out.is_open()) return;
+    out << "# vnchKey Per-Application Modes\n";
+    for (const auto& pair : app_output_modes_) {
+        out << pair.first << "=" << pair.second << "\n";
+    }
+}
+
+std::string VnchkeyEngine::getOutputModeForContext(fcitx::InputContext* ic) {
+    if (ic && config_remember_app_mode_) {
+        std::string prog = ic->program();
+        if (!prog.empty()) {
+            auto it = app_output_modes_.find(prog);
+            if (it != app_output_modes_.end()) {
+                return it->second;
+            }
+            std::string lower_prog = prog;
+            for (char& c : lower_prog) c = std::tolower(c);
+            if (lower_prog.find("chrome") != std::string::npos ||
+                lower_prog.find("firefox") != std::string::npos ||
+                lower_prog.find("chromium") != std::string::npos ||
+                lower_prog.find("brave") != std::string::npos ||
+                lower_prog.find("edge") != std::string::npos ||
+                lower_prog.find("opera") != std::string::npos ||
+                lower_prog.find("vivaldi") != std::string::npos ||
+                lower_prog.find("slack") != std::string::npos ||
+                lower_prog.find("discord") != std::string::npos ||
+                lower_prog.find("telegram") != std::string::npos ||
+                lower_prog.find("teams") != std::string::npos ||
+                lower_prog.find("electron") != std::string::npos) {
+                return "Preedit";
+            }
+            if (lower_prog.find("alacritty") != std::string::npos ||
+                lower_prog.find("kitty") != std::string::npos ||
+                lower_prog.find("wezterm") != std::string::npos ||
+                lower_prog.find("terminal") != std::string::npos ||
+                lower_prog.find("code") != std::string::npos ||
+                lower_prog.find("sublime") != std::string::npos ||
+                lower_prog.find("nvim") != std::string::npos ||
+                lower_prog.find("emacs") != std::string::npos ||
+                lower_prog.find("idea") != std::string::npos) {
+                return "Direct";
+            }
+        }
+    }
+    return config_output_mode_;
+}
+
+void VnchkeyEngine::setOutputModeForContext(fcitx::InputContext* ic, const std::string& mode) {
+    if (ic && config_remember_app_mode_) {
+        std::string prog = ic->program();
+        if (!prog.empty()) {
+            app_output_modes_[prog] = mode;
+            saveAppModes();
+        }
+    }
+    config_output_mode_ = mode;
+    saveConfig();
 }
 
 void VnchkeyEngine::loadConfig() {
@@ -339,6 +472,15 @@ void VnchkeyEngine::loadConfig() {
                 if (start != std::string::npos && end != std::string::npos) {
                     config_charset_ = val.substr(start, end - start + 1);
                 }
+            } else if (line.rfind("OutputMode=", 0) == 0) {
+                std::string val = line.substr(11);
+                size_t start = val.find_first_not_of(" \t\"'");
+                size_t end = val.find_last_not_of(" \t\"'");
+                if (start != std::string::npos && end != std::string::npos) {
+                    config_output_mode_ = val.substr(start, end - start + 1);
+                }
+            } else if (line.rfind("RememberAppMode=", 0) == 0) {
+                config_remember_app_mode_ = (line.find("False") == std::string::npos);
             } else if (line.rfind("AutoRestoreEnglish=", 0) == 0) {
                 config_auto_restore_ = (line.find("False") == std::string::npos);
             } else if (line.rfind("EnableMacro=", 0) == 0) {
@@ -350,6 +492,8 @@ void VnchkeyEngine::loadConfig() {
             }
         }
     }
+
+    loadAppModes();
 
     // Load macro table & user dictionary if configured
     std::string macro_path = std::string(home) + "/.config/fcitx5/conf/vnchkey-macro-table.conf";
@@ -380,6 +524,8 @@ void VnchkeyEngine::saveConfig() {
             while (std::getline(file, l)) {
                 if (l.rfind("InputMethod=", 0) != 0 &&
                     l.rfind("OutputCharset=", 0) != 0 &&
+                    l.rfind("OutputMode=", 0) != 0 &&
+                    l.rfind("RememberAppMode=", 0) != 0 &&
                     l.rfind("AutoRestoreEnglish=", 0) != 0 &&
                     l.rfind("EnableMacro=", 0) != 0 &&
                     l.rfind("SpellCheck=", 0) != 0 &&
@@ -397,6 +543,8 @@ void VnchkeyEngine::saveConfig() {
         }
         out << "InputMethod=" << config_method_ << "\n";
         out << "OutputCharset=Unicode\n";
+        out << "OutputMode=" << config_output_mode_ << "\n";
+        out << "RememberAppMode=" << (config_remember_app_mode_ ? "True" : "False") << "\n";
         out << "AutoRestoreEnglish=" << (config_auto_restore_ ? "True" : "False") << "\n";
         out << "EnableMacro=" << (config_macro_ ? "True" : "False") << "\n";
         out << "SpellCheck=" << (config_spell_check_ ? "True" : "False") << "\n";
@@ -437,11 +585,15 @@ void VnchkeyEngine::keyEvent(const fcitx::InputMethodEntry &entry, fcitx::KeyEve
         return;
     }
 
+    auto* ic = keyEvent.inputContext();
+    std::string mode = getOutputModeForContext(ic);
+    const bool isPreeditMode = (mode == "Preedit" || mode == "preedit");
+
     auto rawKey = keyEvent.rawKey();
     auto states = rawKey.states();
     auto sym = rawKey.sym();
 
-    // Pass through combination shortcuts (Ctrl, Alt, Super) and cursor/navigation keys
+    // Pass through combination shortcuts (Ctrl, Alt, Super) and navigation/cursor keys
     if (states.test(fcitx::KeyState::Ctrl) ||
         states.test(fcitx::KeyState::Alt) ||
         states.test(fcitx::KeyState::Super) ||
@@ -449,19 +601,87 @@ void VnchkeyEngine::keyEvent(const fcitx::InputMethodEntry &entry, fcitx::KeyEve
         sym == FcitxKey_Tab ||
         sym == FcitxKey_KP_Tab ||
         sym == FcitxKey_ISO_Left_Tab ||
-        sym == FcitxKey_Delete ||
-        sym == FcitxKey_Escape ||
-        sym == FcitxKey_Return ||
-        sym == FcitxKey_KP_Enter) {
+        sym == FcitxKey_Delete) {
+        if (isPreeditMode && ic && fcitx5_vnchkey_has_active_word(ctx)) {
+            // Commit preedit buffer before cursor navigation
+            char* cur = fcitx5_vnchkey_get_current_word(ctx);
+            if (cur && cur[0] != '\0') {
+                ic->commitString(cur);
+                fcitx5_vnchkey_free_string(cur);
+            }
+            ic->inputPanel().reset();
+            ic->updatePreedit();
+            ic->updateUserInterface(fcitx::UserInterfaceComponent::InputPanel);
+        }
         fcitx5_vnchkey_reset(ctx);
         return;
     }
 
-    // User pressed physical Backspace: let the app delete character naturally, sync engine state
+    // Escape key
+    if (sym == FcitxKey_Escape) {
+        if (isPreeditMode && ic && fcitx5_vnchkey_has_active_word(ctx)) {
+            // Cancel preedit composition without committing
+            fcitx5_vnchkey_reset(ctx);
+            ic->inputPanel().reset();
+            ic->updatePreedit();
+            ic->updateUserInterface(fcitx::UserInterfaceComponent::InputPanel);
+            keyEvent.filterAndAccept();
+            return;
+        }
+        fcitx5_vnchkey_reset(ctx);
+        return;
+    }
+
+    // Return/Enter key
+    if (sym == FcitxKey_Return || sym == FcitxKey_KP_Enter) {
+        if (isPreeditMode && ic && fcitx5_vnchkey_has_active_word(ctx)) {
+            // Enter commits current preedit word
+            char* cur = fcitx5_vnchkey_get_current_word(ctx);
+            if (cur && cur[0] != '\0') {
+                ic->commitString(cur);
+                fcitx5_vnchkey_free_string(cur);
+            }
+            ic->inputPanel().reset();
+            ic->updatePreedit();
+            ic->updateUserInterface(fcitx::UserInterfaceComponent::InputPanel);
+            fcitx5_vnchkey_reset(ctx);
+            keyEvent.filterAndAccept();
+            return;
+        }
+        fcitx5_vnchkey_reset(ctx);
+        return;
+    }
+
+    // Backspace handling
     if (sym == FcitxKey_BackSpace) {
         if (rawKey.isVirtual()) {
             return;
         }
+        if (isPreeditMode && ic && fcitx5_vnchkey_has_active_word(ctx)) {
+            fcitx5_vnchkey_handle_backspace(ctx);
+            if (fcitx5_vnchkey_has_active_word(ctx)) {
+                char* cur = fcitx5_vnchkey_get_current_word(ctx);
+                if (cur && cur[0] != '\0') {
+                    fcitx::Text text(cur, fcitx::TextFormatFlag::Underline);
+                    ic->inputPanel().setClientPreedit(text);
+                    ic->updatePreedit();
+                    ic->updateUserInterface(fcitx::UserInterfaceComponent::InputPanel);
+                    fcitx5_vnchkey_free_string(cur);
+                } else {
+                    ic->inputPanel().reset();
+                    ic->updatePreedit();
+                    ic->updateUserInterface(fcitx::UserInterfaceComponent::InputPanel);
+                }
+            } else {
+                ic->inputPanel().reset();
+                ic->updatePreedit();
+                ic->updateUserInterface(fcitx::UserInterfaceComponent::InputPanel);
+            }
+            keyEvent.filterAndAccept();
+            return;
+        }
+
+        // Direct Mode: let the app delete character naturally, sync engine state
         fcitx5_vnchkey_handle_backspace(ctx);
         return;
     }
@@ -486,29 +706,64 @@ void VnchkeyEngine::keyEvent(const fcitx::InputMethodEntry &entry, fcitx::KeyEve
 
     int consumed = fcitx5_vnchkey_process_key(ctx, ch, timestamp_ms, &out_backspaces, &out_commit);
 
-    if (consumed) {
-        auto* ic = keyEvent.inputContext();
-        if (ic) {
-            if (out_backspaces > 0) {
-                if (ic->capabilityFlags().test(fcitx::CapabilityFlag::SurroundingText) &&
-                    ic->surroundingText().isValid()) {
-                    ic->deleteSurroundingText(-static_cast<int>(out_backspaces), out_backspaces);
-                } else {
-                    is_forwarding_ = true;
-                    for (size_t i = 0; i < out_backspaces; ++i) {
-                        ic->forwardKey(fcitx::Key(FcitxKey_BackSpace));
+    if (isPreeditMode && ic) {
+        char* completed = fcitx5_vnchkey_get_completed_word(ctx);
+        if (completed) {
+            // Word finalized (delimiter, punctuation, macro expansion)
+            ic->inputPanel().reset();
+            ic->updatePreedit();
+            ic->updateUserInterface(fcitx::UserInterfaceComponent::InputPanel);
+            if (completed[0] != '\0') {
+                ic->commitString(completed);
+            }
+            fcitx5_vnchkey_free_string(completed);
+            keyEvent.filterAndAccept();
+        } else if (fcitx5_vnchkey_has_active_word(ctx)) {
+            // Active word being composed inline with underline
+            char* cur = fcitx5_vnchkey_get_current_word(ctx);
+            if (cur && cur[0] != '\0') {
+                fcitx::Text text(cur, fcitx::TextFormatFlag::Underline);
+                ic->inputPanel().setClientPreedit(text);
+                ic->updatePreedit();
+                ic->updateUserInterface(fcitx::UserInterfaceComponent::InputPanel);
+                fcitx5_vnchkey_free_string(cur);
+            }
+            keyEvent.filterAndAccept();
+        } else {
+            ic->inputPanel().reset();
+            ic->updatePreedit();
+            ic->updateUserInterface(fcitx::UserInterfaceComponent::InputPanel);
+            if (consumed) {
+                if (out_commit && out_commit[0] != '\0') {
+                    ic->commitString(out_commit);
+                }
+                keyEvent.filterAndAccept();
+            }
+        }
+    } else {
+        // Direct Mode: micro-diff backspaces + suffix commit
+        if (consumed) {
+            if (ic) {
+                if (out_backspaces > 0) {
+                    if (ic->capabilityFlags().test(fcitx::CapabilityFlag::SurroundingText) &&
+                        ic->surroundingText().isValid()) {
+                        ic->deleteSurroundingText(-static_cast<int>(out_backspaces), out_backspaces);
+                    } else {
+                        is_forwarding_ = true;
+                        for (size_t i = 0; i < out_backspaces; ++i) {
+                            ic->forwardKey(fcitx::Key(FcitxKey_BackSpace));
+                        }
+                        is_forwarding_ = false;
                     }
-                    is_forwarding_ = false;
+                }
+
+                if (out_commit && out_commit[0] != '\0') {
+                    ic->commitString(out_commit);
                 }
             }
 
-            // Commit transformed suffix
-            if (out_commit && out_commit[0] != '\0') {
-                ic->commitString(out_commit);
-            }
+            keyEvent.filterAndAccept();
         }
-
-        keyEvent.filterAndAccept();
     }
 
     if (out_commit) {
@@ -517,11 +772,14 @@ void VnchkeyEngine::keyEvent(const fcitx::InputMethodEntry &entry, fcitx::KeyEve
 }
 
 void VnchkeyEngine::reset(const fcitx::InputMethodEntry &entry, fcitx::InputContextEvent &event) {
-    // Only reset on actual window/focus change (InputContextFocusOut).
-    // Ignore spurious InputContextReset events triggered after commitString/deleteSurroundingText,
-    // preserving the active word buffer just like fcitx5-lilypad.
     if (event.type() != fcitx::EventType::InputContextFocusOut) {
         return;
+    }
+    auto* ic = event.inputContext();
+    if (ic) {
+        ic->inputPanel().reset();
+        ic->updatePreedit();
+        ic->updateUserInterface(fcitx::UserInterfaceComponent::InputPanel);
     }
     void* ctx = getContext(entry.uniqueName());
     if (ctx) {

@@ -97,6 +97,51 @@ pub unsafe extern "C" fn fcitx5_vnchkey_handle_backspace(ctx: *mut Fcitx5Vnchkey
     }
 }
 
+/// Returns the active composing word in the engine.
+/// Must be freed with `fcitx5_vnchkey_free_string`.
+#[no_mangle]
+pub unsafe extern "C" fn fcitx5_vnchkey_get_current_word(
+    ctx: *mut Fcitx5VnchkeyContext,
+) -> *mut c_char {
+    if !ctx.is_null() {
+        let word = (*ctx).engine.current_word();
+        let c_str = CString::new(word).unwrap_or_default();
+        c_str.into_raw()
+    } else {
+        std::ptr::null_mut()
+    }
+}
+
+/// Returns the last completed word if a word boundary (delimiter/macro/restore) was just reached.
+/// Must be freed with `fcitx5_vnchkey_free_string`.
+#[no_mangle]
+pub unsafe extern "C" fn fcitx5_vnchkey_get_completed_word(
+    ctx: *mut Fcitx5VnchkeyContext,
+) -> *mut c_char {
+    if !ctx.is_null() {
+        if let Some(word) = (*ctx).engine.last_completed_word() {
+            let c_str = CString::new(word).unwrap_or_default();
+            c_str.into_raw()
+        } else {
+            std::ptr::null_mut()
+        }
+    } else {
+        std::ptr::null_mut()
+    }
+}
+
+/// Checks whether the engine has an active composing word.
+#[no_mangle]
+pub unsafe extern "C" fn fcitx5_vnchkey_has_active_word(
+    ctx: *mut Fcitx5VnchkeyContext,
+) -> bool {
+    if !ctx.is_null() {
+        (*ctx).engine.has_active_word()
+    } else {
+        false
+    }
+}
+
 /// Loads custom macros from a configuration file.
 #[no_mangle]
 pub unsafe extern "C" fn fcitx5_vnchkey_load_macros(

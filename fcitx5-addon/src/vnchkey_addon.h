@@ -5,6 +5,8 @@
 #include <fcitx/addonmanager.h>
 #include <fcitx/inputmethodengine.h>
 #include <fcitx/inputcontext.h>
+#include <fcitx/inputpanel.h>
+#include <fcitx/text.h>
 #include <fcitx/event.h>
 #include <fcitx/action.h>
 #include <fcitx/menu.h>
@@ -12,10 +14,12 @@
 #include <fcitx/instance.h>
 #include <fcitx/userinterfacemanager.h>
 #include <fcitx-utils/signals.h>
+#include <fcitx-utils/textformatflags.h>
 #include <cstdint>
 #include <cstddef>
 #include <string>
 #include <vector>
+#include <unordered_map>
 #include <memory>
 
 // C-ABI declarations exported from Rust (crates/fcitx5-vnchkey-ffi)
@@ -47,6 +51,10 @@ extern "C" {
     bool fcitx5_vnchkey_get_macro_enabled(void* ctx);
     void fcitx5_vnchkey_set_bracket_transform(void* ctx, bool enabled);
     void fcitx5_vnchkey_set_w2u(void* ctx, uint32_t mode);
+
+    char* fcitx5_vnchkey_get_current_word(void* ctx);
+    char* fcitx5_vnchkey_get_completed_word(void* ctx);
+    bool fcitx5_vnchkey_has_active_word(void* ctx);
 }
 
 class VnchkeyEngine : public fcitx::InputMethodEngineV2 {
@@ -64,6 +72,10 @@ private:
     void* getContext(const std::string& entryName);
     void loadConfig();
     void saveConfig();
+    void loadAppModes();
+    void saveAppModes();
+    std::string getOutputModeForContext(fcitx::InputContext* ic);
+    void setOutputModeForContext(fcitx::InputContext* ic, const std::string& mode);
     void setupStatusMenu();
     void updateActionState();
 
@@ -74,6 +86,10 @@ private:
 
     std::string config_method_ = "Auto";
     std::string config_charset_ = "Unicode";
+    std::string config_output_mode_ = "Direct";
+    bool config_remember_app_mode_ = true;
+    std::unordered_map<std::string, std::string> app_output_modes_;
+
     bool config_auto_restore_ = true;
     bool config_macro_ = true;
     bool config_spell_check_ = true;
@@ -88,6 +104,9 @@ private:
     std::unique_ptr<fcitx::SimpleAction> actionMethodAuto_;
     std::unique_ptr<fcitx::SimpleAction> actionMethodTelex_;
     std::unique_ptr<fcitx::SimpleAction> actionMethodVni_;
+
+    std::unique_ptr<fcitx::SimpleAction> actionOutputModeDirect_;
+    std::unique_ptr<fcitx::SimpleAction> actionOutputModePreedit_;
 
     std::unique_ptr<fcitx::SimpleAction> actionCharsetUnicode_;
 

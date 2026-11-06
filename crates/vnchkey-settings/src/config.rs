@@ -12,6 +12,8 @@ pub struct VnchkeyConfig {
     pub input_method: String,
     pub mode: String,
     pub output_charset: String,
+    pub output_mode: String,
+    pub remember_app_mode: bool,
     pub type_w_to_u: String,
     pub bracket_transform: String,
     pub modern_style: bool,
@@ -36,6 +38,8 @@ impl Default for VnchkeyConfig {
             input_method: "Auto".to_string(),
             mode: "Uinput (Smooth)".to_string(),
             output_charset: "Unicode".to_string(),
+            output_mode: "Direct".to_string(),
+            remember_app_mode: true,
             type_w_to_u: "Non-Start".to_string(),
             bracket_transform: "Disabled".to_string(),
             modern_style: true,
@@ -118,6 +122,8 @@ impl ConfigManager {
             if let Some(v) = map.get("InputMethod") { cfg.input_method = v.clone(); }
             if let Some(v) = map.get("Mode") { cfg.mode = v.clone(); }
             if let Some(v) = map.get("OutputCharset") { cfg.output_charset = v.clone(); }
+            if let Some(v) = map.get("OutputMode") { cfg.output_mode = v.clone(); }
+            if let Some(v) = map.get("RememberAppMode") { cfg.remember_app_mode = v.eq_ignore_ascii_case("true"); }
             if let Some(v) = map.get("TypeW2U") { cfg.type_w_to_u = v.clone(); }
             if let Some(v) = map.get("BracketTransform") { cfg.bracket_transform = v.clone(); }
             if let Some(v) = map.get("ModernStyle") { cfg.modern_style = v.eq_ignore_ascii_case("true"); }
@@ -150,6 +156,8 @@ impl ConfigManager {
         lines.push(format!("InputMethod={}", cfg.input_method));
         lines.push(format!("Mode={}", cfg.mode));
         lines.push(format!("OutputCharset={}", cfg.output_charset));
+        lines.push(format!("OutputMode={}", cfg.output_mode));
+        lines.push(format!("RememberAppMode={}", if cfg.remember_app_mode { "True" } else { "False" }));
         lines.push(format!("TypeW2U={}", cfg.type_w_to_u));
         lines.push(format!("BracketTransform={}", cfg.bracket_transform));
         lines.push(format!("ModernStyle={}", if cfg.modern_style { "True" } else { "False" }));
