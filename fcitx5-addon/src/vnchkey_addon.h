@@ -77,7 +77,7 @@ private:
     std::string getOutputModeForContext(fcitx::InputContext* ic);
     void setOutputModeForContext(fcitx::InputContext* ic, const std::string& mode);
     void setupStatusMenu();
-    void updateActionState();
+    void updateActionState(fcitx::InputContext* ic = nullptr);
 
     fcitx::AddonManager* manager_;
     void* ctx_auto_ = nullptr;

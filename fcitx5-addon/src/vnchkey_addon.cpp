@@ -142,8 +142,10 @@ void VnchkeyEngine::setupStatusMenu() {
     actionOutputModeDirect_->setLongText("Chế độ xuất: Trực tiếp (Direct - Editor/Terminal)");
     connections_.push_back(actionOutputModeDirect_->connect<fcitx::SimpleAction::Activated>([this](fcitx::InputContext* ic) {
         setOutputModeForContext(ic, "Direct");
-        updateActionState();
+        updateActionState(ic);
         if (ic) {
+            if (actionOutputModeDirect_) actionOutputModeDirect_->update(ic);
+            if (actionOutputModePreedit_) actionOutputModePreedit_->update(ic);
             if (statusAction_) statusAction_->update(ic);
             ic->updateUserInterface(fcitx::UserInterfaceComponent::StatusArea);
         }
@@ -155,8 +157,10 @@ void VnchkeyEngine::setupStatusMenu() {
     actionOutputModePreedit_->setLongText("Chế độ xuất: Gạch chân (Preedit - Web/Google Docs)");
     connections_.push_back(actionOutputModePreedit_->connect<fcitx::SimpleAction::Activated>([this](fcitx::InputContext* ic) {
         setOutputModeForContext(ic, "Preedit");
-        updateActionState();
+        updateActionState(ic);
         if (ic) {
+            if (actionOutputModeDirect_) actionOutputModeDirect_->update(ic);
+            if (actionOutputModePreedit_) actionOutputModePreedit_->update(ic);
             if (statusAction_) statusAction_->update(ic);
             ic->updateUserInterface(fcitx::UserInterfaceComponent::StatusArea);
         }
@@ -265,7 +269,7 @@ void VnchkeyEngine::setupStatusMenu() {
     updateActionState();
 }
 
-void VnchkeyEngine::updateActionState() {
+void VnchkeyEngine::updateActionState(fcitx::InputContext* ic) {
     if (statusAction_) {
         statusAction_->setShortText(config_method_);
     }
@@ -287,7 +291,8 @@ void VnchkeyEngine::updateActionState() {
         actionMethodVni_->setShortText(std::string(isVni ? "✔ " : "   ") + "VNI");
     }
 
-    const bool isPreedit = (config_output_mode_ == "Preedit" || config_output_mode_ == "preedit");
+    std::string current_mode = ic ? getOutputModeForContext(ic) : config_output_mode_;
+    const bool isPreedit = (current_mode == "Preedit" || current_mode == "preedit");
     if (actionOutputModeDirect_) {
         actionOutputModeDirect_->setChecked(!isPreedit);
         actionOutputModeDirect_->setShortText(std::string(!isPreedit ? "✔ " : "   ") + "Gõ Trực Tiếp (Direct)");
@@ -328,14 +333,18 @@ void VnchkeyEngine::activate(const fcitx::InputMethodEntry &entry, fcitx::InputC
     if (ctx_vni_) fcitx5_vnchkey_reset(ctx_vni_);
     auto* ic = event.inputContext();
     if (ic) {
-        updateActionState();
+        updateActionState(ic);
         ic->statusArea().clearGroup(fcitx::StatusGroup::InputMethod);
+        if (actionOutputModeDirect_) ic->statusArea().addAction(fcitx::StatusGroup::InputMethod, actionOutputModeDirect_.get());
+        if (actionOutputModePreedit_) ic->statusArea().addAction(fcitx::StatusGroup::InputMethod, actionOutputModePreedit_.get());
         if (actionAutoRestore_) ic->statusArea().addAction(fcitx::StatusGroup::InputMethod, actionAutoRestore_.get());
         if (actionMacro_) ic->statusArea().addAction(fcitx::StatusGroup::InputMethod, actionMacro_.get());
         if (actionSpellCheck_) ic->statusArea().addAction(fcitx::StatusGroup::InputMethod, actionSpellCheck_.get());
         if (actionDictionary_) ic->statusArea().addAction(fcitx::StatusGroup::InputMethod, actionDictionary_.get());
         if (actionSettings_) ic->statusArea().addAction(fcitx::StatusGroup::InputMethod, actionSettings_.get());
 
+        if (actionOutputModeDirect_) actionOutputModeDirect_->update(ic);
+        if (actionOutputModePreedit_) actionOutputModePreedit_->update(ic);
         if (actionAutoRestore_) actionAutoRestore_->update(ic);
         if (actionMacro_) actionMacro_->update(ic);
         if (actionSpellCheck_) actionSpellCheck_->update(ic);
