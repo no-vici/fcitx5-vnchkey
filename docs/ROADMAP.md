@@ -8,13 +8,14 @@
 ## 📌 Tổng Quan Tiến Độ
 
 ```
-[v0.1.0: Lõi Rust & Kiến Trúc Fcitx5]  ──(Hoàn tất)──► [v0.2.0: Đột Phá Trải Nghiệm Gõ] ──(Hoàn tất)──► [v0.3.0 & Tương Lai]
-  • Safe Rust Core Engine                                • Chế độ Kép: Direct & Preedit                     • Context Guard Tự Động (URL/Code)
-  • Micro-diff LCP Algorithm                             • Floating Preedit Tooltip                         • Tối ưu Wayland Compositor Sâu
-  • Ngữ âm học ~6.750 từ gốc                             • Per-App Mode Memory                              • Phân phối AUR / PPA / Copr
-  • Native Rust Settings GUI (egui)                      • Địa danh Tây Nguyên & Dấu nháy '                 • Cloud/Git Sync Cấu Hình
-                                                         • Persistent Context Guard (Java IDEs/Wine)
-                                                         • Adaptive Micro-Pause Engine (Direct on Web)
+[v0.1.0: Lõi Rust & Kiến Trúc Fcitx5]  ──(Hoàn tất)──► [v0.2.0: Đột Phá Trải Nghiệm Gõ] ──(Hoàn tất)──► [v0.3.0: Tối Ưu Thực Chiến Linux]
+  • Safe Rust Core Engine                                • Chế độ Kép: Direct & Preedit                     • GNOME Wayland gnome-shell Guard
+  • Micro-diff LCP Algorithm                             • Floating Preedit Tooltip                         • Allowlist WPS Office (hidesPreedit)
+  • Ngữ âm học ~6.750 từ gốc                             • Per-App Mode Memory                              • Dọn dẹp Sheets (deleteAfterChars)
+  • Native Rust Settings GUI (egui)                      • Địa danh Tây Nguyên & Dấu nháy '                 • BlindWrites Auto-fallback (Cursor)
+                                                         • Persistent Context Guard (Java IDEs/Wine)        • Phím tắt Lật Từ (Ctrl+Shift+Z)
+                                                         • Adaptive Micro-Pause Engine (Direct on Web)      • Re-open âm tiết sau Backspace
+                                                         • System App Picker & Mode Grid
 ```
 
 ---
@@ -68,7 +69,31 @@
 
 ## 🚀 Kế Hoạch Phát Triển Tiếp Theo (Upcoming Milestones)
 
-### Giai đoạn tiếp theo: Thông Minh Hóa Ngữ Cảnh & Mở Rộng Hệ Sinh Thái
+### Phiên bản 0.3.0: Tối Ưu Hóa Trải Nghiệm Thực Chiến Độc Quyền Cho Linux (Chắt lọc từ Funput & VMK)
+
+#### 1. Khắc Phục Các Góc Khuất Khắc Nghiệt Trên Linux & Wayland
+- [ ] **Bảo Vệ GNOME Wayland (`gnome-shell` Proxy Guard)**:
+  - Loại trừ chuỗi proxy `"gnome-shell"` khi đọc `ic->program()` trên GNOME Wayland.
+  - Ngăn ngừa hiện tượng một ứng dụng bị lỗi (như Cursor IDE) làm ô nhiễm bộ đệm gán chế độ của toàn bộ hệ điều hành.
+- [ ] **Đặc Trị WPS Office (`hidesClientPreedit` Allowlist)**:
+  - Tự động nhận diện danh sách bộ ứng dụng WPS Office (`wps`, `wpp`, `et`, `wpspdf`).
+  - Ép Fcitx5 tự vẽ khung nổi (`panel.setPreedit(preedit)`), xóa bỏ hoàn toàn lỗi "gõ tàng hình" kinh niên do WPS khai báo hỗ trợ Preedit nhưng lại không tự vẽ gạch chân.
+  - Ngăn chặn ép Non-preedit vào WPS vì engine của WPS không hỗ trợ `Qt::ImSurroundingText`.
+- [ ] **Dọn Dẹp Hậu Tố Gợi Ý Google Sheets (`deleteAfterChars`)**:
+  - Tự động phát hiện vùng chọn autocomplete phía sau con trỏ (`surrounding.anchor() > surrounding.cursor()`) trong Google Sheets.
+  - Xóa sạch phần gợi ý trước khi commit từ mới, chấm dứt hoàn toàn hiện tượng dính chữ kỳ quặc (`chư` + `ứ` $\to$ `chưứ`).
+- [ ] **Thuật Toán `BlindWrites` & Tự Động Lùi Về Preedit Cho Editor Cứng Đầu (Cursor / VS Code)**:
+  - Giám sát phản hồi tài liệu: nếu app trả lời rỗng $2$ lần liên tiếp khi đang nhận lệnh sửa $\to$ nhận diện app đang nuốt lệnh xóa và tự động chuyển sang chế độ Preedit an toàn, chống triệt để lỗi `Phuú`.
+
+#### 2. Tính Năng Gõ Tiện Ích Đột Phá
+- [ ] **Phím Tắt Lật Từ Tức Thì (Flip Word — `Ctrl + Shift + Z`)**:
+  - Cho phép người dùng hoặc lập trình viên hoán đổi tức thì giữa từ tiếng Việt và chuỗi ký tự thô ban đầu (`mas` $\leftrightarrow$ `má`), tiện lợi tuyệt đối khi gõ mã nguồn mà không cần Backspace gõ lại.
+- [ ] **Khôi Phục Âm Tiết Sau Backspace (`adoptWordBeforeBackspace`)**:
+  - Khi xóa dấu cách sau một từ đã hoàn tất, tự động đọc lại âm tiết trước con trỏ vào bộ nhớ đệm để người dùng có thể gõ tiếp phím dấu sửa đổi (ví dụ: `phủ` ␣ ⌫ `s` $\to$ `phú`).
+
+---
+
+### Giai đoạn hoàn thiện hệ sinh thái & Phân phối
 
 #### 1. Context Guard Nâng Cao (Smart Auto-Bypass)
 - [ ] **Nhận diện thanh địa chỉ URL & Đường dẫn thư mục**: Tự động phát hiện khi con trỏ đang nhập URL (`http://...`, `https://...`, `www....`), địa chỉ IP, hoặc đường dẫn tệp (`/usr/bin/...`, `~/.config/...`) để tự động chuyển sang chế độ gõ ký tự thô (Raw English Bypass), không can thiệp dấu tiếng Việt.
