@@ -200,6 +200,18 @@ impl TelexEngine {
                         return (letters.into_iter().collect(), true, true);
                     } else {
                         // Adding or changing tone
+                        let mut test_letters = letters.clone();
+                        apply_smart_uo_horn(&mut test_letters);
+                        let word_str: String = test_letters.iter().collect();
+                        if let Some(parsed) = crate::syllable_parser::parse_syllable(&word_str) {
+                            let new_tone = crate::syllable_parser::ToneMark::from_index(tone);
+                            if !parsed.with_tone(new_tone).is_valid() {
+                                // Phonetic violation (e.g. stop coda -c, -ch, -p, -t taking huyền, hỏi, ngã)
+                                letters.push(ch);
+                                return (letters.into_iter().collect(), false, false);
+                            }
+                        }
+
                         apply_smart_uo_horn(&mut letters);
                         rebalance_tone(&mut letters, tone, self.tone_style);
                         return (letters.into_iter().collect(), true, false);
@@ -548,7 +560,21 @@ pub fn extract_tone(letters: &[char]) -> usize {
 }
 
 /// Strips existing tones from all vowels in `letters` and places `tone` on the orthographically correct vowel.
+/// Powered by the next-gen Vietnamese syllable parser (`syllable_parser.rs`).
 pub fn rebalance_tone(letters: &mut [char], tone: usize, tone_style: ToneStyle) {
+    let word: String = letters.iter().collect();
+    if let Some(parsed) = crate::syllable_parser::parse_syllable(&word) {
+        if !parsed.nucleus.is_empty() {
+            let tone_mark = crate::syllable_parser::ToneMark::from_index(tone);
+            let reconstructed = parsed.with_tone(tone_mark).reconstruct(tone_style);
+            let recon_chars: Vec<char> = reconstructed.chars().collect();
+            if recon_chars.len() == letters.len() {
+                letters.copy_from_slice(&recon_chars);
+                return;
+            }
+        }
+    }
+
     for c in letters.iter_mut() {
         if let Some((base, _, is_up)) = decompose_vowel(*c) {
             *c = compose_vowel(base, 0, is_up);
@@ -1324,5 +1350,35 @@ mod tests {
         assert_eq!(telex.feed("quawjp").0, "quặp");
         assert_eq!(telex.feed("quasnh").0, "quánh");
         assert_eq!(telex.feed("zij").0, "zị");
+    }
+
+    #[test]
+    fn test_dynamic_tone_shifting() {
+        let telex_modern = TelexEngine::new(ToneStyle::Modern);
+        // 'hosa' -> 'ho' + 's' -> 'hó', type 'a' -> dynamically shifts to 'hoá'
+        assert_eq!(telex_modern.feed("hosa").0, "hoá");
+        assert_eq!(telex_modern.feed("hosan").0, "hoán");
+        assert_eq!(telex_modern.feed("tosa").0, "toá");
+        assert_eq!(telex_modern.feed("tosan").0, "toán");
+
+        let telex_classic = TelexEngine::new(ToneStyle::Classic);
+        // 'hosa' -> 'hóa', type 'n' -> 'hoán' (tone shifts to 'a' because of coda 'n')
+        assert_eq!(telex_classic.feed("hosa").0, "hóa");
+        assert_eq!(telex_classic.feed("hosan").0, "hoán");
+        assert_eq!(telex_classic.feed("tosa").0, "tóa");
+        assert_eq!(telex_classic.feed("tosan").0, "toán");
+    }
+
+    #[test]
+    fn test_phonetic_tone_protection() {
+        let telex = TelexEngine::new(ToneStyle::Modern);
+        // 'được' has stop coda 'c', which cannot take huyền (f), hỏi (r), ngã (x)
+        assert_eq!(telex.feed("dduowcjf").0, "đượcf");
+        assert_eq!(telex.feed("dduowcjr").0, "đượcr");
+        assert_eq!(telex.feed("dduowcjx").0, "đượcx");
+        // But can change to sắc (s) -> 'đước'
+        assert_eq!(telex.feed("dduowcjs").0, "đước");
+        // And pressing 'j' again toggles tone off -> 'đươcj'
+        assert_eq!(telex.feed("dduowcjj").0, "đươcj");
     }
 }

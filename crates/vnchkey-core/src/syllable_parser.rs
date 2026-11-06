@@ -142,47 +142,27 @@ impl ParsedSyllable {
         let lower_coda = self.coda.to_lowercase();
         let lower_onset = self.onset.to_lowercase();
 
-        // 1. Must contain at least one vowel in nucleus if finished
+        // 1. Must contain at least one vowel in nucleus
         if lower_nucleus.is_empty() {
             return false;
         }
 
-        // 2. Stop codas (c, ch, p, t) can ONLY take Ngang (0 / untoned), Sắc (1), or Nặng (5)
-        if matches!(lower_coda.as_str(), "c" | "ch" | "p" | "t")
+        // 2. Stop codas (c, ch, p, t, k) can ONLY take Ngang (0 / untoned), Sắc (1), or Nặng (5)
+        if matches!(lower_coda.as_str(), "c" | "ch" | "p" | "t" | "k")
             && matches!(self.tone, ToneMark::Grave | ToneMark::HookAbove | ToneMark::Tilde)
         {
             return false;
         }
 
-        // 3. Short vowels 'ă' and 'â' cannot form open syllables (must have coda)
-        if matches!(lower_nucleus.as_str(), "ă" | "â") && lower_coda.is_empty() {
-            return false;
-        }
-
-        // 4. Closed diphthongs (iê, uô, ươ, yê) require a coda
-        if matches!(lower_nucleus.as_str(), "iê" | "uô" | "ươ" | "yê") && lower_coda.is_empty() {
-            return false;
-        }
-
-        // 5. Open diphthongs (ia, ua, ưa) cannot take a consonant coda
+        // 3. Open diphthongs (ia, ua, ưa) cannot take a consonant coda
         if matches!(lower_nucleus.as_str(), "ia" | "ua" | "ưa") && !lower_coda.is_empty() {
             return false;
         }
 
-        // 6. Spelling rules: 'k', 'gh', 'ngh' must precede 'i', 'e', 'ê' (or glide 'u' + 'y'/'ê')
+        // 4. Spelling rules: 'gh', 'ngh' must precede 'i', 'e', 'ê' (or glide 'u' + 'y'/'ê')
         if matches!(lower_onset.as_str(), "gh" | "ngh") {
             if let Some(first_v) = lower_nucleus.chars().next() {
                 if !matches!(first_v, 'i' | 'e' | 'ê') {
-                    return false;
-                }
-            }
-        } else if lower_onset == "k" {
-            if self.glide.is_some() {
-                // k before glide u is generally written q (qua, quốc)
-                return false;
-            }
-            if let Some(first_v) = lower_nucleus.chars().next() {
-                if !matches!(first_v, 'i' | 'e' | 'ê' | 'y') {
                     return false;
                 }
             }
@@ -198,7 +178,16 @@ impl ParsedSyllable {
             self.onset.len() + 2 + self.nucleus.len() + self.coda.len(),
         );
 
-        res.push_str(&self.onset);
+        let is_gi_alone = self.onset.eq_ignore_ascii_case("gi")
+            && self.nucleus.eq_ignore_ascii_case("i");
+
+        if is_gi_alone {
+            if let Some(first_g) = self.onset.chars().next() {
+                res.push(first_g);
+            }
+        } else {
+            res.push_str(&self.onset);
+        }
 
         if self.tone == ToneMark::None {
             if let Some(g) = self.glide {
@@ -386,6 +375,14 @@ pub fn parse_syllable(word: &str) -> Option<ParsedSyllable> {
                 | ('t', 'h')
                 | ('t', 'r')
                 | ('d', 'z')
+                | ('k', 'r')
+                | ('p', 'r')
+                | ('d', 'r')
+                | ('đ', 'r')
+                | ('b', 'r')
+                | ('k', 'l')
+                | ('p', 'l')
+                | ('b', 'l')
         ) {
             onset_len = 2;
         }
@@ -716,6 +713,14 @@ mod tests {
         let duoc = parse_syllable("được").unwrap();
         assert_eq!(duoc.reconstruct(ToneStyle::Modern), "được");
         assert_eq!(duoc.reconstruct(ToneStyle::Classic), "được");
+
+        let gin = parse_syllable("gìn").unwrap();
+        assert_eq!(gin.reconstruct(ToneStyle::Modern), "gìn");
+        assert_eq!(gin.reconstruct(ToneStyle::Classic), "gìn");
+
+        let gi = parse_syllable("gì").unwrap();
+        assert_eq!(gi.reconstruct(ToneStyle::Modern), "gì");
+        assert_eq!(gi.reconstruct(ToneStyle::Classic), "gì");
     }
 
     #[test]
@@ -767,9 +772,9 @@ mod tests {
         invalid_stop.tone = ToneMark::Grave;
         assert!(!invalid_stop.is_valid());
 
-        // Invalid: short vowel 'ă' without coda
-        let invalid_short = ParsedSyllable::new("b", None, "ă", "", ToneMark::None);
-        assert!(!invalid_short.is_valid());
+        // Invalid: open diphthong 'ia' with consonant coda
+        let invalid_open_diph = ParsedSyllable::new("m", None, "ia", "n", ToneMark::None);
+        assert!(!invalid_open_diph.is_valid());
 
         // Invalid: 'gh' before 'a'
         let invalid_gh = ParsedSyllable::new("gh", None, "a", "", ToneMark::None);
