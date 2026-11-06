@@ -86,6 +86,9 @@
   - Giám sát phản hồi tài liệu: nếu app trả lời rỗng $2$ lần liên tiếp khi đang nhận lệnh sửa $\to$ nhận diện app đang nuốt lệnh xóa và tự động chuyển sang chế độ Preedit an toàn, chống triệt để lỗi `Phuú`.
 
 #### 2. Tính Năng Gõ Tiện Ích Đột Phá
+- [x] **Hoàn tác Macro một chạm & Chống lặp vô hạn (Macro Revert on Backspace & Loop Suppression)**:
+  - Cho phép người dùng thu hồi ngay lập tức từ viết tắt gốc khi bấm phím Backspace sau khi vừa bung Macro (ví dụ: `vn` + ` ` $\to$ `Việt Nam ` $\xrightarrow{\text{Backspace}}$ `vn`).
+  - Tự động áp dụng cơ chế tạm khóa (suppression) để khi người dùng nhấn tiếp phím Space sau khi hoàn tác, từ viết tắt gốc sẽ giữ nguyên thành `vn ` mà không bị nổ bung lặp lại vô tận.
 - [x] **Phím Tắt Lật Từ Tức Thì (Flip Word — `Ctrl + Shift + Z`)**:
   - Cho phép người dùng hoặc lập trình viên hoán đổi tức thì giữa từ tiếng Việt và chuỗi ký tự thô ban đầu (`mas` $\leftrightarrow$ `má`), tiện lợi tuyệt đối khi gõ mã nguồn mà không cần Backspace gõ lại.
 - [ ] **Khôi Phục Âm Tiết Sau Backspace (`adoptWordBeforeBackspace`)**:

@@ -163,9 +163,13 @@ Kế thừa thuật toán từ điển tĩnh từ **GoNhanh**:
 
 ---
 
-### 3.8. Bảng Gõ Tắt Mở Rộng Tức Thì (Macro Expansion & Undo)
-- Tự động mở rộng từ viết tắt khi gõ phím phân cách (Space, dấu câu).
-- **Hoàn tác gõ tắt tức thì (Macro Undo)**: Nếu vừa mở rộng từ tắt mà nhấn ngay phím `Backspace`, engine sẽ xóa cụm từ đã bung và phục hồi lại đúng từ viết tắt ban đầu.
+### 3.8. Bảng Gõ Tắt Mở Rộng Tức Thì & Hoàn Tác Thông Minh (Macro Expansion & Smart Undo)
+- Tự động mở rộng từ viết tắt khi gõ phím phân cách (Space, dấu câu): ví dụ `vn` + phím cách $\to$ `Việt Nam `.
+- **Hoàn tác Macro một chạm (One-Step Macro Revert on Backspace)**:
+  - Nếu vừa bung macro mà người dùng nhấn ngay phím `Backspace`, engine tự động tính toán và gửi số lượng Backspace chính xác để thu hồi toàn bộ cụm từ đã bung cùng dấu cách, phục hồi lại nguyên vẹn chuỗi viết tắt gốc (`Việt Nam ` $\xrightarrow{\text{Backspace}}$ `vn`).
+- **Cơ chế Chống Lặp Vô Hạn (Infinite Loop Suppression)**:
+  - Điểm cải tiến vượt trội so với các bộ gõ truyền thống: Khi macro vừa được hoàn tác về lại từ viết tắt gốc (ví dụ `vn`), nếu người dùng nhấn tiếp phím `Space` (vì thực sự muốn gõ chữ `vn ` như trong `vn index`), engine sẽ **tạm khóa việc bung macro** cho từ đó. Phím Space đi qua tự nhiên mà không bao giờ bị bẫy trong vòng lặp vô tận (`vn` $\to$ `Việt Nam ` $\to$ `vn` $\to$ `Việt Nam `).
+  - Trạng thái tạm khóa tự động giải phóng ngay khi chuyển sang từ tiếp theo, bảo đảm các lần gõ tắt sau đó vẫn hoạt động trơn tru 100%.
 
 ---
 
