@@ -90,12 +90,13 @@ impl Default for MacroTable {
     }
 }
 
-/// Resolves dynamic date and time variables ($DATE, $TIME, $YEAR, $NOW, $DATETIME).
+/// Resolves dynamic date and time variables ($DATE, $TIME, $YEAR, $NOW, $DATETIME)
+/// using the system's local time and timezone.
 pub fn resolve_dynamic_tokens(text: &str) -> String {
     if !text.contains('$') {
         return text.to_string();
     }
-    let (year, month, day, hour, min) = get_civil_datetime();
+    let (year, month, day, hour, min) = get_local_datetime();
     let date_str = format!("{:02}/{:02}/{:04}", day, month, year);
     let time_str = format!("{:02}:{:02}", hour, min);
     let year_str = format!("{:04}", year);
@@ -108,21 +109,46 @@ pub fn resolve_dynamic_tokens(text: &str) -> String {
         .replace("$YEAR", &year_str)
 }
 
-/// Calculates civil date and time (UTC+7) from Unix Epoch using Howard Hinnant's algorithm.
-fn get_civil_datetime() -> (i32, u32, u32, u32, u32) {
+/// Retrieves the system's local date and time according to the operating system's configured timezone.
+fn get_local_datetime() -> (i32, u32, u32, u32, u32) {
+    // 1. Query the OS local date and time (respects /etc/localtime, TZ env, DST, user timezone)
+    if let Ok(output) = std::process::Command::new("date")
+        .arg("+%Y %m %d %H %M")
+        .output()
+    {
+        if let Ok(s) = std::str::from_utf8(&output.stdout) {
+            let parts: Vec<&str> = s.split_whitespace().collect();
+            if parts.len() >= 5 {
+                if let (Ok(y), Ok(m), Ok(d), Ok(h), Ok(min)) = (
+                    parts[0].parse(),
+                    parts[1].parse(),
+                    parts[2].parse(),
+                    parts[3].parse(),
+                    parts[4].parse(),
+                ) {
+                    return (y, m, d, h, min);
+                }
+            }
+        }
+    }
+
+    // 2. Fallback to UTC SystemTime calculation if Command is not accessible
+    get_civil_datetime_fallback()
+}
+
+/// Pure math fallback using Howard Hinnant's civil calendar algorithm from Unix Epoch.
+fn get_civil_datetime_fallback() -> (i32, u32, u32, u32, u32) {
     let now = std::time::SystemTime::now();
     let secs = now
         .duration_since(std::time::UNIX_EPOCH)
         .map(|d| d.as_secs())
         .unwrap_or(0);
 
-    // Default to UTC+7 (Vietnam standard time)
-    let local_secs = secs + 7 * 3600;
-    let sec_in_day = local_secs % 86400;
+    let sec_in_day = secs % 86400;
     let hour = (sec_in_day / 3600) as u32;
     let min = ((sec_in_day % 3600) / 60) as u32;
 
-    let z = (local_secs / 86400) as i64 + 719468;
+    let z = (secs / 86400) as i64 + 719468;
     let era = (if z >= 0 { z } else { z - 146096 }) / 146097;
     let doe = (z - era * 146097) as u32;
     let yoe = (doe - doe / 1020 + doe / 1461 - doe / 146096) / 365;

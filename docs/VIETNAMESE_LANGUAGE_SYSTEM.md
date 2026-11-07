@@ -156,7 +156,7 @@ Kế thừa các nghiên cứu và kinh nghiệm thực chiến từ các bộ g
 - **Từ điển công nghệ mở rộng**: Bổ sung sẵn hàng loạt công cụ lập trình và DevOps phổ biến (`npm`, `cargo`, `docker`, `pacman`, `makepkg`, `k8s`, `kubectl`, `postgres`, `redis`, `nextjs`, `tailwind`, `prisma`, `vitest`, `wasm`...).
 
 ### 8.4. Macro Biến Động Ngày/Giờ & Tìm Kiếm Nhanh
-- Cho phép sử dụng các biến động thời gian thực trong bảng gõ tắt: `$DATE` (ngày hiện tại `DD/MM/YYYY`), `$TIME` (giờ hiện tại `HH:MM`), `$NOW` / `$DATETIME` (ngày và giờ), `$YEAR` (năm).
+- Cho phép sử dụng các biến động thời gian thực trong bảng gõ tắt: `$DATE` (ngày hiện tại `DD/MM/YYYY`), `$TIME` (giờ hiện tại `HH:MM`), `$NOW` / `$DATETIME` (ngày và giờ), `$YEAR` (năm), **tự động lấy theo múi giờ địa phương (local timezone) của hệ điều hành** (tương thích hoàn hảo cho Người Việt ở Mỹ, Châu Âu, Úc, Nhật Bản, Việt Nam...).
 - Hỗ trợ thanh tìm kiếm trực quan (`🔍`) trong Tab Macros của `vnchkey-settings` giúp người dùng lọc nhanh hàng trăm từ viết tắt chỉ trong tích tắc.
 
 
