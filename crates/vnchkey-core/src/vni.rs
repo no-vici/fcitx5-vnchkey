@@ -165,15 +165,19 @@ impl VniEngine {
                         let (o_base, _, o_up) = decompose_vowel(letters[o_idx]).unwrap();
 
                         // Exceptions:
-                        // 1. 'qu' + 'o' (e.g. 'quon' for 'quởn' / 'quỡn'): in 'qu', 'u' is glide/semi-vowel and never takes a horn ('ư').
+                        // 1. 'qu' + 'o' (e.g. 'quon' for 'quởn' / 'quỡn', 'quo' for 'quơ'): in 'qu', 'u' is glide/semi-vowel and never takes a horn ('ư').
                         // 2. open syllable 'thuo' -> 'thuơ' (for 'thuở')
+                        // 3. open syllable 'huo' -> 'huơ' (for 'huơ tay')
                         let is_qu_o = u_idx > 0 && letters[u_idx - 1].eq_ignore_ascii_case(&'q');
                         let is_open_thuo = u_idx == 2
                             && o_idx + 1 == letters.len()
                             && letters[0].eq_ignore_ascii_case(&'t')
                             && letters[1].eq_ignore_ascii_case(&'h');
+                        let is_open_huo = u_idx == 1
+                            && o_idx + 1 == letters.len()
+                            && letters[0].eq_ignore_ascii_case(&'h');
 
-                        if is_open_thuo || is_qu_o {
+                        if is_open_thuo || is_open_huo || is_qu_o {
                             if o_base == 'ơ' {
                                 letters[o_idx] = compose_vowel('o', 0, o_up);
                                 letters.push('7');
@@ -372,9 +376,10 @@ mod tests {
         assert_eq!(vni_modern.feed("hoa2").0, "hoà");
         assert_eq!(vni_modern.feed("thuy3").0, "thuỷ");
 
-        // Southern dialect 'quởn' / 'quỡn' & 'thuở' in VNI
+        // Southern dialect 'quởn' / 'quỡn' & 'thuở' & 'huơ' in VNI
         assert_eq!(vni.feed("quon73").0, "quởn");
         assert_eq!(vni.feed("quon74").0, "quỡn");
         assert_eq!(vni.feed("thuo73").0, "thuở");
+        assert_eq!(vni.feed("huo7").0, "huơ");
     }
 }
