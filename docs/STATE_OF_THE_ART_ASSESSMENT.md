@@ -90,9 +90,11 @@ Trước khi khẳng định là bộ gõ hoàn hảo nhất, vnchKey cần vư�
 - [ ] **Slack / Discord / Telegram Web**: Gõ nhanh các đoạn tin nhắn có emoji, dấu ngoặc, link URL dính liền chữ.
 
 ### 5.4. Các góc khuất ngữ âm học (Linguistic Edge Cases)
+- [ ] **Bộ ba ngoại lệ vần `uơ`**: Thử gõ `thuowr` $\to$ `thuở`, `quonwr`/`quon73` $\to$ `quởn`, `quow`/`quo7` $\to$ `quơ`, `huow`/`huo7` $\to$ `huơ`.
+- [ ] **Nguyên âm ba & cụm từ đặc thù**: Thử gõ `khuyur` $\to$ `khuỷu`, `ngoeof` $\to$ `ngoèo`, `suyts` $\to$ `suýt`, `xoong` $\to$ `xoong`, `goongf` $\to$ `goòng`, `ginf` $\to$ `gìn`.
 - [ ] **Hoán đổi dấu phụ**: Thử gõ `ấm` + `w` $\to$ `ắm`, `bốn` + `w` $\to$ `bớn`, `mặt` + `a` $\to$ `mật`.
 - [ ] **Gõ sai dấu trên âm cuối tắc**: Thử gõ `được` + `f`, `bác` + `r`, `mất` + `x` $\to$ từ gốc phải được bảo toàn nguyên vẹn.
-- [ ] **Từ ghép & Địa danh lạ**: Gõ các từ Nam Bộ (`dzìa`, `chánh`) và địa danh Tây Nguyên (`Đắk Lắk`, `Cư M'gar`, `M'Đrắk`).
+- [ ] **Từ ghép & Khẩu ngữ Sài Gòn / Tây Nguyên**: Gõ các từ Nam Bộ (`quởn`, `số dzách`, `cà chớn`, `trớt quớt`, `bá cháy`, `mèn đéc ơi`) và địa danh Tây Nguyên (`Đắk Lắk`, `Cư M'gar`, `M'Đrắk`).
 - [ ] **Lật từ tức thì (Flip Word)**: Bấm `Ctrl + Shift + Z` kiểm tra việc chuyển đổi qua lại giữa tiếng Việt và mã thô tiếng Anh (`thể` $\longleftrightarrow$ `theer`).
 
 ---

@@ -145,7 +145,11 @@ Tích hợp sẵn danh mục ~6.750 từ đơn gốc Tiếng Việt và bộ lu�
 - **Kiểm soát âm cuối tắc (`-c, -ch, -p, -t`)**: Chỉ cho phép mang thanh Sắc hoặc thanh Nặng. Ngăn chặn các âm tiết vô lý như `bạc` mang dấu hỏi (`bacr`) hoặc dấu huyền (`bacf`).
 - **Phát hiện xung đột ngữ âm**: Loại bỏ các kết hợp phụ âm / nguyên âm sai quy tắc như `ce`, `ci`, `cy`, `ge`, `giê`, `nge`, `ngi`.
 - **Hỗ trợ địa danh Tây Nguyên & ký tự đặc biệt**: Mở rộng nhận diện và bỏ qua kiểm tra âm học cho các địa danh đặc thù có cụm phụ âm lạ và dấu nháy đơn (`Đắk Lắk`, `Cư M'gar`, `Ea H'leo`, `M'Đrắk`, `Đắk Nông`, `Krông Nô`, `Pleiku`...). Tích hợp bộ chuẩn hóa dấu nháy đơn (curly quotes `’` / `‘` $\to$ `'`).
-- **Hỗ trợ từ ngữ Nam Bộ & khẩu ngữ**: Công nhận các âm tiết phương ngữ và biến âm tự nhiên (`dzìa`, `dzô`, `dzí`, `gởi`, `chánh`...).
+- **Hỗ trợ từ ngữ Nam Bộ, Sài Gòn xưa & khẩu ngữ**: Tích hợp kho ngữ liệu trích từ bài sưu tập *"Gom góp từ ngữ của miền Nam và Saigon xưa"* (Nguyễn Cao Trường). Công nhận các âm tiết phương ngữ và biến âm tự nhiên (`dzìa`, `dzô`, `dzí`, `gởi`, `chánh`, `quởn`, `quỡn`, `số dzách`, `trớt quớt`, `cà chớn`, `bảnh tỏn`, `quỉ`, `chùm hum`, `mèn đéc ơi`...).
+- **Xử lý trọn vẹn bộ ba ngoại lệ vần `uơ`**:
+  - `thuo` + râu $\to$ `thuơ` (cho từ `thuở`).
+  - `quon` / `quo` + râu $\to$ `quơn` / `quơ` (cho từ `quởn`, `quỡn`, `quơ tay`, chữ `u` sau `q` không bao giờ biến thành `ư`).
+  - `huo` + râu $\to$ `huơ` (cho từ `huơ tay`, `huơ dao`).
 
 ---
 
@@ -178,6 +182,9 @@ Kế thừa thuật toán từ điển tĩnh từ **GoNhanh**:
 - **Cơ chế Chống Lặp Vô Hạn (Infinite Loop Suppression)**:
   - Điểm cải tiến vượt trội so với các bộ gõ truyền thống: Khi macro vừa được hoàn tác về lại từ viết tắt gốc (ví dụ `vn`), nếu người dùng nhấn tiếp phím `Space` (vì thực sự muốn gõ chữ `vn ` như trong `vn index`), engine sẽ **tạm khóa việc bung macro** cho từ đó. Phím Space đi qua tự nhiên mà không bao giờ bị bẫy trong vòng lặp vô tận (`vn` $\to$ `Việt Nam ` $\to$ `vn` $\to$ `Việt Nam `).
   - Trạng thái tạm khóa tự động giải phóng ngay khi chuyển sang từ tiếp theo, bảo đảm các lần gõ tắt sau đó vẫn hoạt động trơn tru 100%.
+- **Preset Macro Sài Gòn Xưa Tích Hợp Sẵn (`presets/saigon-xua-macro.conf`)**:
+  - Tích hợp sẵn bộ gõ tắt hơn 60 thành ngữ và khẩu ngữ Nam Kỳ quen thuộc: `sdz` $\to$ `số dzách`, `tq` $\to$ `trớt quớt`, `bcbc` $\to$ `bá cháy bù chét`, `crct` $\to$ `cà rịch cà tang`, `tlml` $\to$ `tào lao mía lao`, `hxq` $\to$ `hết xí quách`, `hgqn` $\to$ `hổng quởn`, `mdo` $\to$ `mèn đéc ơi`...
+  - Dễ dàng nối vào cấu hình cá nhân hoặc import qua Tab Macros trong giao diện cài đặt.
 
 ---
 
