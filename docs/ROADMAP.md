@@ -95,19 +95,21 @@
 - [ ] **Khôi Phục Âm Tiết Sau Backspace (`adoptWordBeforeBackspace`)**:
   - Khi xóa dấu cách sau một từ đã hoàn tất, tự động đọc lại âm tiết trước con trỏ vào bộ nhớ đệm để người dùng có thể gõ tiếp phím dấu sửa đổi (ví dụ: `phủ` ␣ ⌫ `s` $\to$ `phú`).
 
-#### 3. Nâng Cấp Ngữ Âm Thế Hệ Mới: Bộ Bóc Tách Âm Tiết Chuyên Sâu (Kế thừa tinh hoa từ Bamboo-Core)
-- [ ] **Kiến Trúc Bóc Tách Âm Tiết 4 Thành Phần (`syllable_parser.rs`)**:
+#### 3. Nâng Cấp Ngữ Âm Thế Hệ Mới: Bộ Bóc Tách Âm Tiết Chuyên Sâu (Kế thừa tinh hoa từ Bamboo-Core & VietC)
+- [x] **Kiến Trúc Bóc Tách Âm Tiết 5 Thành Phần (`syllable_parser.rs`)**:
   - Phân rã từ theo cấu trúc âm tiết chuẩn tiếng Việt: $\text{Syllable} = \text{Onset (Âm đầu)} + \text{Glide (Âm đệm)} + \text{Nucleus (Âm chính)} + \text{Coda (Âm cuối)} + \text{Tone (Dấu thanh)}$.
-  - Nhận diện toàn diện các cặp phụ âm ghép (`ngh, ng, ch, gh, kh, nh, ph, th, tr, qu, gi`) và tổ hợp nguyên âm đôi/ba (`ia/iê, ya/yê, ua/uô, ưa/ươ, iêu, oai, uay, ươu`...).
-- [ ] **Cơ Chế Dời Dấu Thanh Động (Dynamic Tone Shifting)**:
-  - Tự động di chuyển dấu thanh tới nguyên âm tối ưu nhất khi người dùng gõ thêm nguyên âm mới (ví dụ: `ho` + `s` $\to$ `hó`, gõ tiếp `a` $\to$ tự dời thành `hoá` thay vì kẹt lại ở `hóa`).
+  - Nhận diện toàn diện các cặp phụ âm ghép (`ngh, ng, ch, gh, kh, nh, ph, th, tr, qu, gi`), phụ âm Tây Nguyên (`kr, pr, dr, đr, br, kl, pl, bl`) và tổ hợp nguyên âm đôi/ba (`ia/iê, ya/yê, ua/uô, ưa/ươ, iêu, oai, uay, ươu`...).
+- [x] **Cơ Chế Dời Dấu Thanh Động (Dynamic Tone Shifting)**:
+  - Tự động di chuyển dấu thanh tới nguyên âm tối ưu nhất khi người dùng gõ thêm nguyên âm mới (ví dụ: `ho` + `s` $\to$ `hó`, gõ tiếp `a` $\to$ tự dời thành `hoá`/`hóa` thay vì kẹt lại ở `hóan`).
   - Hỗ trợ chuyển đổi mượt mà giữa quy tắc đặt dấu mới (`hoá, thuỷ`) và quy tắc đặt dấu cũ (`hóa, thủy`) theo cấu hình người dùng.
-- [ ] **Mở Rộng Gõ Dấu Tự Do Tuyệt Đối (Full Free-Marking Flexibility)**:
-  - Cho phép người dùng bỏ dấu thanh hoặc phím biến âm (`w, a, e, o, d`) ở bất kỳ vị trí nào trong từ mà không làm biến dạng từ (ví dụ: `duongwf` $\to$ `đường`, `toans` $\to$ `toán`, `ddawfng` $\to$ `đằng`).
-- [ ] **Tự Động Hoàn Tác Khi Vi Phạm Ngữ Âm (Phonetic Auto-Undo & Spell Revert)**:
-  - Ngăn chặn biến âm sai hoặc tự động phục hồi phím gốc khi tổ hợp phím vi phạm luật âm vị học tiếng Việt (ví dụ: phụ âm cuối `-c, -p, -t, -ch` chỉ đi với dấu Sắc/Nặng; phụ âm `k, gh, ngh` chỉ đi với nguyên âm dòng trước `i, e, ê`).
-- [ ] **Thừa Hưởng Toàn Bộ Test Suite Thực Chiến Của Bamboo**:
-  - Chuyển ngữ hàng trăm test cases thực tế từ `bamboo_test.go` của tác giả Lương Thanh Lam sang bộ kiểm thử tự động `#[test]` trong Rust để đảm bảo tỷ lệ bao phủ và độ chính xác ngữ âm 100%.
+- [x] **Hoán Đổi Dấu Phụ Giữ Nguyên Thanh Điệu (Shape Modifier Swapping — Tinh hoa chắt lọc từ VietC)**:
+  - Cho phép người dùng hoán đổi tức thì giữa các cặp nguyên âm biến hình (`â ↔ ă` qua `w/a` trong Telex hoặc `6/8` trong VNI, `ô ↔ ơ` qua `w/o` trong Telex hoặc `6/7` trong VNI) mà vẫn bảo toàn nguyên vẹn dấu thanh đang mang.
+  - Ví dụ: `ấm` + `w` $\to$ `ắm`, `bốn` + `w` $\to$ `bớn`, `tập` + `w` $\to$ `tặp`, `hợp` + `o` $\to$ `hộp`.
+- [x] **Bảo Vệ Ngữ Âm Học & Chống Gõ Sai Dấu (Phonetic Tone Protection)**:
+  - Ngăn chặn hoàn toàn việc gắn các thanh điệu trái quy luật ngữ âm (Huyền, Hỏi, Ngã) lên các âm tiết kết thúc bằng phụ âm tắc (`-c, -ch, -p, -t, -k`).
+  - Ví dụ: Khi gõ `được`, nếu vô tình bấm nhầm phím `f`, `r`, `x`, bộ gõ sẽ không làm hỏng từ thành `đườc`, `đưởc` mà giữ nguyên từ chuẩn và xuất ký tự thô: `đượcf`, `đượcr`.
+- [x] **Thừa Hưởng Toàn Bộ Test Suite Thực Chiến Của VietC & Bamboo (`vietc_regression_tests.rs`)**:
+  - Tích hợp bộ kiểm thử hồi quy tự động bao quát toàn bộ các tổ hợp âm đệm `qu`, `gi`, `uê`, `uơ`, hoán đổi biến âm, tự động phục hồi tiếng Anh (`fix`, `cargo`, `status`, `world`, `english`) và kiểm thử tổ hợp phím.
 
 ---
 

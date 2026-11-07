@@ -1370,6 +1370,32 @@ mod tests {
     }
 
     #[test]
+    fn test_shape_modifier_swapping_and_tone_preservation() {
+        let telex = TelexEngine::new(ToneStyle::Modern);
+        // aaw -> ă, oow -> ơ
+        assert_eq!(telex.feed("aaw").0, "ă");
+        assert_eq!(telex.feed("oow").0, "ơ");
+        assert_eq!(telex.feed("aa").0, "â");
+        assert_eq!(telex.feed("oo").0, "ô");
+
+        // Swap â <-> ă preserving tone
+        assert_eq!(telex.feed("amsw").0, "ắm");
+        assert_eq!(telex.feed("amswa").0, "ấm");
+        assert_eq!(telex.feed("canw").0, "căn");
+        assert_eq!(telex.feed("canwa").0, "cân");
+        assert_eq!(telex.feed("tapjw").0, "tặp");
+        assert_eq!(telex.feed("tapjwa").0, "tập");
+
+        // Swap ô <-> ơ preserving tone
+        assert_eq!(telex.feed("bonsw").0, "bớn");
+        assert_eq!(telex.feed("bonswo").0, "bốn");
+        assert_eq!(telex.feed("hopjw").0, "hợp");
+        assert_eq!(telex.feed("hopjwo").0, "hộp");
+        assert_eq!(telex.feed("cotjw").0, "cợt");
+        assert_eq!(telex.feed("cotjwo").0, "cột");
+    }
+
+    #[test]
     fn test_phonetic_tone_protection() {
         let telex = TelexEngine::new(ToneStyle::Modern);
         // 'được' has stop coda 'c', which cannot take huyền (f), hỏi (r), ngã (x)
