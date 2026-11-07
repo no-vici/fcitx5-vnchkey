@@ -228,6 +228,7 @@ impl ConfigManager {
 
     pub fn load_macros_from_file(path: &Path) -> Vec<(String, String)> {
         let mut res = Vec::new();
+        let mut seen = std::collections::HashSet::new();
         if let Ok(content) = fs::read_to_string(path) {
             for line in content.lines() {
                 let line = line.trim();
@@ -235,11 +236,38 @@ impl ConfigManager {
                     continue;
                 }
                 if let Some((k, v)) = line.split_once('=') {
-                    res.push((k.trim().to_string(), v.trim().to_string()));
+                    let key = k.trim().to_string();
+                    let norm = key.to_lowercase();
+                    if !norm.is_empty() && !seen.contains(&norm) {
+                        seen.insert(norm);
+                        res.push((key, v.trim().to_string()));
+                    }
                 }
             }
         }
         res
+    }
+
+    /// Loại bỏ các macro trùng lặp phím tắt (không phân biệt hoa/thường), giữ lại định nghĩa đầu tiên.
+    pub fn deduplicate_macros(macros: &mut Vec<(String, String)>) -> usize {
+        let mut seen = std::collections::HashSet::new();
+        let before = macros.len();
+        let mut deduped = Vec::new();
+        for (k, v) in macros.drain(..) {
+            let norm = k.trim().to_lowercase();
+            if !norm.is_empty() {
+                if !seen.contains(&norm) {
+                    seen.insert(norm);
+                    deduped.push((k, v));
+                }
+            } else {
+                // Giữ lại hàng trống nếu người dùng vừa mới bấm thêm
+                deduped.push((k, v));
+            }
+        }
+        let removed = before - deduped.len();
+        *macros = deduped;
+        removed
     }
 
     pub fn save_macros(macros: &[(String, String)]) -> std::io::Result<()> {
@@ -248,9 +276,13 @@ impl ConfigManager {
 
         let mut lines = Vec::new();
         lines.push("# vnchKey Macro Replacement Table".to_string());
+        let mut seen = std::collections::HashSet::new();
         for (k, v) in macros {
-            if !k.trim().is_empty() {
-                lines.push(format!("{}={}", k.trim(), v.trim()));
+            let key = k.trim();
+            let norm = key.to_lowercase();
+            if !norm.is_empty() && !seen.contains(&norm) {
+                seen.insert(norm);
+                lines.push(format!("{}={}", key, v.trim()));
             }
         }
 
@@ -405,4 +437,27 @@ impl ConfigManager {
             .output();
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_deduplicate_macros() {
+        let mut macros = vec![
+            ("vn".to_string(), "Việt Nam".to_string()),
+            ("ch".to_string(), "Cộng Hòa".to_string()),
+            ("VN".to_string(), "Vạn Năng".to_string()),
+            ("ch ".to_string(), "Cộng Hòa Xã Hội".to_string()),
+            ("td".to_string(), "Tự Do".to_string()),
+        ];
+        let removed = ConfigManager::deduplicate_macros(&mut macros);
+        assert_eq!(removed, 2);
+        assert_eq!(macros.len(), 3);
+        assert_eq!(macros[0], ("vn".to_string(), "Việt Nam".to_string()));
+        assert_eq!(macros[1], ("ch".to_string(), "Cộng Hòa".to_string()));
+        assert_eq!(macros[2], ("td".to_string(), "Tự Do".to_string()));
+    }
+}
+
 

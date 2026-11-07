@@ -136,6 +136,7 @@ impl SettingsApp {
     }
 
     fn save_all(&mut self) -> bool {
+        ConfigManager::deduplicate_macros(&mut self.macros);
         let ok1 = ConfigManager::save_config(&self.config).is_ok();
         let ok2 = ConfigManager::save_macros(&self.macros).is_ok();
         let ok3 = ConfigManager::save_dictionary(&self.dictionary).is_ok();
@@ -1323,6 +1324,31 @@ impl SettingsApp {
         });
         ui.add_space(12.0);
 
+        // Phát hiện phím tắt trùng lặp
+        let mut key_counts: std::collections::HashMap<String, usize> = std::collections::HashMap::new();
+        for (k, _) in &self.macros {
+            let norm = k.trim().to_lowercase();
+            if !norm.is_empty() {
+                *key_counts.entry(norm).or_insert(0) += 1;
+            }
+        }
+        let duplicate_count = key_counts.values().filter(|&&c| c > 1).count();
+
+        if duplicate_count > 0 {
+            ui.horizontal(|ui| {
+                ui.label(
+                    egui::RichText::new(format!("⚠️ Phát hiện {} phím tắt bị trùng lặp!", duplicate_count))
+                        .color(egui::Color32::from_rgb(0xf3, 0x8b, 0xa8))
+                        .strong(),
+                );
+                if ui.button(egui::RichText::new("🧹 Dọn Dẹp Trùng Lặp").color(egui::Color32::from_rgb(0xfa, 0xb3, 0x87))).clicked() {
+                    let removed = ConfigManager::deduplicate_macros(&mut self.macros);
+                    self.status_message = Some((format!("Đã loại bỏ {} macro bị trùng lặp!", removed), true));
+                }
+            });
+            ui.add_space(6.0);
+        }
+
         egui::Frame::new()
             .fill(egui::Color32::from_rgb(0x18, 0x18, 0x25))
             .stroke(egui::Stroke::new(1.0_f32, egui::Color32::from_rgb(0x28, 0x2a, 0x36)))
@@ -1338,10 +1364,14 @@ impl SettingsApp {
 
                 let mut to_remove = None;
                 for (idx, (k, v)) in self.macros.iter_mut().enumerate() {
+                    let is_dup = !k.trim().is_empty() && key_counts.get(&k.trim().to_lowercase()).copied().unwrap_or(0) > 1;
                     ui.horizontal(|ui| {
                         ui.add(egui::TextEdit::singleline(k).desired_width(160.0));
                         ui.add_space(10.0);
                         ui.add(egui::TextEdit::singleline(v).desired_width(260.0));
+                        if is_dup {
+                            ui.label(egui::RichText::new("⚠️ Trùng phím!").color(egui::Color32::from_rgb(0xf3, 0x8b, 0xa8)).size(11.0));
+                        }
                         if ui.button("🗑").clicked() {
                             to_remove = Some(idx);
                         }
@@ -1360,12 +1390,30 @@ impl SettingsApp {
             }
             if ui.button("📜 Nạp Mẫu Sài Gòn Xưa").clicked() {
                 let saigon_macros = ConfigManager::load_macros_from_file(&ConfigManager::saigon_macro_path());
-                let existing_keys: std::collections::HashSet<String> =
-                    self.macros.iter().map(|(k, _)| k.trim().to_lowercase()).collect();
+                let mut existing_keys: std::collections::HashSet<String> =
+                    self.macros.iter().map(|(k, _)| k.trim().to_lowercase()).filter(|k| !k.is_empty()).collect();
+                let mut added = 0;
+                let mut skipped = 0;
                 for (k, v) in saigon_macros {
-                    if !existing_keys.contains(&k.trim().to_lowercase()) {
+                    let norm = k.trim().to_lowercase();
+                    if !norm.is_empty() && !existing_keys.contains(&norm) {
+                        existing_keys.insert(norm);
                         self.macros.push((k, v));
+                        added += 1;
+                    } else {
+                        skipped += 1;
                     }
+                }
+                if added > 0 {
+                    self.status_message = Some((
+                        format!("Đã nạp {} macro Sài Gòn Xưa (đã bỏ qua {} mục trùng lặp)!", added, skipped),
+                        true,
+                    ));
+                } else {
+                    self.status_message = Some((
+                        format!("Tất cả {} macro Sài Gòn Xưa đã có sẵn trong danh sách, không có mục mới nào được thêm.", skipped),
+                        false,
+                    ));
                 }
             }
         });

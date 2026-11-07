@@ -117,3 +117,24 @@ Trong tiếng Việt, vần `uo` đi với phím râu thông thường sẽ bi�
 - `suýt`: Dấu sắc bắt buộc nằm trên `y` $\to$ `suýt`.
 - Cụm `u-y-ê` (`chuyện`, `khuyên`, `quyết`): Dù theo chuẩn Mới hay Cổ Điển, nguyên âm `ê` có độ ưu tiên tuyệt đối $\to$ `chuyện`, `quyết`.
 
+### 6.6. Độ Ưu Tiên Tuyệt Đối Của Nguyên Âm Có Dấu Phụ (`ê, ơ, â, ă, ô`) Trong Phong Cách Cổ Điển (Classic)
+- **Quy tắc phân biệt**: Trong phong cách Cổ Điển (Classic), các nhị trùng âm mở không có phụ âm cuối như `oa`, `oe`, `uy` đặt dấu thanh lên âm đệm đi trước (`hòa`, `khỏe`, `thủy`).
+- **Ngoại lệ hạt nhân có dấu phụ**: Khi âm chính là nguyên âm mang dấu phụ/mũ (`ê`, `ơ`, `â`, `ă`, `ô`) như trong `thuê`, `huê`, `quê`, `thuở`, `huơ`:
+  - Trọng âm ngữ âm tập trung toàn bộ vào hạt nhân mang mũ/móc.
+  - Do đó, dấu thanh **luôn luôn rơi vào hạt nhân** mang mũ/móc: `thue61` $\to$ `thuế`, `hue61` $\to$ `huế` *(tuyệt đối không bị lỗi rớt dấu lên âm đệm thành `thúê`, `húê`)*.
+
+---
+
+## 7. Cơ Chế Quản Lý & Bảo Vệ Chống Trùng Lặp Macro (Macro Collision Guard)
+
+Để đảm bảo hiệu năng và tính nhất quán khi người dùng định nghĩa hoặc nạp hàng loạt phím tắt gõ tắt (Macro):
+1. **Kiểm Tra Trùng Lặp Không Phân Biệt Hoa/Thường (Case-Insensitive Deduplication)**:
+   - Các phím tắt như `vn` và `VN` được xem là cùng một khóa gõ tắt để tránh xung đột hành vi khi gõ.
+   - Khi nạp macro từ tệp tin (`saigon-xua-macro.conf` hoặc tệp tùy chỉnh), engine tự động lọc bỏ các phím tắt đã tồn tại, chỉ thêm mới các phím tắt chưa có.
+2. **Cảnh Báo & Dọn Dẹp Trực Quan Trên Giao Diện (Settings UI Collision Warning)**:
+   - Nếu xuất hiện 2 phím tắt trùng nhau trong bảng chỉnh sửa, giao diện gắn nhãn cảnh báo đỏ `⚠️ Trùng phím!` ngay tại dòng đó và hiển thị thanh thông báo phía trên.
+   - Nút `🧹 Dọn Dẹp Trùng Lặp` cho phép người dùng chuẩn hóa lại toàn bộ bảng macro chỉ với 1 cú click.
+3. **Tự Động Chuẩn Hóa Khi Lưu (Auto Clean-up on Save)**:
+   - Trước khi ghi xuống tệp `vnchkey-macro-table.conf`, hàm `save_macros` luôn tự động loại bỏ trùng lặp và chuốt sạch khoảng trắng thừa, đảm bảo tệp cấu hình của người dùng luôn tinh gọn và an toàn 100%.
+
+

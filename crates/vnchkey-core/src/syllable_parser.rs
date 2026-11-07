@@ -220,8 +220,16 @@ impl ParsedSyllable {
                     }
                 }
                 ToneStyle::Classic => {
-                    if is_onset_q {
-                        // After 'q', tone is always placed on the nucleus vowel
+                    let has_marked_nucleus = nuc_chars.iter().any(|&c| {
+                        matches!(
+                            decompose_vowel(c).map(|(b, _, _)| b),
+                            Some('ă' | 'â' | 'ê' | 'ô' | 'ơ')
+                        )
+                    });
+
+                    if is_onset_q || has_marked_nucleus {
+                        // After 'q' or when nucleus has diacritic vowels (ê, ơ, â, ă, ô as in thuế, huế, thuở, quởn),
+                        // tone is ALWAYS placed on the nucleus vowel!
                         if nuc_chars.len() == 1 {
                             nuc_chars[0] = apply_tone(nuc_chars[0], tone_idx);
                         } else if nuc_chars.len() >= 2 {
