@@ -283,13 +283,16 @@ impl TelexEngine {
                     let (o_base, _, o_up) = decompose_vowel(letters[o_idx]).unwrap();
                     let (u_base, _, _) = decompose_vowel(letters[u_idx]).unwrap();
 
-                    // Exception: open syllable 'thuo' -> 'thuơ' (for 'thuở')
+                    // Exceptions:
+                    // 1. 'qu' + 'o' (e.g. 'quon' for 'quởn' / 'quỡn'): in 'qu', 'u' is glide/semi-vowel and never takes a horn ('ư').
+                    // 2. open syllable 'thuo' -> 'thuơ' (for 'thuở')
+                    let is_qu_o = u_idx > 0 && letters[u_idx - 1].eq_ignore_ascii_case(&'q');
                     let is_open_thuo = u_idx == 2
                         && o_idx + 1 == letters.len()
                         && letters[0].eq_ignore_ascii_case(&'t')
                         && letters[1].eq_ignore_ascii_case(&'h');
 
-                    if is_open_thuo {
+                    if is_open_thuo || is_qu_o {
                         if o_base == 'ơ' {
                             letters[o_idx] = compose_vowel('o', 0, o_up);
                             letters.push(ch);
@@ -531,6 +534,28 @@ pub fn has_effective_vowel(letters: &[char]) -> bool {
 /// Automatically promotes plain `uo` -> `ươ` when followed by a consonant coda (`duoc` -> `dươc`).
 pub fn apply_smart_uo_horn(letters: &mut [char]) -> bool {
     if let Some((u_idx, o_idx)) = find_adjacent_uo(letters) {
+        // Exception 1: 'qu' + 'o' (e.g. 'quon' for 'quởn' / 'quỡn')
+        // In 'qu', 'u' is glide/semi-vowel and never takes a horn ('ư').
+        if u_idx > 0 && letters[u_idx - 1].eq_ignore_ascii_case(&'q') {
+            let (o_base, o_tone, o_up) = decompose_vowel(letters[o_idx]).unwrap();
+            let has_consonant_coda =
+                o_idx + 1 < letters.len() && !is_vietnamese_vowel(letters[o_idx + 1]);
+            if has_consonant_coda && o_base == 'o' {
+                letters[o_idx] = compose_vowel('ơ', o_tone, o_up);
+                return true;
+            }
+            return false;
+        }
+
+        // Exception 2: open syllable 'thuo' (for 'thuở')
+        let is_open_thuo = u_idx == 2
+            && o_idx + 1 == letters.len()
+            && letters[0].eq_ignore_ascii_case(&'t')
+            && letters[1].eq_ignore_ascii_case(&'h');
+        if is_open_thuo {
+            return false;
+        }
+
         let has_consonant_coda =
             o_idx + 1 < letters.len() && !is_vietnamese_vowel(letters[o_idx + 1]);
         if has_consonant_coda {
@@ -1295,6 +1320,10 @@ mod tests {
         assert_eq!(telex.feed("cuuws").0, "cứu");
         assert_eq!(telex.feed("thuowr").0, "thuở");
         assert_eq!(telex.feed("quawngj").0, "quặng");
+        // Southern dialect 'quởn' / 'quỡn' (horn only on 'o', 'u' after 'q' is never 'ư')
+        assert_eq!(telex.feed("quonwr").0, "quởn");
+        assert_eq!(telex.feed("quowrn").0, "quởn");
+        assert_eq!(telex.feed("quonwx").0, "quỡn");
     }
 
     #[test]

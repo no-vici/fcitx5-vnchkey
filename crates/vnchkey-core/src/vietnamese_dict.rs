@@ -68,6 +68,9 @@ pub const RARE_WORDS: &[&str] = &[
     // Interjections, spoken and southern dialect words
     "dzô", "dzậy", "hông", "hổng", "zị", "zi", "zia", "hén", "nghen", "tui", "mầy",
     "chảnh", "xạo",
+    // Southern & Saigon classical vocabulary ("Gom góp từ ngữ của miền Nam và Saigon xưa")
+    "chớn", "dzách", "dách", "quỉ", "quởn", "quỡn", "quơn", "quớt", "tỏn", "xề",
+    "nhổng", "cháng", "chác", "cháo", "lữa", "nư", "hum", "mụi", "lét", "đéc",
 ];
 
 static VIETNAMESE_WORD_SET: OnceLock<HashSet<String>> = OnceLock::new();

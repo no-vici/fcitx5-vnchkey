@@ -55,6 +55,7 @@ package() {
   # Cài đặt metadata cấu hình cho Fcitx5 Settings (1 gói vnchKey duy nhất)
   install -Dm644 data/addon/vnchkey.conf "$pkgdir/usr/share/fcitx5/addon/vnchkey.conf"
   install -Dm644 data/inputmethod/vnchkey.conf "$pkgdir/usr/share/fcitx5/inputmethod/vnchkey.conf"
+  install -Dm644 data/presets/saigon-xua-macro.conf "$pkgdir/usr/share/fcitx5/vnchkey/presets/saigon-xua-macro.conf"
 
   # Cài đặt biểu tượng hệ thống chuẩn kích thước giống lilypad (24x24, 22x22, scalable SVG, status)
   mkdir -p "$pkgdir/usr/share/icons"
