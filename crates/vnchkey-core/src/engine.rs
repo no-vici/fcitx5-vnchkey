@@ -234,6 +234,11 @@ impl Engine {
         self.vni.set_tone_style(tone_style);
     }
 
+    /// Returns the active tone placement style.
+    pub fn tone_style(&self) -> ToneStyle {
+        self.config.tone_style
+    }
+
     /// Sets W to Ư rule.
     pub fn set_type_w_to_u(&mut self, w2u: W2UType) {
         self.config.type_w_to_u = w2u;

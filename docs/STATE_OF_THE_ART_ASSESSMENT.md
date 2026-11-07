@@ -102,3 +102,4 @@ Trước khi khẳng định là bộ gõ hoàn hảo nhất, vnchKey cần vư�
 vnchKey đã có một **bộ khung nền tảng xuất sắc** mà ít bộ gõ nào có được: mã nguồn an toàn tuyệt đối viết bằng Rust, tích hợp native Fcitx5, thuật toán micro-diff tối ưu độ trễ, và bộ parser ngữ âm học 5 thành phần.
 
 Khi bạn hoàn thành đợt kiểm thử thực chiến này và xác nhận mọi kịch bản trên đều vận hành trơn tru, vnchKey sẽ hoàn toàn tự tin bước lên **cột mốc v0.3.0** với tư cách là một trong những bộ gõ tiếng Việt tốt nhất, chỉn chu nhất mà cộng đồng Linux từng có.
+

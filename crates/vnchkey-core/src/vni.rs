@@ -354,5 +354,18 @@ mod tests {
         assert_eq!(vni.feed("gio77").0, "gio7");
         assert_eq!(vni.feed("khong66").0, "khong6");
         assert_eq!(vni.feed("d99").0, "d9");
+
+        // ToneStyle test
+        let vni_classic = VniEngine::new(ToneStyle::Classic);
+        assert_eq!(vni_classic.feed("toa1").0, "tóa");
+        assert_eq!(vni_classic.feed("toan1").0, "toán");
+        assert_eq!(vni_classic.feed("hoa2").0, "hòa");
+        assert_eq!(vni_classic.feed("thuy3").0, "thủy");
+
+        let vni_modern = VniEngine::new(ToneStyle::Modern);
+        assert_eq!(vni_modern.feed("toa1").0, "toá");
+        assert_eq!(vni_modern.feed("toan1").0, "toán");
+        assert_eq!(vni_modern.feed("hoa2").0, "hoà");
+        assert_eq!(vni_modern.feed("thuy3").0, "thuỷ");
     }
 }

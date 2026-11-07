@@ -595,6 +595,19 @@ void VnchkeyEngine::loadConfig() {
                 config_spell_check_ = (line.find("False") == std::string::npos);
             } else if (line.rfind("EnableDictionary=", 0) == 0) {
                 config_dictionary_ = (line.find("False") == std::string::npos);
+            } else if (line.rfind("ModernStyle=", 0) == 0) {
+                config_modern_style_ = (line.find("False") == std::string::npos && line.find("false") == std::string::npos);
+            } else if (line.rfind("BracketTransform=", 0) == 0) {
+                config_bracket_transform_ = (line.find("True") != std::string::npos || line.find("true") != std::string::npos);
+            } else if (line.rfind("TypeW2U=", 0) == 0) {
+                std::string val = line.substr(8);
+                if (val.find("Always") != std::string::npos) {
+                    config_w2u_ = 1;
+                } else if (val.find("Disabled") != std::string::npos) {
+                    config_w2u_ = 2;
+                } else {
+                    config_w2u_ = 0;
+                }
             }
         }
     }
@@ -613,6 +626,9 @@ void VnchkeyEngine::loadConfig() {
         fcitx5_vnchkey_set_macro_enabled(ctx, config_macro_);
         fcitx5_vnchkey_set_spell_check(ctx, config_spell_check_);
         fcitx5_vnchkey_set_dictionary_enabled(ctx, config_dictionary_);
+        fcitx5_vnchkey_set_tone_style(ctx, config_modern_style_ ? 0 : 1);
+        fcitx5_vnchkey_set_bracket_transform(ctx, config_bracket_transform_);
+        fcitx5_vnchkey_set_w2u(ctx, config_w2u_);
     }
 }
 

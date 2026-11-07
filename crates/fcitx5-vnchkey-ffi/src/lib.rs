@@ -342,3 +342,28 @@ pub unsafe extern "C" fn fcitx5_vnchkey_set_w2u(ctx: *mut Fcitx5VnchkeyContext, 
         (*ctx).engine.set_type_w_to_u(w2u);
     }
 }
+
+/// Configures tone style (0 = Modern: oà, uý; 1 = Classic: hòa, ủy).
+#[no_mangle]
+pub unsafe extern "C" fn fcitx5_vnchkey_set_tone_style(ctx: *mut Fcitx5VnchkeyContext, style: u32) {
+    if !ctx.is_null() {
+        let tone_style = match style {
+            1 => vnchkey_core::ToneStyle::Classic,
+            _ => vnchkey_core::ToneStyle::Modern,
+        };
+        (*ctx).engine.set_tone_style(tone_style);
+    }
+}
+
+/// Returns tone style (0 = Modern: oà, uý; 1 = Classic: hòa, ủy).
+#[no_mangle]
+pub unsafe extern "C" fn fcitx5_vnchkey_get_tone_style(ctx: *mut Fcitx5VnchkeyContext) -> u32 {
+    if !ctx.is_null() {
+        match (*ctx).engine.tone_style() {
+            vnchkey_core::ToneStyle::Modern => 0,
+            vnchkey_core::ToneStyle::Classic => 1,
+        }
+    } else {
+        0
+    }
+}

@@ -52,6 +52,8 @@ extern "C" {
     bool fcitx5_vnchkey_get_macro_enabled(void* ctx);
     void fcitx5_vnchkey_set_bracket_transform(void* ctx, bool enabled);
     void fcitx5_vnchkey_set_w2u(void* ctx, uint32_t mode);
+    void fcitx5_vnchkey_set_tone_style(void* ctx, uint32_t style);
+    uint32_t fcitx5_vnchkey_get_tone_style(void* ctx);
 
     char* fcitx5_vnchkey_get_current_word(void* ctx);
     char* fcitx5_vnchkey_get_completed_word(void* ctx);
@@ -105,6 +107,9 @@ private:
     bool config_macro_ = true;
     bool config_spell_check_ = true;
     bool config_dictionary_ = true;
+    bool config_modern_style_ = true;
+    bool config_bracket_transform_ = false;
+    uint32_t config_w2u_ = 0;
 
     bool is_forwarding_ = false;
 
