@@ -766,6 +766,18 @@ mod tests {
         assert_eq!(type_word(&mut engine, "duocwdj "), "được ");
         assert_eq!(type_word(&mut engine, "duocdj "), "được ");
         assert_eq!(type_word(&mut engine, "duocwdj7duo "), "được7duo ");
+
+        let mut engine_classic_telex = Engine::new(EngineConfig {
+            method: InputMethod::Telex,
+            tone_style: ToneStyle::Classic,
+            ..EngineConfig::default()
+        });
+        assert_eq!(type_word(&mut engine_classic_telex, "thuees "), "thuế ");
+        assert_eq!(type_word(&mut engine_classic_telex, "huees "), "huế ");
+        assert_eq!(type_word(&mut engine_classic_telex, "thusee "), "thuế ");
+        assert_eq!(type_word(&mut engine_classic_telex, "husee "), "huế ");
+        assert_eq!(type_word(&mut engine_classic_telex, "thuese "), "thuế ");
+        assert_eq!(type_word(&mut engine_classic_telex, "huese "), "huế ");
     }
 
     #[test]

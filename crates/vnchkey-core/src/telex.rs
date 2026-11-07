@@ -1404,6 +1404,14 @@ mod tests {
         assert_eq!(telex_classic.feed("hosan").0, "hoán");
         assert_eq!(telex_classic.feed("tosa").0, "tóa");
         assert_eq!(telex_classic.feed("tosan").0, "toán");
+
+        // Classic style must correctly place tone on 'ê' (thuế, huế) never on 'u' (thúê, húê)
+        assert_eq!(telex_classic.feed("thuees").0, "thuế");
+        assert_eq!(telex_classic.feed("huees").0, "huế");
+        assert_eq!(telex_classic.feed("thusee").0, "thuế");
+        assert_eq!(telex_classic.feed("husee").0, "huế");
+        assert_eq!(telex_classic.feed("thuese").0, "thuế");
+        assert_eq!(telex_classic.feed("huese").0, "huế");
     }
 
     #[test]
