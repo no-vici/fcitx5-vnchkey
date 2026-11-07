@@ -96,6 +96,20 @@ impl ConfigManager {
         Self::config_dir().join("vnchkey-macro-table.conf")
     }
 
+    pub fn saigon_macro_path() -> PathBuf {
+        Self::config_dir().join("saigon-xua-macro.conf")
+    }
+
+    pub const SAIGON_MACRO_CONTENT: &'static str = include_str!("../../../presets/saigon-xua-macro.conf");
+
+    pub fn ensure_saigon_macro_preset() {
+        let path = Self::saigon_macro_path();
+        if !path.exists() {
+            let _ = fs::create_dir_all(Self::config_dir());
+            let _ = fs::write(&path, Self::SAIGON_MACRO_CONTENT);
+        }
+    }
+
     pub fn dict_path() -> PathBuf {
         Self::config_dir().join("vnchkey-dictionary.conf")
     }
@@ -209,9 +223,12 @@ impl ConfigManager {
                 ("hn".to_string(), "hôm nay".to_string()),
             ];
         }
+        Self::load_macros_from_file(&path)
+    }
 
+    pub fn load_macros_from_file(path: &Path) -> Vec<(String, String)> {
         let mut res = Vec::new();
-        if let Ok(content) = fs::read_to_string(&path) {
+        if let Ok(content) = fs::read_to_string(path) {
             for line in content.lines() {
                 let line = line.trim();
                 if line.is_empty() || line.starts_with('#') {

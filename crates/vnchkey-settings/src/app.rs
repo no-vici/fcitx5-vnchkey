@@ -97,6 +97,7 @@ impl SettingsApp {
 
         // Load logo texture
         let logo_texture = Self::load_logo_texture(&cc.egui_ctx);
+        ConfigManager::ensure_saigon_macro_preset();
         let app_modes = ConfigManager::load_app_modes();
         let selected_app_idx = if !app_modes.is_empty() { Some(0) } else { None };
 
@@ -1353,9 +1354,21 @@ impl SettingsApp {
             });
 
         ui.add_space(10.0);
-        if ui.button("+ Thêm Viết Tắt").clicked() {
-            self.macros.push(("".to_string(), "".to_string()));
-        }
+        ui.horizontal(|ui| {
+            if ui.button("+ Thêm Viết Tắt").clicked() {
+                self.macros.push(("".to_string(), "".to_string()));
+            }
+            if ui.button("📜 Nạp Mẫu Sài Gòn Xưa").clicked() {
+                let saigon_macros = ConfigManager::load_macros_from_file(&ConfigManager::saigon_macro_path());
+                let existing_keys: std::collections::HashSet<String> =
+                    self.macros.iter().map(|(k, _)| k.trim().to_lowercase()).collect();
+                for (k, v) in saigon_macros {
+                    if !existing_keys.contains(&k.trim().to_lowercase()) {
+                        self.macros.push((k, v));
+                    }
+                }
+            }
+        });
     }
 
     // 5. Dictionary Page

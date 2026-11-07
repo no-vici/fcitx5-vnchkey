@@ -182,9 +182,9 @@ Kế thừa thuật toán từ điển tĩnh từ **GoNhanh**:
 - **Cơ chế Chống Lặp Vô Hạn (Infinite Loop Suppression)**:
   - Điểm cải tiến vượt trội so với các bộ gõ truyền thống: Khi macro vừa được hoàn tác về lại từ viết tắt gốc (ví dụ `vn`), nếu người dùng nhấn tiếp phím `Space` (vì thực sự muốn gõ chữ `vn ` như trong `vn index`), engine sẽ **tạm khóa việc bung macro** cho từ đó. Phím Space đi qua tự nhiên mà không bao giờ bị bẫy trong vòng lặp vô tận (`vn` $\to$ `Việt Nam ` $\to$ `vn` $\to$ `Việt Nam `).
   - Trạng thái tạm khóa tự động giải phóng ngay khi chuyển sang từ tiếp theo, bảo đảm các lần gõ tắt sau đó vẫn hoạt động trơn tru 100%.
-- **Preset Macro Sài Gòn Xưa Tích Hợp Sẵn (`presets/saigon-xua-macro.conf`)**:
+- **Preset Macro Sài Gòn Xưa Tích Hợp Sẵn (`~/.config/fcitx5/conf/saigon-xua-macro.conf`)**:
   - Tích hợp sẵn bộ gõ tắt hơn 60 thành ngữ và khẩu ngữ Nam Kỳ quen thuộc: `sdz` $\to$ `số dzách`, `tq` $\to$ `trớt quớt`, `bcbc` $\to$ `bá cháy bù chét`, `crct` $\to$ `cà rịch cà tang`, `tlml` $\to$ `tào lao mía lao`, `hxq` $\to$ `hết xí quách`, `hgqn` $\to$ `hổng quởn`, `mdo` $\to$ `mèn đéc ơi`...
-  - Dễ dàng nối vào cấu hình cá nhân hoặc import qua Tab Macros trong giao diện cài đặt.
+  - Lưu trữ trực tiếp trong thư mục cấu hình người dùng `~/.config/fcitx5/conf/saigon-xua-macro.conf` để dễ dàng chỉnh sửa cá nhân hóa, hoặc nhấp nút **"📜 Nạp Mẫu Sài Gòn Xưa"** trong Tab Macros của bảng Cài Đặt.
 
 ---
 

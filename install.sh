@@ -89,7 +89,6 @@ fi
 # Fcitx5 metadata configuration (Single unified vnchKey entry like fcitx5-lilypad)
 sudo install -Dm644 data/addon/vnchkey.conf "$PREFIX/share/fcitx5/addon/vnchkey.conf"
 sudo install -Dm644 data/inputmethod/vnchkey.conf "$PREFIX/share/fcitx5/inputmethod/vnchkey.conf"
-sudo install -Dm644 data/presets/saigon-xua-macro.conf "$PREFIX/share/fcitx5/vnchkey/presets/saigon-xua-macro.conf"
 sudo rm -f "$PREFIX/share/fcitx5/inputmethod/vnchkey-telex.conf" "$PREFIX/share/fcitx5/inputmethod/vnchkey-vni.conf"
 # Icons (Scaled to 24x24 / 22x22 matching lilypad status bar and panel standards)
 sudo mkdir -p "$PREFIX/share/icons"
