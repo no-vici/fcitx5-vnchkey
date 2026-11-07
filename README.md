@@ -6,7 +6,7 @@
 
 **Bộ Gõ Tiếng Việt Hiệu Năng Cao Cho Linux (Fcitx5 / Wayland / X11)**  
 *Được phát triển bằng Rust kết hợp Native C++ Fcitx5 Module.*  
-*Hội tụ tinh hoa xử lý biến âm từ **OpenViet IME**, **OpenKey**, **GoNhanh** và thuật toán Micro-diff từ **Lilypad**.*  
+*Hội tụ tinh hoa xử lý biến âm từ **OpenViet IME**, **OpenKey**, **GoNhanh**, **VietC** và thuật toán Micro-diff từ **Lilypad**.*  
 *Mang đậm tinh thần Tự Do và Di sản Cờ Vàng Ba Sọc Đỏ.*
 
 [![Rust](https://img.shields.io/badge/Rust-1.80%2B-orange.svg?style=flat-square&logo=rust)](https://www.rust-lang.org)
@@ -33,7 +33,12 @@
    - [3.5. Tự Động Khôi Phục Tiếng Anh (Restore English)](#35-tự-động-khôi-phục-tiếng-anh-restore-english)
    - [3.6. Chế Độ Gõ Đa Năng: Auto, Telex, VNI](#36-chế-độ-gõ-đa-năng-auto-telex-vni)
    - [3.7. Bảo Toàn Chữ Hoa Thông Minh (Smart Casing)](#37-bảo-toàn-chữ-hoa-thông-minh-smart-casing)
-   - [3.8. Bảng Gõ Tắt Mở Rộng Tức Thì (Macro Expansion & Undo)](#38-bảng-gõ-tắt-mở-rộng-tức-thì-macro-expansion--undo)
+   - [3.8. Bảng Gõ Tắt Mở Rộng Tức Thì & Hoàn Tác Thông Minh (Macro Expansion & Smart Undo)](#38-bảng-gõ-tắt-mở-rộng-tức-thì--hoàn-tác-thông-minh-macro-expansion--smart-undo)
+   - [3.9. Bộ Bóc Tách Âm Tiết 5 Thành Phần & Dời Dấu Thanh Động (Next-Gen Syllable Parser)](#39-bộ-bóc-tách-âm-tiết-5-thành-phần--dời-dấu-thanh-động-next-gen-syllable-parser)
+   - [3.10. Hoán Đổi Dấu Phụ Bảo Toàn Thanh Điệu (Shape Modifier Swapping — Tinh Hoa VietC)](#310-hoán-đổi-dấu-phụ-bảo-toàn-thanh-điệu-shape-modifier-swapping--tinh-hoa-vietc)
+   - [3.11. Bảo Vệ Ngữ Âm Học & Chống Gõ Sai Dấu (Phonetic Tone Protection)](#311-bảo-vệ-ngữ-âm-học--chống-gõ-sai-dấu-phonetic-tone-protection)
+   - [3.12. Phím Tắt Lật Từ Tức Thì (Flip Word — Ctrl + Shift + Z)](#312-phím-tắt-lật-từ-tức-thì-flip-word--ctrl--shift--z)
+   - [3.13. Bộ Lọc & Đặc Trị Thực Chiến Linux / Wayland (Hardened Runtime Fixes)](#313-bộ-lọc--đặc-trị-thực-chiến-linux--wayland-hardened-runtime-fixes)
 4. [Giao Diện Cài Đặt Trực Quan (Rust + egui GUI)](#4-giao-diện-cài-đặt-trực-quan-rust--egui-gui)
 5. [Hướng Dẫn Cài Đặt Cho Arch Linux](#5-hướng-dẫn-cài-đặt-cho-arch-linux)
 6. [Lộ Trình Phát Triển & Tài Liệu Kỹ Thuật (Roadmap & Docs)](#6-lộ-trình-phát-triển--tài-liệu-kỹ-thuật-roadmap--docs)
@@ -63,15 +68,18 @@ fcitx5-vnchkey/
 ├── crates/
 │   ├── vnchkey-core/                # [Lõi Rust] Xử lý âm vị học & biến đổi dấu Tiếng Việt
 │   │   ├── Cargo.toml
-│   │   └── src/
-│   │       ├── lib.rs               # Module exports
-│   │       ├── engine.rs            # Bộ điều phối trung tâm (Syllable State Machine)
-│   │       ├── telex.rs             # Biến đổi Telex, quy tắc âm tiết & tách âm tiết cuối
-│   │       ├── vni.rs               # Biến đổi VNI đa thứ tự phím (1-9, 0 xóa dấu)
-│   │       ├── auto_restore.rs      # Trie từ điển tiếng Anh kỹ thuật (GoNhanh)
-│   │       ├── casing.rs            # Theo dõi và bảo toàn kiểu chữ hoa/thường
-│   │       ├── macros.rs            # Bảng từ viết tắt (Gõ tắt) & hoàn tác
-│   │       └── vietnamese_dict.rs   # Bộ từ điển Chánh Tả ~6.750 từ gốc tiếng Việt
+│   │   ├── src/
+│   │   │   ├── lib.rs               # Module exports
+│   │   │   ├── engine.rs            # Bộ điều phối trung tâm (Syllable State Machine)
+│   │   │   ├── telex.rs             # Biến đổi Telex, quy tắc âm tiết & tách âm tiết cuối
+│   │   │   ├── vni.rs               # Biến đổi VNI đa thứ tự phím (1-9, 0 xóa dấu)
+│   │   │   ├── syllable_parser.rs   # [Mới] Bộ bóc tách âm tiết 5 thành phần (Onset-Glide-Nucleus-Coda-Tone)
+│   │   │   ├── auto_restore.rs      # Trie từ điển tiếng Anh kỹ thuật (GoNhanh)
+│   │   │   ├── casing.rs            # Theo dõi và bảo toàn kiểu chữ hoa/thường
+│   │   │   ├── macros.rs            # Bảng từ viết tắt (Gõ tắt) & hoàn tác
+│   │   │   └── vietnamese_dict.rs   # Bộ từ điển Chánh Tả ~6.750 từ gốc tiếng Việt
+│   │   └── tests/
+│   │       └── vietc_regression_tests.rs # [Mới] Bộ kiểm thử hồi quy đối sánh từ VietC
 │   │
 │   ├── fcitx5-vnchkey-ffi/          # [Tầng C-ABI] Giao tiếp giữa Rust core và C++
 │   │   ├── Cargo.toml
@@ -170,6 +178,68 @@ Kế thừa thuật toán từ điển tĩnh từ **GoNhanh**:
 - **Cơ chế Chống Lặp Vô Hạn (Infinite Loop Suppression)**:
   - Điểm cải tiến vượt trội so với các bộ gõ truyền thống: Khi macro vừa được hoàn tác về lại từ viết tắt gốc (ví dụ `vn`), nếu người dùng nhấn tiếp phím `Space` (vì thực sự muốn gõ chữ `vn ` như trong `vn index`), engine sẽ **tạm khóa việc bung macro** cho từ đó. Phím Space đi qua tự nhiên mà không bao giờ bị bẫy trong vòng lặp vô tận (`vn` $\to$ `Việt Nam ` $\to$ `vn` $\to$ `Việt Nam `).
   - Trạng thái tạm khóa tự động giải phóng ngay khi chuyển sang từ tiếp theo, bảo đảm các lần gõ tắt sau đó vẫn hoạt động trơn tru 100%.
+
+---
+
+### 3.9. Bộ Bóc Tách Âm Tiết 5 Thành Phần & Dời Dấu Thanh Động (Next-Gen Syllable Parser)
+Khác biệt với các bộ gõ truyền thống dựa trên chuỗi regex hoặc bảng tra cứu tĩnh, **vnchKey** trang bị module ngữ âm học chuyên sâu `syllable_parser.rs`:
+- **Kiến trúc bóc tách 5 thành phần chuẩn hóa**:
+  $$\text{Syllable} = \text{Onset (Phụ âm đầu)} + \text{Glide (Âm đệm)} + \text{Nucleus (Âm chính)} + \text{Coda (Âm cuối)} + \text{Tone (Thanh điệu)}$$
+  - Nhận diện toàn diện các phụ âm ghép chuẩn (`ngh`, `th`, `tr`, `ph`, `nh`, `ch`...) và mở rộng cho các cụm phụ âm bản địa Tây Nguyên (`kr`, `pr`, `dr`, `đr`, `br`, `kl`, `pl`, `bl`).
+  - Phân lập chính xác âm đệm `u`, `o` (`quang` $\to$ Onset `q`, Glide `u`, Nucleus `a`, Coda `ng`).
+- **Dời Dấu Thanh Động (Dynamic Tone Shifting)**:
+  - Khi người dùng gõ thêm nguyên âm hoặc mở rộng từ, dấu thanh tự động dịch chuyển mượt mà đến đúng vị trí âm chính mới mà không làm vỡ từ:
+    - `ho` + `s` $\to$ `hó` $\xrightarrow{+\text{a}}$ `hoá` (Kiểu mới Modern) hoặc `hóa` (Kiểu cũ Classic).
+    - `thuy` + `r` $\to$ `thủy` $\xrightarrow{+\text{a}}$ `thuyển` $\to$ chuyển dấu chuẩn xác.
+- **Hỗ trợ Song Song Chuẩn Dấu Mới & Cổ Điển**:
+  - Dấu Mới (Modern): `hóa`, `hòa`, `thủy`, `họa` (dấu đặt trên âm chính).
+  - Dấu Cổ Điển (Classic): `hoá`, `hoà`, `thuỷ`, `hoạ`.
+
+---
+
+### 3.10. Hoán Đổi Dấu Phụ Bảo Toàn Thanh Điệu (Shape Modifier Swapping — Tinh Hoa VietC)
+Chắt lọc và nâng cấp từ thuật toán hoán đổi dấu phụ của **VietC**:
+- Khi người dùng muốn đổi dạng mũ nguyên âm mà từ đã có dấu thanh, không cần phải xóa đi hay bấm hoàn tác:
+  - **`â ↔ ă`**: Gõ `w`/`a` (Telex) hoặc `6`/`8` (VNI) trên âm tiết có mũ/móc:
+    - `ấm` + `w` $\to$ `ắm`
+    - `tấn` + `w` $\to$ `tắn`
+    - `mặt` + `a` $\to$ `mật`
+    - `tắt` + `a` $\to$ `tất`
+  - **`ô ↔ ơ`**: Gõ `w`/`o` (Telex) hoặc `6`/`7` (VNI):
+    - `bốn` + `w` $\to$ `bớn`
+    - `nhớ` + `o` $\to$ `nhố`
+    - `lợn` + `o` $\to$ `lộn`
+- **Bảo toàn 100% thanh điệu**: Toàn bộ dấu thanh (Sắc, Huyền, Hỏi, Ngã, Nặng) và âm cuối được giữ nguyên vẹn, chuyển đổi tự nhiên tức thì.
+
+---
+
+### 3.11. Bảo Vệ Ngữ Âm Học & Chống Gõ Sai Dấu (Phonetic Tone Protection)
+- Trong ngữ âm học Tiếng Việt, các âm tiết kết thúc bằng âm cuối tắc (**Stop Codas**: `-c`, `-ch`, `-p`, `-t`, `-k`) **chỉ có thể mang thanh Sắc hoặc thanh Nặng**, tuyệt đối không thể đi cùng thanh Huyền, Hỏi, Ngã.
+- **Cơ chế bảo vệ của vnchKey**:
+  - Khi từ đang có âm cuối tắc và đã mang dấu thanh hợp lệ (ví dụ `được`, `mất`, `bác`, `đẹp`), nếu người dùng vô tình gõ các phím thanh không tương thích (như `f` - Huyền, `r` - Hỏi, `x` - Ngã):
+    - Thay vì làm hỏng từ hoặc rớt dấu kỳ quặc (như `được` + `f` $\to$ `đườc` ở một số bộ gõ khác), engine nhận diện sự vi phạm ngữ âm học và **từ chối biến âm**.
+    - Ký tự gõ sai được giữ nguyên ở dạng phím thô (`được` + `f` $\to$ `đượcf`), bảo toàn nguyên vẹn từ tiếng Việt trước đó.
+
+---
+
+### 3.12. Phím Tắt Lật Từ Tức Thì (Flip Word — `Ctrl + Shift + Z`)
+- Khi đang gõ mã lệnh hoặc tài liệu song ngữ, việc vô tình gõ một từ tiếng Anh thành tiếng Việt (hoặc ngược lại) xảy ra rất thường xuyên.
+- **Tính năng Flip Word**:
+  - Nhấn tổ hợp phím **`Ctrl + Shift + Z`** (hoặc phím tắt cấu hình trong Settings) để đảo ngược trạng thái của từ vừa gõ:
+    - `thể` $\longleftrightarrow$ `theer`
+    - `công` $\longleftrightarrow$ `coong`
+    - `việt` $\longleftrightarrow$ `vieetj`
+  - Giúp lập trình viên và người viết lách sửa nhanh lỗi gõ nhầm mà không cần nhấn Backspace nhiều lần rồi gõ lại từ đầu.
+
+---
+
+### 3.13. Bộ Lọc & Đặc Trị Thực Chiến Linux / Wayland (Hardened Runtime Fixes)
+Được tôi luyện qua hàng loạt tình huống thực tế trên môi trường Linux Wayland và X11:
+- **WPS Office (`hidesClientPreedit`)**: Bộ ứng dụng WPS Office (`wps`, `wpp`, `et`) tự vẽ giao diện nhập liệu riêng. vnchKey tự động phát hiện và áp dụng `hidesClientPreedit = true`, loại bỏ hoàn toàn hiện tượng hiển thị 2 dòng chữ chồng chéo lên nhau.
+- **Google Sheets (`deleteAfterChars`)**: Xử lý đặc thù cho bảng tính Google Docs/Sheets, tối ưu hoá chuỗi sự kiện xoá/chèn ký tự (`deleteAfterChars`) để tránh làm xáo trộn ô tính hoặc mất nội dung khi đang chỉnh sửa cell.
+- **GNOME Shell Wayland Proxy Guard**: Bổ sung rào chắn bảo vệ khi Fcitx5 giao tiếp với input method proxy của GNOME Shell trên Wayland, ngăn ngừa nguy cơ deadlock, đóng băng con trỏ hoặc crash tiến trình Fcitx5 khi chuyển đổi giữa các cửa sổ ứng dụng.
+- **Firefox Direct Mode Polish**: Tinh chỉnh phát phím Backspace vi mô cho Firefox ở chế độ Direct, loại bỏ hiện tượng "nuốt" phím Backspace đầu tiên khi gõ nhanh trên thanh địa chỉ URL (Awesomebar) hoặc biểu mẫu web.
+- **Giao diện Cài Đặt (Applications Manager) Full-Height**: Bố cục danh sách ứng dụng hiển thị tràn viền chiều cao, tích hợp nút gỡ bỏ ứng dụng căn giữa kèm icon thùng rác thanh lịch, đồng bộ hai chiều trực quan.
 
 ---
 
