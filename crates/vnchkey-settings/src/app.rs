@@ -574,6 +574,12 @@ impl SettingsApp {
         );
         ui.add_space(8.0);
 
+        ui.checkbox(
+            &mut self.config.select_and_replace_web,
+            "Dokey Select-and-Replace: Dùng Shift+Mũi tên trái bôi đen thay vì Backspace trên Web & Electron (chống nuốt chữ Slack, Discord, Notion)",
+        );
+        ui.add_space(8.0);
+
         ui.horizontal(|ui| {
             ui.label(egui::RichText::new("Độ trễ khi gõ Direct trên Web (Direct Delay)").size(13.0));
             ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {

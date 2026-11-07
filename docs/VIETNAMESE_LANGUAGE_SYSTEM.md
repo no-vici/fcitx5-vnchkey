@@ -1,6 +1,6 @@
 # Nền Tảng Ngôn Ngữ Học & Cơ Chế Hoạt Động của vnchKey
 
-Tài liệu này phân tích chi tiết nền tảng ngữ âm học tiếng Việt (dựa trên các nghiên cứu ngôn ngữ học Tiếng Việt truyền thống, tài liệu `vietnamese-language-system.md` từ dự án Gõ Nhanh, và kho tàng ngữ liệu *e-cadao.com/Ngonngu*) cùng cơ chế chuyển đổi âm tiết tốc độ cao, thông minh và an toàn của **vnchKey (Tự Do Edition)**.
+Tài liệu này phân tích chi tiết nền tảng ngữ âm học Tiếng Việt (dựa trên các nghiên cứu ngôn ngữ học Tiếng Việt truyền thống, tài liệu `vietnamese-language-system.md` từ dự án Gõ Nhanh, và kho tàng ngữ liệu *e-cadao.com/Ngonngu*) cùng cơ chế chuyển đổi âm tiết tốc độ cao, thông minh và an toàn của **vnchKey (Tự Do Edition)**.
 
 ---
 
@@ -159,5 +159,12 @@ Kế thừa các nghiên cứu và kinh nghiệm thực chiến từ các bộ g
 - Cho phép sử dụng các biến động thời gian thực trong bảng gõ tắt: `$DATE` (ngày hiện tại `DD/MM/YYYY`), `$TIME` (giờ hiện tại `HH:MM`), `$NOW` / `$DATETIME` (ngày và giờ), `$YEAR` (năm), **tự động lấy theo múi giờ địa phương (local timezone) của hệ điều hành** (tương thích hoàn hảo cho Người Việt ở Mỹ, Châu Âu, Úc, Nhật Bản, Việt Nam...).
 - Hỗ trợ thanh tìm kiếm trực quan (`🔍`) trong Tab Macros của `vnchkey-settings` giúp người dùng lọc nhanh hàng trăm từ viết tắt chỉ trong tích tắc.
 
-
+### 8.5. Kỹ Thuật Select-and-Replace Cho Web & Electron Apps (Khắc Phục Nuốt Backspace Trong Direct Mode)
+- **Bản chất vấn đề:** Các trình soạn thảo Rich Text hiện đại (ProseMirror, Slate, Lexical, DraftJS trên Google Chrome, Slack, Discord, Notion, VS Code...) quản lý cây DOM ảo nội bộ. Khi bộ gõ ở chế độ Direct Mode phát ra chuỗi $N$ lần phím `Backspace` giả lập cực nhanh để xóa các ký tự cũ, các engine JavaScript này thường chặn (suppress) hoặc chỉ xử lý 1 sự kiện Backspace, dẫn đến hiện tượng "nuốt chữ", dính chữ hoặc nhân đôi chữ (chẳng hạn gõ `Haxy` biến thành `Hayãy`).
+- **Giải pháp Đột Phá:** vnchKey tích hợp kỹ thuật Select-and-Replace được tinh giản từ nghiên cứu của Đỗ Huy Toàn:
+  - Khi phát hiện cửa sổ mục tiêu là Web Browser hoặc Electron app (`chrome`, `chromium`, `firefox`, `brave`, `edge`, `slack`, `discord`, `notion`, `electron`, `teams`, `vscode`...), addon thay thế chuỗi $N$ lần phím `Backspace` bằng $N$ lần tổ hợp phím **`Shift + Left Arrow`** để tạo vùng bôi đen (selection) ngược lại đúng số lượng ký tự cần thay thế.
+  - Sau đó, chuỗi ký tự thay thế mới được commit trực tiếp đè lên vùng chọn. Vì mọi trình soạn thảo web và input field đều có hành vi chuẩn mực là gõ đè lên vùng chọn, vấn đề nuốt phím Backspace được triệt tiêu hoàn toàn.
+  - **Bảo toàn Terminal:** Cơ chế này tự động bỏ qua các ứng dụng Terminal (`kitty`, `alacritty`, `konsole`, `wezterm`, `foot`, `xterm`...) để tránh gửi chuỗi ANSI escape sequence `\x1b[1;2D`, giúp trải nghiệm dòng lệnh luôn mượt mà với Backspace truyền thống.
+  - **Tùy chọn linh hoạt:** Người dùng có thể bật/tắt tính năng này tùy ý trong mục *Cài đặt chung* của `vnchkey-settings` (`SelectAndReplaceWeb = true/false`).
+  - **Preedit Mode làm chốt chặn tối thượng:** Đối với các ứng dụng canvas đặc thù không nhận selection dạng này (như Google Docs Canvas Mode), tính năng *Ghi nhớ Chế độ Nhập liệu Theo Từng Ứng Dụng (Per-App Memory)* cho phép chỉ định Preedit Mode riêng cho các ứng dụng đó mà không ảnh hưởng tới Direct Mode của toàn hệ thống.
 

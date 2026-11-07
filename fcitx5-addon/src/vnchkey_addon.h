@@ -111,6 +111,7 @@ private:
     bool config_modern_style_ = true;
     bool config_bracket_transform_ = false;
     uint32_t config_w2u_ = 0;
+    bool config_select_and_replace_web_ = true;
 
     bool is_forwarding_ = false;
 

@@ -581,6 +581,8 @@ void VnchkeyEngine::loadConfig() {
                 config_preedit_tooltip_ = (line.find("False") == std::string::npos);
             } else if (line.rfind("PersistentContextGuard=", 0) == 0) {
                 config_persistent_guard_ = (line.find("False") == std::string::npos);
+            } else if (line.rfind("SelectAndReplaceWeb=", 0) == 0) {
+                config_select_and_replace_web_ = (line.find("False") == std::string::npos && line.find("false") == std::string::npos);
             } else if (line.rfind("DirectDelayMs=", 0) == 0) {
                 try {
                     config_direct_delay_ms_ = std::stoi(line.substr(14));
@@ -672,6 +674,7 @@ void VnchkeyEngine::saveConfig() {
         out << "RememberAppMode=" << (config_remember_app_mode_ ? "True" : "False") << "\n";
         out << "PreeditTooltip=" << (config_preedit_tooltip_ ? "True" : "False") << "\n";
         out << "PersistentContextGuard=" << (config_persistent_guard_ ? "True" : "False") << "\n";
+        out << "SelectAndReplaceWeb=" << (config_select_and_replace_web_ ? "True" : "False") << "\n";
         out << "DirectDelayMs=" << config_direct_delay_ms_ << "\n";
         out << "AutoRestoreEnglish=" << (config_auto_restore_ ? "True" : "False") << "\n";
         out << "EnableMacro=" << (config_macro_ ? "True" : "False") << "\n";
@@ -1015,30 +1018,43 @@ void VnchkeyEngine::keyEvent(const fcitx::InputMethodEntry &entry, fcitx::KeyEve
                         ic->surroundingText().isValid()) {
                         ic->deleteSurroundingText(-static_cast<int>(out_backspaces), out_backspaces);
                     } else {
+                        std::string prog = ic->program();
+                        std::string lower_prog = prog;
+                        for (char& c : lower_prog) c = std::tolower(c);
+                        bool is_web = (
+                            lower_prog.find("chrome") != std::string::npos ||
+                            lower_prog.find("firefox") != std::string::npos ||
+                            lower_prog.find("chromium") != std::string::npos ||
+                            lower_prog.find("brave") != std::string::npos ||
+                            lower_prog.find("edge") != std::string::npos ||
+                            lower_prog.find("opera") != std::string::npos ||
+                            lower_prog.find("vivaldi") != std::string::npos ||
+                            lower_prog.find("electron") != std::string::npos ||
+                            lower_prog.find("slack") != std::string::npos ||
+                            lower_prog.find("discord") != std::string::npos ||
+                            lower_prog.find("notion") != std::string::npos ||
+                            lower_prog.find("element") != std::string::npos ||
+                            lower_prog.find("teams") != std::string::npos
+                        );
+
                         is_forwarding_ = true;
-                        for (size_t i = 0; i < out_backspaces; ++i) {
-                            ic->forwardKey(fcitx::Key(FcitxKey_BackSpace));
+                        if (config_select_and_replace_web_ && is_web) {
+                            // Dokey Innovation: Select-and-Replace (Shift + Left Arrow)
+                            // Overcomes ProseMirror, Notion, Slack, and React virtual DOM Backspace suppression!
+                            for (size_t i = 0; i < out_backspaces; ++i) {
+                                ic->forwardKey(fcitx::Key(FcitxKey_Left, fcitx::KeyState::Shift));
+                            }
+                        } else {
+                            for (size_t i = 0; i < out_backspaces; ++i) {
+                                ic->forwardKey(fcitx::Key(FcitxKey_BackSpace));
+                            }
                         }
                         is_forwarding_ = false;
 
                         // Adaptive Micro-Pause: allow browser JavaScript event loop / DOM to settle
                         int effective_delay = config_direct_delay_ms_;
-                        if (effective_delay <= 0) {
-                            std::string prog = ic->program();
-                            std::string lower_prog = prog;
-                            for (char& c : lower_prog) c = std::tolower(c);
-                            if (lower_prog.find("chrome") != std::string::npos ||
-                                lower_prog.find("firefox") != std::string::npos ||
-                                lower_prog.find("chromium") != std::string::npos ||
-                                lower_prog.find("brave") != std::string::npos ||
-                                lower_prog.find("edge") != std::string::npos ||
-                                lower_prog.find("opera") != std::string::npos ||
-                                lower_prog.find("vivaldi") != std::string::npos ||
-                                lower_prog.find("electron") != std::string::npos ||
-                                lower_prog.find("slack") != std::string::npos ||
-                                lower_prog.find("discord") != std::string::npos) {
-                                effective_delay = 4; // 4ms is ideal for web DOM cursor settlement
-                            }
+                        if (effective_delay <= 0 && is_web) {
+                            effective_delay = 4; // 4ms is ideal for web DOM cursor settlement
                         }
                         if (effective_delay > 0) {
                             std::this_thread::sleep_for(std::chrono::milliseconds(effective_delay));
