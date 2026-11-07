@@ -303,6 +303,7 @@ makepkg -si
 
 - 📌 **[Lộ Trình Phát Triển (Project Roadmap)](docs/ROADMAP.md)**: Theo dõi tiến độ chi tiết của các mốc phát hành **v0.1.0** (Nền tảng kiến trúc), **v0.2.0** (Chế độ Kép, Persistent Context Guard, Adaptive Micro-Pause) và kế hoạch tương lai cho **v0.3.0** (Smart Context Auto-Bypass, Wayland deep integration, AUR/PPA packaging).
 - ⚖️ **[Đánh Giá Khách Quan & So Sánh Kiến Trúc (Benchmark & Landscape Analysis)](docs/BENCHMARK_AND_COMPARISON.md)**: Phân tích so sánh toàn diện và trung thực giữa vnchKey và các bộ gõ hàng đầu trên Linux (Bamboo, UniKey, Lilypad, OpenKey), chỉ ra những điểm mạnh thực sự và những hạn chế cần tiếp tục hoàn thiện.
+- 🎯 **[Đánh Giá Khách Quan & Tiêu Chí Kiểm Định v0.3.0 (State of the Art Assessment)](docs/STATE_OF_THE_ART_ASSESSMENT.md)**: Báo cáo đánh giá mức độ hoàn thiện của vnchKey so với các bộ gõ đương thời và checklist kịch bản kiểm thử thực tế toàn diện trước khi phát hành v0.3.0.
 - 🔬 **[Phân Tích Kỹ Thuật Cơ Chế Non-Preedit UniKey vs Wayland](docs/NON_PREEDIT_WAYLAND_ANALYSIS.md)**: Phân tích chuyên sâu về sự khác biệt kiến trúc xử lý bàn phím giữa Windows và Linux Wayland, nguyên nhân gốc rễ gây lỗi nhảy chữ trên Web DOM và giải pháp toàn diện của vnchKey.
 
 ---
