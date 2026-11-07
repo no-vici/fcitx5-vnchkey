@@ -194,6 +194,32 @@ pub unsafe extern "C" fn fcitx5_vnchkey_undo_macro(
     }
 }
 
+/// Reverts the active composing word back to raw keystrokes on Escape (Dokey style).
+/// Returns 1 if reverted, and writes the required backspaces and raw string to out_commit.
+#[no_mangle]
+pub unsafe extern "C" fn fcitx5_vnchkey_undo_escape(
+    ctx: *mut Fcitx5VnchkeyContext,
+    out_backspaces: *mut usize,
+    out_commit: *mut *mut c_char,
+) -> c_int {
+    if ctx.is_null() {
+        return 0;
+    }
+    let ctx = &mut *ctx;
+    if let Some(output) = ctx.engine.undo_to_raw() {
+        if !out_backspaces.is_null() {
+            *out_backspaces = output.backspaces;
+        }
+        if !out_commit.is_null() {
+            let c_str = CString::new(output.commit_text).unwrap_or_default();
+            *out_commit = c_str.into_raw();
+        }
+        1
+    } else {
+        0
+    }
+}
+
 /// Loads custom macros from a configuration file.
 #[no_mangle]
 pub unsafe extern "C" fn fcitx5_vnchkey_load_macros(

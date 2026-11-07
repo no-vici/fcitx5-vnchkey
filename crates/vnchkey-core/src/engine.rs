@@ -113,6 +113,25 @@ pub struct Engine {
     last_completed_word: Option<String>,
     last_macro: Option<LastMacroExpansion>,
     suppressed_macro: Option<String>,
+    reopen_state: Option<ReopenWordState>,
+}
+
+/// Saved state of the previous word completed with a single Space,
+/// allowing "Reopen Previous Word" if Backspace is pressed immediately after Space (Dokey style).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ReopenWordState {
+    /// Active Vietnamese word when space was pressed
+    pub current_word: String,
+    /// Raw input keystrokes
+    pub raw_strokes: String,
+    /// Whether Telex rules transformed this word
+    pub word_used_telex: bool,
+    /// Whether VNI rules transformed this word
+    pub word_used_vni: bool,
+    /// Manual undo state
+    pub manual_undo: bool,
+    /// Whether English mode was locked
+    pub english_locked: bool,
 }
 
 /// Tracks the most recent macro expansion for one-step undo on Backspace.
@@ -149,6 +168,7 @@ impl Engine {
             last_completed_word: None,
             last_macro: None,
             suppressed_macro: None,
+            reopen_state: None,
         }
     }
 
@@ -252,8 +272,7 @@ impl Engine {
         self.vni.set_bracket_transform(enabled);
     }
 
-    /// Resets all internal buffers (e.g. on window unfocus or navigation key).
-    pub fn reset(&mut self) {
+    fn reset_word_buffers(&mut self) {
         self.current_word.clear();
         self.raw_strokes.clear();
         self.casing.reset();
@@ -265,15 +284,66 @@ impl Engine {
         self.suppressed_macro = None;
     }
 
+    /// Resets all internal buffers (e.g. on window unfocus or navigation key).
+    pub fn reset(&mut self) {
+        self.reset_word_buffers();
+        self.reopen_state = None;
+    }
+
     /// Handles physical Backspace pressed by the user.
-    pub fn handle_backspace(&mut self) {
-        self.current_word.pop();
-        self.raw_strokes.pop();
+    /// If Backspace is pressed immediately after completing a word with a single Space,
+    /// reopens the previous word so marks/tones can be applied (Dokey style).
+    /// Returns true if a previously completed word was reopened.
+    pub fn handle_backspace(&mut self) -> bool {
         if self.current_word.is_empty() {
+            if let Some(saved) = self.reopen_state.take() {
+                self.current_word = saved.current_word;
+                self.raw_strokes = saved.raw_strokes;
+                self.word_used_telex = saved.word_used_telex;
+                self.word_used_vni = saved.word_used_vni;
+                self.manual_undo = false;
+                self.english_locked = saved.english_locked;
+                return true;
+            }
             self.reset();
+            false
         } else {
-            self.manual_undo = true;
+            self.reopen_state = None;
+            self.current_word.pop();
+            self.raw_strokes.pop();
+            if self.current_word.is_empty() {
+                self.reset();
+            } else {
+                self.manual_undo = true;
+            }
+            false
         }
+    }
+
+    /// Reverts the active composing word back to the raw keystrokes (Escape to Undo)
+    /// and temporarily locks English mode for this word.
+    pub fn undo_to_raw(&mut self) -> Option<EngineOutput> {
+        if self.current_word.is_empty() || self.raw_strokes.is_empty() {
+            return None;
+        }
+        if self.current_word == self.raw_strokes {
+            self.english_locked = true;
+            return None;
+        }
+
+        let old_word = self.current_word.clone();
+        self.current_word = self.raw_strokes.clone();
+        self.english_locked = true;
+
+        let (backspaces, commit_text) = compare_and_split_strings(&old_word, &self.current_word);
+        Some(EngineOutput {
+            backspaces,
+            commit_text,
+            consumed: true,
+            auto_restored: true,
+            macro_expanded: false,
+            adaptive_delay_ms: 0,
+        })
     }
 
     /// Returns the active composing word.
@@ -425,7 +495,19 @@ impl Engine {
             // No macro or auto-restore needed: reset word buffer and let delimiter pass through natively
             let has_word = !self.current_word.is_empty();
             let target = format!("{}{}", self.current_word, ch);
-            self.reset();
+            if ch == ' ' && has_word && self.raw_strokes.len() <= 32 {
+                self.reopen_state = Some(ReopenWordState {
+                    current_word: self.current_word.clone(),
+                    raw_strokes: self.raw_strokes.clone(),
+                    word_used_telex: self.word_used_telex,
+                    word_used_vni: self.word_used_vni,
+                    manual_undo: self.manual_undo,
+                    english_locked: self.english_locked,
+                });
+            } else {
+                self.reopen_state = None;
+            }
+            self.reset_word_buffers();
             if has_word {
                 self.last_completed_word = Some(target);
             }
@@ -434,6 +516,29 @@ impl Engine {
                 commit_text: ch.to_string(),
                 consumed: false,
                 auto_restored: false,
+                macro_expanded: false,
+                adaptive_delay_ms: 0,
+            };
+        }
+
+        // Any non-delimiter key cancels pending reopen state
+        self.reopen_state = None;
+
+        // Developer-Aware: camelCase identifier detection (e.g. "parse" + 'S' -> "parseS")
+        // If an uppercase letter arrives after lowercase letters, restore raw prefix if it had diacritics
+        // and lock English mode for this identifier.
+        let prev_has_lower = self.raw_strokes.chars().any(|c| c.is_ascii_lowercase());
+        if prev_has_lower && ch.is_ascii_uppercase() {
+            let old_word = self.current_word.clone();
+            self.raw_strokes.push(ch);
+            self.current_word = self.raw_strokes.clone();
+            self.english_locked = true;
+            let (backspaces, commit_text) = compare_and_split_strings(&old_word, &self.current_word);
+            return EngineOutput {
+                backspaces,
+                commit_text,
+                consumed: true,
+                auto_restored: true,
                 macro_expanded: false,
                 adaptive_delay_ms: 0,
             };
@@ -1020,5 +1125,95 @@ mod tests {
         }
         engine.process_key('a', 0.0);
         assert!(engine.undo_macro_expansion().is_none());
+    }
+
+    #[test]
+    fn test_reopen_previous_word_on_backspace() {
+        let mut engine = Engine::new(EngineConfig {
+            method: InputMethod::Telex,
+            ..EngineConfig::default()
+        });
+
+        // Test 1: User types 'tieeng' (tiêng) + space -> "tiêng "
+        for ch in ['t', 'i', 'e', 'e', 'n', 'g', ' '] {
+            engine.process_key(ch, 0.0);
+        }
+        assert_eq!(engine.current_word(), "");
+
+        // User realizes they forgot tone and presses Backspace immediately!
+        let reopened = engine.handle_backspace();
+        assert!(reopened);
+        assert_eq!(engine.current_word(), "tiêng");
+        assert_eq!(engine.raw_strokes(), "tieeng");
+
+        // Now user types 's' -> dynamically becomes 'tiếng'!
+        let out = engine.process_key('s', 0.0);
+        assert!(out.consumed);
+        assert_eq!(engine.current_word(), "tiếng");
+        assert_eq!(out.commit_text, "ếng");
+
+        // Finish the word with space
+        engine.process_key(' ', 0.0);
+
+        // Test 2: User types 'xin' + space -> "xin "
+        for ch in ['x', 'i', 'n', ' '] {
+            engine.process_key(ch, 0.0);
+        }
+        let reopened2 = engine.handle_backspace();
+        assert!(reopened2);
+        assert_eq!(engine.current_word(), "xin");
+
+        // Types 'f' -> becomes 'xìn'!
+        let out2 = engine.process_key('f', 0.0);
+        assert!(out2.consumed);
+        assert_eq!(engine.current_word(), "xìn");
+        assert_eq!(out2.commit_text, "ìn");
+    }
+
+    #[test]
+    fn test_undo_to_raw_escape() {
+        let mut engine = Engine::new(EngineConfig {
+            method: InputMethod::Telex,
+            ..EngineConfig::default()
+        });
+
+        // User types 'tieengs' -> becomes 'tiếng'
+        for ch in ['t', 'i', 'e', 'e', 'n', 'g', 's'] {
+            engine.process_key(ch, 0.0);
+        }
+        assert_eq!(engine.current_word(), "tiếng");
+
+        // User hits Escape to undo to raw keys (e.g. they wanted code/test string 'tieengs')
+        let out = engine.undo_to_raw().unwrap();
+        assert_eq!(engine.current_word(), "tieengs");
+        assert_eq!(engine.raw_strokes(), "tieengs");
+        // Replaces "ếng" with "eengs" (3 backspaces)
+        assert_eq!(out.backspaces, 3);
+        assert_eq!(out.commit_text, "eengs");
+    }
+
+    #[test]
+    fn test_developer_camel_case_detection() {
+        let mut engine = Engine::new(EngineConfig {
+            method: InputMethod::Telex,
+            ..EngineConfig::default()
+        });
+
+        // User types 'parse' -> 'parse'
+        for ch in ['p', 'a', 'r', 's', 'e'] {
+            engine.process_key(ch, 0.0);
+        }
+
+        // Now user types uppercase 'S' (camelCase transition: parse + S)
+        let out = engine.process_key('S', 0.0);
+        assert!(out.consumed);
+        assert_eq!(engine.current_word(), "parseS");
+
+        // Subsequent letters like 'y', 'l', 'l', 'a', 'b', 'l', 'e' pass untouched (no accidental Vietnamese marks!)
+        for ch in ['y', 'l', 'l', 'a', 'b', 'l', 'e'] {
+            let out_char = engine.process_key(ch, 0.0);
+            assert!(!out_char.consumed);
+        }
+        assert_eq!(engine.current_word(), "parseSyllable");
     }
 }

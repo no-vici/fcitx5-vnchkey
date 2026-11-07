@@ -137,4 +137,27 @@ Trong tiếng Việt, vần `uo` đi với phím râu thông thường sẽ bi�
 3. **Tự Động Chuẩn Hóa Khi Lưu (Auto Clean-up on Save)**:
    - Trước khi ghi xuống tệp `vnchkey-macro-table.conf`, hàm `save_macros` luôn tự động loại bỏ trùng lặp và chuốt sạch khoảng trắng thừa, đảm bảo tệp cấu hình của người dùng luôn tinh gọn và an toàn 100%.
 
+---
+
+## 8. Các Tiện Ích Gõ Hiện Đại (Next-Gen Typing Innovations)
+
+Kế thừa các nghiên cứu và kinh nghiệm thực chiến từ các bộ gõ tiên tiến (Dokey của Đỗ Huy Toàn, Vikey của Tony Dinh, Vietfox):
+
+### 8.1. Hồi Sinh Từ Trước Sau Phím Space (Reopen Previous Word on Backspace)
+- **Vấn đề thực tế**: Người dùng gõ xong chữ cái, theo thói quen gõ phím cách (`tiêng `) rồi mới nhận ra quên bỏ dấu sắc. Ở các bộ gõ truyền thống, chữ đã bị chốt (commit) và người dùng buộc phải bấm xóa hết cả chữ để gõ lại từ đầu.
+- **Giải pháp của vnchKey**: Khi một từ kết thúc bằng phím cách duy nhất, engine lưu trạng thái từ vào bộ nhớ đệm `reopen_state`. Nếu phím kế tiếp ngay sau là `Backspace`, từ trước đó được nạp lại tức thì vào bộ đệm soạn thảo. Người dùng chỉ cần gõ tiếp phím dấu (`s` $\to$ `tiếng`, `f` $\to$ `xìn`) là dấu thanh được đặt vào chính xác!
+
+### 8.2. Hoàn Nguyên Chữ Thô Bằng Phím Escape (Escape to Undo)
+- Khi đang gõ mã lệnh hoặc từ tiếng Anh lạ mà bộ gõ vô tình biến thành tiếng Việt (ví dụ `tieengs` $\to$ `tiếng`), người dùng chỉ cần nhấn phím **`Escape`**.
+- Engine tự động xóa phần chữ tiếng Việt bằng Micro-Diff và thế lại chính xác chuỗi phím thô đã gõ (`tieengs`), đồng thời khóa chế độ tiếng Anh cho từ này để người dùng tiếp tục gõ mà không bị biến đổi lại.
+
+### 8.3. Nhận Diện Mã Lập Trình Thông Minh (Developer-Aware Mode)
+- **Nhận diện chuyển tiếp camelCase / PascalCase**: Khi một chữ hoa xuất hiện ngay sau các chữ thường (ví dụ `parse` + `S` $\to$ `parseS`), engine tự động nhận diện đây là tên biến lập trình, hoàn nguyên các dấu phụ nếu có ở phần tiền tố và khóa chế độ tiếng Anh cho toàn bộ định danh.
+- **Từ điển công nghệ mở rộng**: Bổ sung sẵn hàng loạt công cụ lập trình và DevOps phổ biến (`npm`, `cargo`, `docker`, `pacman`, `makepkg`, `k8s`, `kubectl`, `postgres`, `redis`, `nextjs`, `tailwind`, `prisma`, `vitest`, `wasm`...).
+
+### 8.4. Macro Biến Động Ngày/Giờ & Tìm Kiếm Nhanh
+- Cho phép sử dụng các biến động thời gian thực trong bảng gõ tắt: `$DATE` (ngày hiện tại `DD/MM/YYYY`), `$TIME` (giờ hiện tại `HH:MM`), `$NOW` / `$DATETIME` (ngày và giờ), `$YEAR` (năm).
+- Hỗ trợ thanh tìm kiếm trực quan (`🔍`) trong Tab Macros của `vnchkey-settings` giúp người dùng lọc nhanh hàng trăm từ viết tắt chỉ trong tích tắc.
+
+
 

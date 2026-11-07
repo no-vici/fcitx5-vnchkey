@@ -813,6 +813,35 @@ void VnchkeyEngine::keyEvent(const fcitx::InputMethodEntry &entry, fcitx::KeyEve
             keyEvent.filterAndAccept();
             return;
         }
+
+        // Direct Mode: revert active word to raw typed strokes (Escape to Undo - Dokey style)
+        size_t esc_bs = 0;
+        char* esc_commit = nullptr;
+        if (fcitx5_vnchkey_undo_escape(ctx, &esc_bs, &esc_commit)) {
+            if (ic) {
+                if (esc_bs > 0) {
+                    if (ic->capabilityFlags().test(fcitx::CapabilityFlag::SurroundingText) &&
+                        ic->surroundingText().isValid()) {
+                        ic->deleteSurroundingText(-static_cast<int>(esc_bs), esc_bs);
+                    } else {
+                        is_forwarding_ = true;
+                        for (size_t i = 0; i < esc_bs; ++i) {
+                            ic->forwardKey(fcitx::Key(FcitxKey_BackSpace));
+                        }
+                        is_forwarding_ = false;
+                    }
+                }
+                if (esc_commit && esc_commit[0] != '\0') {
+                    ic->commitString(esc_commit);
+                }
+            }
+            if (esc_commit) {
+                fcitx5_vnchkey_free_string(esc_commit);
+            }
+            keyEvent.filterAndAccept();
+            return;
+        }
+
         fcitx5_vnchkey_reset(ctx);
         return;
     }

@@ -30,6 +30,7 @@ pub struct SettingsApp {
     // Form editing states
     new_dict_word: String,
     dict_search: String,
+    macro_search: String,
 
     // Applications page state
     selected_app_idx: Option<usize>,
@@ -110,6 +111,7 @@ impl SettingsApp {
             status_message: None,
             new_dict_word: String::new(),
             dict_search: String::new(),
+            macro_search: String::new(),
             selected_app_idx,
             app_search: String::new(),
             show_add_app_dialog: false,
@@ -1322,68 +1324,15 @@ impl SettingsApp {
             ui.add_space(20.0);
             ui.checkbox(&mut self.config.capitalize_macro, "Viết hoa thông minh (Capitalize Macro)");
         });
-        ui.add_space(12.0);
+        ui.add_space(6.0);
+        ui.label(
+            egui::RichText::new("💡 Mẹo: Hỗ trợ biến động ngày giờ như $DATE (ngày), $TIME (giờ), $NOW (ngày giờ), $YEAR trong nội dung thay thế.")
+                .color(egui::Color32::from_rgb(0xa6, 0xad, 0xc8))
+                .size(11.5),
+        );
+        ui.add_space(8.0);
 
-        // Phát hiện phím tắt trùng lặp
-        let mut key_counts: std::collections::HashMap<String, usize> = std::collections::HashMap::new();
-        for (k, _) in &self.macros {
-            let norm = k.trim().to_lowercase();
-            if !norm.is_empty() {
-                *key_counts.entry(norm).or_insert(0) += 1;
-            }
-        }
-        let duplicate_count = key_counts.values().filter(|&&c| c > 1).count();
-
-        if duplicate_count > 0 {
-            ui.horizontal(|ui| {
-                ui.label(
-                    egui::RichText::new(format!("⚠️ Phát hiện {} phím tắt bị trùng lặp!", duplicate_count))
-                        .color(egui::Color32::from_rgb(0xf3, 0x8b, 0xa8))
-                        .strong(),
-                );
-                if ui.button(egui::RichText::new("🧹 Dọn Dẹp Trùng Lặp").color(egui::Color32::from_rgb(0xfa, 0xb3, 0x87))).clicked() {
-                    let removed = ConfigManager::deduplicate_macros(&mut self.macros);
-                    self.status_message = Some((format!("Đã loại bỏ {} macro bị trùng lặp!", removed), true));
-                }
-            });
-            ui.add_space(6.0);
-        }
-
-        egui::Frame::new()
-            .fill(egui::Color32::from_rgb(0x18, 0x18, 0x25))
-            .stroke(egui::Stroke::new(1.0_f32, egui::Color32::from_rgb(0x28, 0x2a, 0x36)))
-            .corner_radius(egui::CornerRadius::same(8))
-            .inner_margin(egui::Margin::same(12))
-            .show(ui, |ui| {
-                ui.horizontal(|ui| {
-                    ui.label(egui::RichText::new("Từ Viết Tắt (Shortcut)").strong().color(egui::Color32::from_rgb(0x89, 0xb4, 0xfa)));
-                    ui.add_space(120.0);
-                    ui.label(egui::RichText::new("Nội Dung Thay Thế (Expansion)").strong().color(egui::Color32::from_rgb(0x89, 0xb4, 0xfa)));
-                });
-                ui.separator();
-
-                let mut to_remove = None;
-                for (idx, (k, v)) in self.macros.iter_mut().enumerate() {
-                    let is_dup = !k.trim().is_empty() && key_counts.get(&k.trim().to_lowercase()).copied().unwrap_or(0) > 1;
-                    ui.horizontal(|ui| {
-                        ui.add(egui::TextEdit::singleline(k).desired_width(160.0));
-                        ui.add_space(10.0);
-                        ui.add(egui::TextEdit::singleline(v).desired_width(260.0));
-                        if is_dup {
-                            ui.label(egui::RichText::new("⚠️ Trùng phím!").color(egui::Color32::from_rgb(0xf3, 0x8b, 0xa8)).size(11.0));
-                        }
-                        if ui.button("🗑").clicked() {
-                            to_remove = Some(idx);
-                        }
-                    });
-                }
-
-                if let Some(idx) = to_remove {
-                    self.macros.remove(idx);
-                }
-            });
-
-        ui.add_space(10.0);
+        // Thanh công cụ: Thêm viết tắt, Nạp mẫu Sài Gòn Xưa, Tìm kiếm macro
         ui.horizontal(|ui| {
             if ui.button("+ Thêm Viết Tắt").clicked() {
                 self.macros.push(("".to_string(), "".to_string()));
@@ -1416,7 +1365,87 @@ impl SettingsApp {
                     ));
                 }
             }
+
+            ui.add_space(16.0);
+            ui.add(
+                egui::TextEdit::singleline(&mut self.macro_search)
+                    .hint_text("🔍 Tìm từ viết tắt hoặc nội dung...")
+                    .desired_width(220.0),
+            );
+            if !self.macro_search.is_empty() && ui.button("✖").clicked() {
+                self.macro_search.clear();
+            }
         });
+        ui.add_space(8.0);
+
+        // Phát hiện phím tắt trùng lặp
+        let mut key_counts: std::collections::HashMap<String, usize> = std::collections::HashMap::new();
+        for (k, _) in &self.macros {
+            let norm = k.trim().to_lowercase();
+            if !norm.is_empty() {
+                *key_counts.entry(norm).or_insert(0) += 1;
+            }
+        }
+        let duplicate_count = key_counts.values().filter(|&&c| c > 1).count();
+
+        if duplicate_count > 0 {
+            ui.horizontal(|ui| {
+                ui.label(
+                    egui::RichText::new(format!("⚠️ Phát hiện {} phím tắt bị trùng lặp!", duplicate_count))
+                        .color(egui::Color32::from_rgb(0xf3, 0x8b, 0xa8))
+                        .strong(),
+                );
+                if ui.button(egui::RichText::new("🧹 Dọn Dẹp Trùng Lặp").color(egui::Color32::from_rgb(0xfa, 0xb3, 0x87))).clicked() {
+                    let removed = ConfigManager::deduplicate_macros(&mut self.macros);
+                    self.status_message = Some((format!("Đã loại bỏ {} macro bị trùng lặp!", removed), true));
+                }
+            });
+            ui.add_space(6.0);
+        }
+
+        let search_query = self.macro_search.trim().to_lowercase();
+
+        egui::Frame::new()
+            .fill(egui::Color32::from_rgb(0x18, 0x18, 0x25))
+            .stroke(egui::Stroke::new(1.0_f32, egui::Color32::from_rgb(0x28, 0x2a, 0x36)))
+            .corner_radius(egui::CornerRadius::same(8))
+            .inner_margin(egui::Margin::same(12))
+            .show(ui, |ui| {
+                ui.horizontal(|ui| {
+                    ui.label(egui::RichText::new("Từ Viết Tắt (Shortcut)").strong().color(egui::Color32::from_rgb(0x89, 0xb4, 0xfa)));
+                    ui.add_space(120.0);
+                    ui.label(egui::RichText::new("Nội Dung Thay Thế (Expansion)").strong().color(egui::Color32::from_rgb(0x89, 0xb4, 0xfa)));
+                });
+                ui.separator();
+
+                let mut to_remove = None;
+                for (idx, (k, v)) in self.macros.iter_mut().enumerate() {
+                    if !search_query.is_empty() {
+                        let k_match = k.to_lowercase().contains(&search_query);
+                        let v_match = v.to_lowercase().contains(&search_query);
+                        if !k_match && !v_match {
+                            continue;
+                        }
+                    }
+
+                    let is_dup = !k.trim().is_empty() && key_counts.get(&k.trim().to_lowercase()).copied().unwrap_or(0) > 1;
+                    ui.horizontal(|ui| {
+                        ui.add(egui::TextEdit::singleline(k).desired_width(160.0));
+                        ui.add_space(10.0);
+                        ui.add(egui::TextEdit::singleline(v).desired_width(260.0));
+                        if is_dup {
+                            ui.label(egui::RichText::new("⚠️ Trùng phím!").color(egui::Color32::from_rgb(0xf3, 0x8b, 0xa8)).size(11.0));
+                        }
+                        if ui.button("🗑").clicked() {
+                            to_remove = Some(idx);
+                        }
+                    });
+                }
+
+                if let Some(idx) = to_remove {
+                    self.macros.remove(idx);
+                }
+            });
     }
 
     // 5. Dictionary Page
