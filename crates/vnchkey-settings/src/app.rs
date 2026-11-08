@@ -525,13 +525,19 @@ impl SettingsApp {
         ui.add_space(8.0);
 
         ui.horizontal(|ui| {
-            ui.label(egui::RichText::new("Output Charset").size(13.0));
+            ui.label(egui::RichText::new("Bảng mã xuất (Output Charset)").size(13.0));
             ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                let current_label = if self.config.output_charset.contains("Composite") || self.config.output_charset.contains("Tổ hợp") {
+                    "Unicode Tổ Hợp (NFD / XWayland)"
+                } else {
+                    "Unicode Dựng Sẵn (NFC / Chuẩn)"
+                };
                 egui::ComboBox::from_id_salt("output_charset")
-                    .selected_text("Unicode (Standard)")
-                    .width(200.0)
+                    .selected_text(current_label)
+                    .width(220.0)
                     .show_ui(ui, |ui| {
-                        ui.selectable_value(&mut self.config.output_charset, "Unicode".to_string(), "Unicode (Standard)");
+                        ui.selectable_value(&mut self.config.output_charset, "Unicode".to_string(), "Unicode Dựng Sẵn (NFC / Chuẩn)");
+                        ui.selectable_value(&mut self.config.output_charset, "Unicode Composite".to_string(), "Unicode Tổ Hợp (NFD / XWayland)");
                     });
             });
         });

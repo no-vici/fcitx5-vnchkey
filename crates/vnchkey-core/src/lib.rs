@@ -19,7 +19,10 @@ pub mod vni;
 
 pub use auto_restore::{EnglishAutoRestore, DEFAULT_ENGLISH_WORDS};
 pub use casing::{CaseTracker, CasingStyle};
-pub use engine::{Engine, EngineConfig, EngineOutput, InputMethod, ToneStyle, W2UType};
+pub use engine::{
+    to_composite_unicode, Charset, Engine, EngineConfig, EngineOutput, InputMethod, ToneStyle,
+    W2UType,
+};
 pub use macros::MacroTable;
 pub use syllable_parser::{parse_syllable, ParsedSyllable, ToneMark};
 pub use telex::TelexEngine;

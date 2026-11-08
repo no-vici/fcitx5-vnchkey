@@ -33,6 +33,15 @@ pub enum ToneStyle {
     Classic,
 }
 
+/// Output character set encoding standard.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Charset {
+    /// Precomposed Unicode (NFC / Dựng sẵn) - default standard
+    Unicode,
+    /// Decomposed Unicode (NFD / Tổ hợp) - for legacy apps, XWayland graphics editors
+    UnicodeComposite,
+}
+
 /// Engine configuration options.
 #[derive(Debug, Clone)]
 pub struct EngineConfig {
@@ -40,6 +49,8 @@ pub struct EngineConfig {
     pub method: InputMethod,
     /// Preferred tone placement convention
     pub tone_style: ToneStyle,
+    /// Output character set (Unicode NFC vs Unicode Composite NFD)
+    pub charset: Charset,
     /// Automatically restore English keywords and non-Vietnamese words (Restore English)
     pub auto_restore_english: bool,
     /// Enable Chánh Tả spell checking using built-in ~6,750 Vietnamese dictionary & phonology rules
@@ -65,6 +76,7 @@ impl Default for EngineConfig {
         Self {
             method: InputMethod::Auto,
             tone_style: ToneStyle::Modern,
+            charset: Charset::Unicode,
             auto_restore_english: true,
             spell_check: true,
             enable_dictionary: true,
@@ -114,6 +126,8 @@ pub struct Engine {
     last_macro: Option<LastMacroExpansion>,
     suppressed_macro: Option<String>,
     reopen_state: Option<ReopenWordState>,
+    last_delimiter: Option<char>,
+    last_delimiter_spaced: bool,
 }
 
 /// Saved state of the previous word completed with a single Space,
@@ -163,7 +177,181 @@ pub fn is_snappable_punctuation(ch: char) -> bool {
     matches!(ch, ',' | '.' | '!' | '?' | ';' | ':' | ')' | ']' | '}' | '>')
 }
 
+/// Converts precomposed Vietnamese characters to decomposed Unicode (NFD / Unicode Tổ Hợp).
+pub fn to_composite_unicode(s: &str) -> String {
+    let mut out = String::with_capacity(s.len() + 8);
+    for ch in s.chars() {
+        match ch {
+            'á' => out.push_str("a\u{0301}"),
+            'à' => out.push_str("a\u{0300}"),
+            'ả' => out.push_str("a\u{0309}"),
+            'ã' => out.push_str("a\u{0303}"),
+            'ạ' => out.push_str("a\u{0323}"),
+            'â' => out.push_str("a\u{0302}"),
+            'ấ' => out.push_str("a\u{0302}\u{0301}"),
+            'ầ' => out.push_str("a\u{0302}\u{0300}"),
+            'ẩ' => out.push_str("a\u{0302}\u{0309}"),
+            'ẫ' => out.push_str("a\u{0302}\u{0303}"),
+            'ậ' => out.push_str("a\u{0302}\u{0323}"),
+            'ă' => out.push_str("a\u{0306}"),
+            'ắ' => out.push_str("a\u{0306}\u{0301}"),
+            'ằ' => out.push_str("a\u{0306}\u{0300}"),
+            'ẳ' => out.push_str("a\u{0306}\u{0309}"),
+            'ẵ' => out.push_str("a\u{0306}\u{0303}"),
+            'ặ' => out.push_str("a\u{0306}\u{0323}"),
+
+            'Á' => out.push_str("A\u{0301}"),
+            'À' => out.push_str("A\u{0300}"),
+            'Ả' => out.push_str("A\u{0309}"),
+            'Ã' => out.push_str("A\u{0303}"),
+            'Ạ' => out.push_str("A\u{0323}"),
+            'Â' => out.push_str("A\u{0302}"),
+            'Ấ' => out.push_str("A\u{0302}\u{0301}"),
+            'Ầ' => out.push_str("A\u{0302}\u{0300}"),
+            'Ẩ' => out.push_str("A\u{0302}\u{0309}"),
+            'Ẫ' => out.push_str("A\u{0302}\u{0303}"),
+            'Ậ' => out.push_str("A\u{0302}\u{0323}"),
+            'Ă' => out.push_str("A\u{0306}"),
+            'Ắ' => out.push_str("A\u{0306}\u{0301}"),
+            'Ằ' => out.push_str("A\u{0306}\u{0300}"),
+            'Ẳ' => out.push_str("A\u{0306}\u{0309}"),
+            'Ẵ' => out.push_str("A\u{0306}\u{0303}"),
+            'Ặ' => out.push_str("A\u{0306}\u{0323}"),
+
+            'é' => out.push_str("e\u{0301}"),
+            'è' => out.push_str("e\u{0300}"),
+            'ẻ' => out.push_str("e\u{0309}"),
+            'ẽ' => out.push_str("e\u{0303}"),
+            'ẹ' => out.push_str("e\u{0323}"),
+            'ê' => out.push_str("e\u{0302}"),
+            'ế' => out.push_str("e\u{0302}\u{0301}"),
+            'ề' => out.push_str("e\u{0302}\u{0300}"),
+            'ể' => out.push_str("e\u{0302}\u{0309}"),
+            'ễ' => out.push_str("e\u{0302}\u{0303}"),
+            'ệ' => out.push_str("e\u{0302}\u{0323}"),
+
+            'É' => out.push_str("E\u{0301}"),
+            'È' => out.push_str("E\u{0300}"),
+            'Ẻ' => out.push_str("E\u{0309}"),
+            'Ẽ' => out.push_str("E\u{0303}"),
+            'Ẹ' => out.push_str("E\u{0323}"),
+            'Ê' => out.push_str("E\u{0302}"),
+            'Ế' => out.push_str("E\u{0302}\u{0301}"),
+            'Ề' => out.push_str("E\u{0302}\u{0300}"),
+            'Ể' => out.push_str("E\u{0302}\u{0309}"),
+            'Ễ' => out.push_str("E\u{0302}\u{0303}"),
+            'Ệ' => out.push_str("E\u{0302}\u{0323}"),
+
+            'í' => out.push_str("i\u{0301}"),
+            'ì' => out.push_str("i\u{0300}"),
+            'ỉ' => out.push_str("i\u{0309}"),
+            'ĩ' => out.push_str("i\u{0303}"),
+            'ị' => out.push_str("i\u{0323}"),
+
+            'Í' => out.push_str("I\u{0301}"),
+            'Ì' => out.push_str("I\u{0300}"),
+            'Ỉ' => out.push_str("I\u{0309}"),
+            'Ĩ' => out.push_str("I\u{0303}"),
+            'Ị' => out.push_str("I\u{0323}"),
+
+            'ó' => out.push_str("o\u{0301}"),
+            'ò' => out.push_str("o\u{0300}"),
+            'ỏ' => out.push_str("o\u{0309}"),
+            'õ' => out.push_str("o\u{0303}"),
+            'ọ' => out.push_str("o\u{0323}"),
+            'ô' => out.push_str("o\u{0302}"),
+            'ố' => out.push_str("o\u{0302}\u{0301}"),
+            'ồ' => out.push_str("o\u{0302}\u{0300}"),
+            'ổ' => out.push_str("o\u{0302}\u{0309}"),
+            'ỗ' => out.push_str("o\u{0302}\u{0303}"),
+            'ộ' => out.push_str("o\u{0302}\u{0323}"),
+            'ơ' => out.push_str("o\u{031B}"),
+            'ớ' => out.push_str("o\u{031B}\u{0301}"),
+            'ờ' => out.push_str("o\u{031B}\u{0300}"),
+            'ở' => out.push_str("o\u{031B}\u{0309}"),
+            'ỡ' => out.push_str("o\u{031B}\u{0303}"),
+            'ợ' => out.push_str("o\u{031B}\u{0323}"),
+
+            'Ó' => out.push_str("O\u{0301}"),
+            'Ò' => out.push_str("O\u{0300}"),
+            'Ỏ' => out.push_str("O\u{0309}"),
+            'Õ' => out.push_str("O\u{0303}"),
+            'Ọ' => out.push_str("O\u{0323}"),
+            'Ô' => out.push_str("O\u{0302}"),
+            'Ố' => out.push_str("O\u{0302}\u{0301}"),
+            'Ồ' => out.push_str("O\u{0302}\u{0300}"),
+            'Ổ' => out.push_str("O\u{0302}\u{0309}"),
+            'Ỗ' => out.push_str("O\u{0302}\u{0303}"),
+            'Ộ' => out.push_str("O\u{0302}\u{0323}"),
+            'Ơ' => out.push_str("O\u{031B}"),
+            'Ớ' => out.push_str("O\u{031B}\u{0301}"),
+            'Ờ' => out.push_str("O\u{031B}\u{0300}"),
+            'Ở' => out.push_str("O\u{031B}\u{0309}"),
+            'Ỡ' => out.push_str("O\u{031B}\u{0303}"),
+            'Ợ' => out.push_str("O\u{031B}\u{0323}"),
+
+            'ú' => out.push_str("u\u{0301}"),
+            'ù' => out.push_str("u\u{0300}"),
+            'ủ' => out.push_str("u\u{0309}"),
+            'ũ' => out.push_str("u\u{0303}"),
+            'ụ' => out.push_str("u\u{0323}"),
+            'ư' => out.push_str("u\u{031B}"),
+            'ứ' => out.push_str("u\u{031B}\u{0301}"),
+            'ừ' => out.push_str("u\u{031B}\u{0300}"),
+            'ử' => out.push_str("u\u{031B}\u{0309}"),
+            'ữ' => out.push_str("u\u{031B}\u{0303}"),
+            'ự' => out.push_str("u\u{031B}\u{0323}"),
+
+            'Ú' => out.push_str("U\u{0301}"),
+            'Ù' => out.push_str("U\u{0300}"),
+            'Ủ' => out.push_str("U\u{0309}"),
+            'Ũ' => out.push_str("U\u{0303}"),
+            'Ụ' => out.push_str("U\u{0323}"),
+            'Ư' => out.push_str("U\u{031B}"),
+            'Ứ' => out.push_str("U\u{031B}\u{0301}"),
+            'Ừ' => out.push_str("U\u{031B}\u{0300}"),
+            'Ử' => out.push_str("U\u{031B}\u{0309}"),
+            'Ữ' => out.push_str("U\u{031B}\u{0303}"),
+            'Ự' => out.push_str("U\u{031B}\u{0323}"),
+
+            'ý' => out.push_str("y\u{0301}"),
+            'ỳ' => out.push_str("y\u{0300}"),
+            'ỷ' => out.push_str("y\u{0309}"),
+            'ỹ' => out.push_str("y\u{0303}"),
+            'ỵ' => out.push_str("y\u{0323}"),
+
+            'Ý' => out.push_str("Y\u{0301}"),
+            'Ỳ' => out.push_str("Y\u{0300}"),
+            'Ỷ' => out.push_str("Y\u{0309}"),
+            'Ỹ' => out.push_str("Y\u{0303}"),
+            'Ỵ' => out.push_str("Y\u{0323}"),
+
+            other => out.push(other),
+        }
+    }
+    out
+}
+
 impl Engine {
+    /// Formats an outgoing string according to the configured output charset.
+    pub fn format_commit(&self, text: &str) -> String {
+        if self.config.charset == Charset::UnicodeComposite {
+            to_composite_unicode(text)
+        } else {
+            text.to_string()
+        }
+    }
+
+    /// Sets the output character set encoding (Unicode NFC vs Unicode Composite NFD).
+    pub fn set_charset(&mut self, charset: Charset) {
+        self.config.charset = charset;
+    }
+
+    /// Returns the current output character set.
+    pub fn charset(&self) -> Charset {
+        self.config.charset
+    }
+
     /// Creates a new Engine with the specified configuration.
     pub fn new(config: EngineConfig) -> Self {
         Self {
@@ -187,6 +375,8 @@ impl Engine {
             last_macro: None,
             suppressed_macro: None,
             reopen_state: None,
+            last_delimiter: None,
+            last_delimiter_spaced: false,
         }
     }
 
@@ -613,8 +803,47 @@ impl Engine {
             // For any other key, macro undo state is cleared
         }
 
+        // Developer-Aware: Underscore code identifier handling (e.g. _variable, __init__, snake_case)
+        if ch == '_' {
+            self.reopen_state = None;
+            self.last_delimiter = Some('_');
+            self.last_delimiter_spaced = false;
+
+            if self.current_word.is_empty() {
+                self.raw_strokes.push('_');
+                self.current_word.push('_');
+                self.english_locked = true;
+                return EngineOutput {
+                    backspaces: 0,
+                    commit_text: self.format_commit("_"),
+                    consumed: false,
+                    auto_restored: false,
+                    macro_expanded: false,
+                    adaptive_delay_ms: 0,
+                };
+            } else {
+                // In the middle of an identifier: if prefix had Vietnamese diacritics, revert prefix to raw strokes
+                let old_word = self.current_word.clone();
+                self.raw_strokes.push('_');
+                self.current_word = self.raw_strokes.clone();
+                self.english_locked = true;
+                let (backspaces, commit_text) = compare_and_split_strings(&old_word, &self.current_word);
+                return EngineOutput {
+                    backspaces,
+                    commit_text: self.format_commit(&commit_text),
+                    consumed: true,
+                    auto_restored: true,
+                    macro_expanded: false,
+                    adaptive_delay_ms: 0,
+                };
+            }
+        }
+
         // Word delimiter check (Space, Enter, Punctuation)
         if !ch.is_alphanumeric() && !is_bracket {
+            self.last_delimiter = Some(ch);
+            self.last_delimiter_spaced = ch == ' ';
+
             if !self.current_word.is_empty() {
                 // 1. Macro expansion check (suppressed if this word was just reverted via Backspace)
                 let is_suppressed = self.suppressed_macro.as_deref() == Some(&self.current_word);
@@ -709,6 +938,12 @@ impl Engine {
 
         // Any non-delimiter key cancels pending reopen state
         self.reopen_state = None;
+
+        // Developer-Aware: Chained dot accessor detection (e.g. "db.collection.findOne")
+        // If an alphanumeric key begins immediately after a dot without whitespace, lock English mode
+        if self.current_word.is_empty() && self.last_delimiter == Some('.') && !self.last_delimiter_spaced {
+            self.english_locked = true;
+        }
 
         // Developer-Aware: camelCase identifier detection (e.g. "parse" + 'S' -> "parseS")
         // If an uppercase letter arrives after lowercase letters, restore raw prefix if it had diacritics
@@ -994,7 +1229,7 @@ impl Engine {
 
         EngineOutput {
             backspaces,
-            commit_text,
+            commit_text: self.format_commit(&commit_text),
             consumed,
             auto_restored,
             macro_expanded: false,
@@ -1513,5 +1748,75 @@ mod tests {
         });
         assert_eq!(auto_engine.apply_accent_to_selection("nhanh", '1'), Some("nhánh".to_string()));
         assert_eq!(auto_engine.apply_accent_to_selection("nhanh", '2'), Some("nhành".to_string()));
+    }
+
+    #[test]
+    fn test_developer_underscore_identifiers() {
+        let mut engine = Engine::new(EngineConfig {
+            method: InputMethod::Telex,
+            ..EngineConfig::default()
+        });
+
+        // Typing _variable: leading underscore locks English mode
+        engine.process_key('_', 0.0);
+        for ch in ['v', 'a', 'r', 'i', 'a', 'b', 'l', 'e'] {
+            let out = engine.process_key(ch, 0.0);
+            assert!(!out.consumed);
+        }
+        assert_eq!(engine.current_word(), "_variable");
+
+        // Typing space resets buffer
+        engine.process_key(' ', 0.0);
+
+        // Typing snake_case: user_id
+        for ch in ['u', 's', 'e', 'r'] {
+            engine.process_key(ch, 0.0);
+        }
+        let _out_under = engine.process_key('_', 0.0);
+        assert_eq!(engine.current_word(), "user_");
+        for ch in ['i', 'd'] {
+            let out = engine.process_key(ch, 0.0);
+            assert!(!out.consumed);
+        }
+        assert_eq!(engine.current_word(), "user_id");
+    }
+
+    #[test]
+    fn test_developer_chained_dot_accessors() {
+        let mut engine = Engine::new(EngineConfig {
+            method: InputMethod::Telex,
+            ..EngineConfig::default()
+        });
+
+        // Type 'db.'
+        for ch in ['d', 'b', '.'] {
+            engine.process_key(ch, 0.0);
+        }
+
+        // Immediately type 'collection' without space: automatically locked as English!
+        for ch in ['c', 'o', 'l', 'l', 'e', 'c', 't', 'i', 'o', 'n'] {
+            let out = engine.process_key(ch, 0.0);
+            assert!(!out.consumed);
+        }
+        assert_eq!(engine.current_word(), "collection");
+    }
+
+    #[test]
+    fn test_composite_unicode_charset() {
+        assert_eq!(to_composite_unicode("tiếng"), "tie\u{0302}\u{0301}ng");
+        assert_eq!(to_composite_unicode("Việt Nam"), "Vie\u{0302}\u{0323}t Nam");
+
+        let mut engine = Engine::new(EngineConfig {
+            method: InputMethod::Telex,
+            charset: Charset::UnicodeComposite,
+            ..EngineConfig::default()
+        });
+
+        for ch in ['t', 'i', 'e', 'e', 'n', 'g'] {
+            engine.process_key(ch, 0.0);
+        }
+        let out_s = engine.process_key('s', 0.0);
+        // The output commit on 's' must be in Unicode Tổ Hợp (NFD)
+        assert!(out_s.commit_text.contains('\u{0302}') || out_s.commit_text.contains('\u{0301}'));
     }
 }

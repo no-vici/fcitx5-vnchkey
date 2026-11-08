@@ -697,6 +697,8 @@ void VnchkeyEngine::loadConfig() {
         fcitx5_vnchkey_set_tone_style(ctx, config_modern_style_ ? 0 : 1);
         fcitx5_vnchkey_set_bracket_transform(ctx, config_bracket_transform_);
         fcitx5_vnchkey_set_w2u(ctx, config_w2u_);
+        uint32_t charset_code = (config_charset_.find("Composite") != std::string::npos || config_charset_.find("Tổ hợp") != std::string::npos) ? 1 : 0;
+        fcitx5_vnchkey_set_charset(ctx, charset_code);
     }
 }
 
@@ -735,7 +737,7 @@ void VnchkeyEngine::saveConfig() {
             out << l << "\n";
         }
         out << "InputMethod=" << config_method_ << "\n";
-        out << "OutputCharset=Unicode\n";
+        out << "OutputCharset=" << config_charset_ << "\n";
         out << "OutputMode=" << config_output_mode_ << "\n";
         out << "RememberAppMode=" << (config_remember_app_mode_ ? "True" : "False") << "\n";
         out << "PreeditTooltip=" << (config_preedit_tooltip_ ? "True" : "False") << "\n";

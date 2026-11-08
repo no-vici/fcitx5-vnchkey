@@ -243,7 +243,16 @@ impl ConfigManager {
                 if line.is_empty() || line.starts_with('#') {
                     continue;
                 }
-                if let Some((k, v)) = line.split_once('=') {
+                let pair = if let Some(p) = line.split_once('=') {
+                    Some(p)
+                } else if let Some(p) = line.split_once(':') {
+                    Some(p)
+                } else if let Some(p) = line.split_once(';') {
+                    Some(p)
+                } else {
+                    None
+                };
+                if let Some((k, v)) = pair {
                     let key = k.trim().to_string();
                     let norm = key.to_lowercase();
                     if !norm.is_empty() && !seen.contains(&norm) {

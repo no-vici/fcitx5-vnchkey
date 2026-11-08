@@ -55,7 +55,8 @@ impl MacroTable {
         self.entries.clear();
     }
 
-    /// Loads macro definitions from a configuration file (k=v per line).
+    /// Loads macro definitions from a configuration file.
+    /// Supports vnchKey format (k=v), UniKey/EVKey format (k:v), and semicolon format (k;v).
     pub fn load_from_file(&mut self, path: &str) {
         if let Ok(content) = std::fs::read_to_string(path) {
             self.entries.clear();
@@ -64,7 +65,16 @@ impl MacroTable {
                 if line.is_empty() || line.starts_with('#') {
                     continue;
                 }
-                if let Some((k, v)) = line.split_once('=') {
+                let pair = if let Some(p) = line.split_once('=') {
+                    Some(p)
+                } else if let Some(p) = line.split_once(':') {
+                    Some(p)
+                } else if let Some(p) = line.split_once(';') {
+                    Some(p)
+                } else {
+                    None
+                };
+                if let Some((k, v)) = pair {
                     self.insert(k.trim().to_string(), v.trim().to_string());
                 }
             }

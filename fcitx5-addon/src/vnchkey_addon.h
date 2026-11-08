@@ -54,6 +54,7 @@ extern "C" {
     void fcitx5_vnchkey_set_w2u(void* ctx, uint32_t mode);
     void fcitx5_vnchkey_set_tone_style(void* ctx, uint32_t style);
     uint32_t fcitx5_vnchkey_get_tone_style(void* ctx);
+    void fcitx5_vnchkey_set_charset(void* ctx, uint32_t charset);
 
     char* fcitx5_vnchkey_get_current_word(void* ctx);
     char* fcitx5_vnchkey_get_completed_word(void* ctx);

@@ -88,6 +88,18 @@ pub unsafe extern "C" fn fcitx5_vnchkey_reset(ctx: *mut Fcitx5VnchkeyContext) {
     }
 }
 
+/// Sets output character set (0: Unicode NFC, 1: Unicode Composite NFD).
+#[no_mangle]
+pub unsafe extern "C" fn fcitx5_vnchkey_set_charset(ctx: *mut Fcitx5VnchkeyContext, charset: u32) {
+    if !ctx.is_null() {
+        let ctx = &mut *ctx;
+        ctx.engine.set_charset(match charset {
+            1 => vnchkey_core::Charset::UnicodeComposite,
+            _ => vnchkey_core::Charset::Unicode,
+        });
+    }
+}
+
 /// Handles physical Backspace pressed by the user.
 #[no_mangle]
 pub unsafe extern "C" fn fcitx5_vnchkey_handle_backspace(ctx: *mut Fcitx5VnchkeyContext) {

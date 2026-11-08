@@ -92,13 +92,21 @@ Người dùng gõ xong chữ cái, theo thói quen gõ phím cách (`tiêng `) 
 ## 6. Nhận Diện Mã Lập Trình Thông Minh (Developer-Aware Mode)
 
 ### 6.1. Nhận Diện Chuyển Tiếp camelCase / PascalCase
-Trong mã nguồn, các định danh thường được viết dạng `camelCase` (ví dụ `parseString`, `fetchData`). Khi người dùng gõ:
+Trong mã nguồn, các định danh thường được viết dạng `camelCase` hoặc `PascalCase` (ví dụ `parseString`, `ClassName`). Khi người dùng gõ:
 `parse` + `S` $\to$ nếu không có cơ chế bảo vệ, phím `S` sẽ biến `parse` thành chữ tiếng Việt có dấu.
 - **Thuật toán của vnchKey**:
   - Khi một chữ hoa xuất hiện ngay sau một hoặc nhiều chữ thường trong cùng một từ đang soạn thảo, engine tự động nhận diện đây là cú pháp định danh lập trình.
   - Tự động hoàn nguyên các dấu phụ nếu có ở phần tiền tố và khóa chế độ tiếng Anh cho toàn bộ định danh cho tới khi gặp phím phân cách (khoảng trắng, dấu chấm, ngoặc...).
 
-### 6.2. Từ Điển Công Nghệ Mở Rộng
+### 6.2. Tiền Tố Gạch Dưới & Snake Case (`_variable`, `__init__`, `user_id`)
+- **Từ bắt đầu bằng gạch dưới**: Khi gõ ký tự `_` ở đầu từ (ví dụ `_var`, `__init__`), engine lập tức khóa chế độ tiếng Anh (`english_locked = true`), đảm bảo các biến private hay hàm đặc biệt không bị dính dấu tiếng Việt.
+- **Dạng snake_case**: Khi ký tự `_` xuất hiện giữa các chữ cái (ví dụ `user_id`, `parse_string`), engine tự động nhận diện đây là biến mã nguồn, hoàn nguyên dấu phụ nếu có ở tiền tố và bảo toàn định dạng thô.
+
+### 6.3. Truy Xuất Phương Thức / Thuộc Tính Chuỗi Chấm (`db.collection.findOne`)
+- Khi một dấu chấm `.` được gõ ngay sau một định danh mà không có khoảng trắng theo sau (khác với dấu chấm câu trong văn bản tiếng Việt), engine phát hiện đây là chuỗi truy xuất code (chained property/method call).
+- Từ tiếp theo ngay sau dấu chấm tự động được bảo vệ ở chế độ tiếng Anh, triệt tiêu 100% hiện tượng nhảy dấu khi lập trình.
+
+### 6.4. Từ Điển Công Nghệ Mở Rộng
 Tích hợp sẵn danh sách nhận diện hơn 40 công cụ phát triển, framework và lệnh DevOps phổ biến:
 `npm`, `pnpm`, `yarn`, `cargo`, `docker`, `pacman`, `makepkg`, `k8s`, `kubectl`, `postgres`, `redis`, `nextjs`, `tailwind`, `prisma`, `vitest`, `wasm`, `tauri`...
 
@@ -172,6 +180,25 @@ Kế thừa phát kiến xuất sắc của bộ gõ Ngó Sen (`fcitx5-ngosen`),
     - `tieng` + `s` $\to$ `tiếng`
     - Chế độ VNI: `nhanh` + `1` $\to$ `nhánh`, `nước` + `0` $\to$ `nươc`.
   - Nếu phím bấm không phải là phím dấu/mũ hợp lệ (ví dụ gõ chữ `k`), bộ gõ tự động giữ nguyên hành vi chuẩn của hệ thống (gõ đè ký tự mới lên vùng chọn).
+
+---
+
+## 11. Hỗ Trợ Bảng Mã Unicode Tổ Hợp (NFD) & Nhập Liệu Macro Đa Định Dạng
+
+### 11.1. Bảng Mã Unicode Tổ Hợp Sâu (Decomposed Unicode / NFD)
+- **Vấn đề thực tế**: Một số phần mềm đồ họa, thiết kế hoặc ứng dụng cổ điển (Inkscape, Blender bản cũ, một số phần mềm CAD) chạy qua lớp tương thích XWayland thường gặp lỗi hiển thị ô vuông hoặc không tìm kiếm được văn bản tiếng Việt khi dùng Unicode Dựng Sẵn (NFC).
+- **Giải pháp của vnchKey**:
+  - Tích hợp chuẩn mã hóa `Charset::UnicodeComposite` trực tiếp từ lõi `vnchkey-core`.
+  - Hàm `to_composite_unicode` phân tách canonical chính xác toàn bộ nguyên âm có dấu thành nguyên âm cơ sở + ký tự dấu kết hợp (combining diacritics `U+0300`, `U+0301`, `U+0302`, `U+0303`, `U+0306`, `U+0309`, `U+031B`, `U+0323`).
+  - Người dùng có thể dễ dàng chuyển đổi giữa *Unicode Dựng Sẵn (NFC)* và *Unicode Tổ Hợp (NFD)* trực tiếp từ menu cấu hình của `vnchkey-settings`.
+
+### 11.2. Đồng Bộ Macro Đa Nền Tảng (UniKey, EVKey, Ngó Sen, vnchKey)
+- Engine `MacroTable` và giao diện cấu hình tự động nhận diện và phân tích cú pháp của mọi định dạng file gõ tắt phổ biến:
+  - Định dạng vnchKey (`k=v`)
+  - Định dạng UniKey / EVKey (`k:v` hoặc `k;v`)
+  - Định dạng Ngó Sen (`k=v` hoặc `k:v`)
+- Người dùng có thể trực tiếp sao chép các tệp `ukmacro.txt` từ Windows hoặc các bộ gõ khác vào vnchKey mà không cần bất kỳ bước chuyển đổi định dạng thủ công nào.
+
 
 
 
