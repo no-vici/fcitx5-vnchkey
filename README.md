@@ -312,6 +312,8 @@ makepkg -si
 - ⚖️ **[Đánh Giá Khách Quan & So Sánh Kiến Trúc (Benchmark & Landscape Analysis)](docs/BENCHMARK_AND_COMPARISON.md)**: Phân tích so sánh toàn diện và trung thực giữa vnchKey và các bộ gõ hàng đầu trên Linux (Bamboo, UniKey, Lilypad, OpenKey), chỉ ra những điểm mạnh thực sự và những hạn chế cần tiếp tục hoàn thiện.
 - 🎯 **[Đánh Giá Khách Quan & Tiêu Chí Kiểm Định v0.3.0 (State of the Art Assessment)](docs/STATE_OF_THE_ART_ASSESSMENT.md)**: Báo cáo đánh giá mức độ hoàn thiện của vnchKey so với các bộ gõ đương thời và checklist kịch bản kiểm thử thực tế toàn diện trước khi phát hành v0.3.0.
 - 🔬 **[Phân Tích Kỹ Thuật Cơ Chế Non-Preedit UniKey vs Wayland](docs/NON_PREEDIT_WAYLAND_ANALYSIS.md)**: Phân tích chuyên sâu về sự khác biệt kiến trúc xử lý bàn phím giữa Windows và Linux Wayland, nguyên nhân gốc rễ gây lỗi nhảy chữ trên Web DOM và giải pháp toàn diện của vnchKey.
+- 📖 **[Nền Tảng Ngôn Ngữ Học & Âm Vị Học Tiếng Việt](docs/VIETNAMESE_LANGUAGE_SYSTEM.md)**: Cẩm nang chuyên sâu về cấu trúc âm tiết (Onset-Glide-Nucleus-Coda-Tone), quy tắc đặt dấu thanh (Mới vs Cũ), ràng buộc âm cuối tắc và bảng ma trận chuyển đổi vần.
+- ⚡ **[Kiến Trúc Kỹ Thuật Nhập Liệu & Các Đột Phá Công Nghệ](docs/INPUT_ENGINEERING_AND_INNOVATIONS.md)**: Phân tích cơ chế phát phím Micro-Diff, Select-and-Replace cho Web/Electron, hồi sinh từ sau phím cách, Escape to Undo, nhận diện camelCase và hệ thống Macro động theo múi giờ địa phương.
 
 ---
 

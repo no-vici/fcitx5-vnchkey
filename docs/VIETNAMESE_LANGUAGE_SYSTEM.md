@@ -125,46 +125,9 @@ Trong tiếng Việt, vần `uo` đi với phím râu thông thường sẽ bi�
 
 ---
 
-## 7. Cơ Chế Quản Lý & Bảo Vệ Chống Trùng Lặp Macro (Macro Collision Guard)
+> [!TIP]
+> **Tài Liệu Kỹ Thuật Liên Quan:**
+> Để tìm hiểu chi tiết về kiến trúc phần mềm, cơ chế phát phím Micro-Diff, Select-and-Replace trên Web/Electron, khôi phục từ bằng Backspace, Escape to Undo, và hệ thống bảo vệ Macro, xin vui lòng tham khảo:
+> 👉 **[INPUT_ENGINEERING_AND_INNOVATIONS.md](file:///home/codegpt/antigravity/vnchKey/docs/INPUT_ENGINEERING_AND_INNOVATIONS.md)**
 
-Để đảm bảo hiệu năng và tính nhất quán khi người dùng định nghĩa hoặc nạp hàng loạt phím tắt gõ tắt (Macro):
-1. **Kiểm Tra Trùng Lặp Không Phân Biệt Hoa/Thường (Case-Insensitive Deduplication)**:
-   - Các phím tắt như `vn` và `VN` được xem là cùng một khóa gõ tắt để tránh xung đột hành vi khi gõ.
-   - Khi nạp macro từ tệp tin (`saigon-xua-macro.conf` hoặc tệp tùy chỉnh), engine tự động lọc bỏ các phím tắt đã tồn tại, chỉ thêm mới các phím tắt chưa có.
-2. **Cảnh Báo & Dọn Dẹp Trực Quan Trên Giao Diện (Settings UI Collision Warning)**:
-   - Nếu xuất hiện 2 phím tắt trùng nhau trong bảng chỉnh sửa, giao diện gắn nhãn cảnh báo đỏ `⚠️ Trùng phím!` ngay tại dòng đó và hiển thị thanh thông báo phía trên.
-   - Nút `🧹 Dọn Dẹp Trùng Lặp` cho phép người dùng chuẩn hóa lại toàn bộ bảng macro chỉ với 1 cú click.
-3. **Tự Động Chuẩn Hóa Khi Lưu (Auto Clean-up on Save)**:
-   - Trước khi ghi xuống tệp `vnchkey-macro-table.conf`, hàm `save_macros` luôn tự động loại bỏ trùng lặp và chuốt sạch khoảng trắng thừa, đảm bảo tệp cấu hình của người dùng luôn tinh gọn và an toàn 100%.
-
----
-
-## 8. Các Tiện Ích Gõ Hiện Đại (Next-Gen Typing Innovations)
-
-Kế thừa các nghiên cứu và kinh nghiệm thực chiến từ các bộ gõ tiên tiến (Dokey của Đỗ Huy Toàn, Vikey của Tony Dinh, Vietfox):
-
-### 8.1. Hồi Sinh Từ Trước Sau Phím Space (Reopen Previous Word on Backspace)
-- **Vấn đề thực tế**: Người dùng gõ xong chữ cái, theo thói quen gõ phím cách (`tiêng `) rồi mới nhận ra quên bỏ dấu sắc. Ở các bộ gõ truyền thống, chữ đã bị chốt (commit) và người dùng buộc phải bấm xóa hết cả chữ để gõ lại từ đầu.
-- **Giải pháp của vnchKey**: Khi một từ kết thúc bằng phím cách duy nhất, engine lưu trạng thái từ vào bộ nhớ đệm `reopen_state`. Nếu phím kế tiếp ngay sau là `Backspace`, từ trước đó được nạp lại tức thì vào bộ đệm soạn thảo. Người dùng chỉ cần gõ tiếp phím dấu (`s` $\to$ `tiếng`, `f` $\to$ `xìn`) là dấu thanh được đặt vào chính xác!
-
-### 8.2. Hoàn Nguyên Chữ Thô Bằng Phím Escape (Escape to Undo)
-- Khi đang gõ mã lệnh hoặc từ tiếng Anh lạ mà bộ gõ vô tình biến thành tiếng Việt (ví dụ `tieengs` $\to$ `tiếng`), người dùng chỉ cần nhấn phím **`Escape`**.
-- Engine tự động xóa phần chữ tiếng Việt bằng Micro-Diff và thế lại chính xác chuỗi phím thô đã gõ (`tieengs`), đồng thời khóa chế độ tiếng Anh cho từ này để người dùng tiếp tục gõ mà không bị biến đổi lại.
-
-### 8.3. Nhận Diện Mã Lập Trình Thông Minh (Developer-Aware Mode)
-- **Nhận diện chuyển tiếp camelCase / PascalCase**: Khi một chữ hoa xuất hiện ngay sau các chữ thường (ví dụ `parse` + `S` $\to$ `parseS`), engine tự động nhận diện đây là tên biến lập trình, hoàn nguyên các dấu phụ nếu có ở phần tiền tố và khóa chế độ tiếng Anh cho toàn bộ định danh.
-- **Từ điển công nghệ mở rộng**: Bổ sung sẵn hàng loạt công cụ lập trình và DevOps phổ biến (`npm`, `cargo`, `docker`, `pacman`, `makepkg`, `k8s`, `kubectl`, `postgres`, `redis`, `nextjs`, `tailwind`, `prisma`, `vitest`, `wasm`...).
-
-### 8.4. Macro Biến Động Ngày/Giờ & Tìm Kiếm Nhanh
-- Cho phép sử dụng các biến động thời gian thực trong bảng gõ tắt: `$DATE` (ngày hiện tại `DD/MM/YYYY`), `$TIME` (giờ hiện tại `HH:MM`), `$NOW` / `$DATETIME` (ngày và giờ), `$YEAR` (năm), **tự động lấy theo múi giờ địa phương (local timezone) của hệ điều hành** (tương thích hoàn hảo cho Người Việt ở Mỹ, Châu Âu, Úc, Nhật Bản, Việt Nam...).
-- Hỗ trợ thanh tìm kiếm trực quan (`🔍`) trong Tab Macros của `vnchkey-settings` giúp người dùng lọc nhanh hàng trăm từ viết tắt chỉ trong tích tắc.
-
-### 8.5. Kỹ Thuật Select-and-Replace Cho Web & Electron Apps (Khắc Phục Nuốt Backspace Trong Direct Mode)
-- **Bản chất vấn đề:** Các trình soạn thảo Rich Text hiện đại (ProseMirror, Slate, Lexical, DraftJS trên Google Chrome, Slack, Discord, Notion, VS Code...) quản lý cây DOM ảo nội bộ. Khi bộ gõ ở chế độ Direct Mode phát ra chuỗi $N$ lần phím `Backspace` giả lập cực nhanh để xóa các ký tự cũ, các engine JavaScript này thường chặn (suppress) hoặc chỉ xử lý 1 sự kiện Backspace, dẫn đến hiện tượng "nuốt chữ", dính chữ hoặc nhân đôi chữ (chẳng hạn gõ `Haxy` biến thành `Hayãy`).
-- **Giải pháp Đột Phá:** vnchKey tích hợp kỹ thuật Select-and-Replace được tinh giản từ nghiên cứu của Đỗ Huy Toàn:
-  - Khi phát hiện cửa sổ mục tiêu là Web Browser hoặc Electron app (`chrome`, `chromium`, `firefox`, `brave`, `edge`, `slack`, `discord`, `notion`, `electron`, `teams`, `vscode`...), addon thay thế chuỗi $N$ lần phím `Backspace` bằng $N$ lần tổ hợp phím **`Shift + Left Arrow`** để tạo vùng bôi đen (selection) ngược lại đúng số lượng ký tự cần thay thế.
-  - Sau đó, chuỗi ký tự thay thế mới được commit trực tiếp đè lên vùng chọn. Vì mọi trình soạn thảo web và input field đều có hành vi chuẩn mực là gõ đè lên vùng chọn, vấn đề nuốt phím Backspace được triệt tiêu hoàn toàn.
-  - **Bảo toàn Terminal:** Cơ chế này tự động bỏ qua các ứng dụng Terminal (`kitty`, `alacritty`, `konsole`, `wezterm`, `foot`, `xterm`...) để tránh gửi chuỗi ANSI escape sequence `\x1b[1;2D`, giúp trải nghiệm dòng lệnh luôn mượt mà với Backspace truyền thống.
-  - **Tùy chọn linh hoạt:** Người dùng có thể bật/tắt tính năng này tùy ý trong mục *Cài đặt chung* của `vnchkey-settings` (`SelectAndReplaceWeb = true/false`).
-  - **Preedit Mode làm chốt chặn tối thượng:** Đối với các ứng dụng canvas đặc thù không nhận selection dạng này (như Google Docs Canvas Mode), tính năng *Ghi nhớ Chế độ Nhập liệu Theo Từng Ứng Dụng (Per-App Memory)* cho phép chỉ định Preedit Mode riêng cho các ứng dụng đó mà không ảnh hưởng tới Direct Mode của toàn hệ thống.
 
