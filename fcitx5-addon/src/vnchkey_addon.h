@@ -61,6 +61,8 @@ extern "C" {
     int fcitx5_vnchkey_flip_word(void* ctx, size_t* out_backspaces, char** out_commit);
     int fcitx5_vnchkey_undo_macro(void* ctx, size_t* out_backspaces, char** out_commit);
     int fcitx5_vnchkey_undo_escape(void* ctx, size_t* out_backspaces, char** out_commit);
+    int fcitx5_vnchkey_rescue_sentence(void* ctx, const char* text, char** out_rescued);
+    int fcitx5_vnchkey_apply_accent_to_selection(void* ctx, const char* selection, uint32_t ch, char** out_transformed);
 }
 
 class VnchkeyEngine : public fcitx::InputMethodEngineV2 {
@@ -112,8 +114,14 @@ private:
     bool config_bracket_transform_ = false;
     uint32_t config_w2u_ = 0;
     bool config_select_and_replace_web_ = true;
+    bool config_word_rescue_ = true;
+
+    // Rescue Undo Cache (Escape/Backspace immediately after activation rescue)
+    std::string last_rescue_raw_;
+    std::string last_rescue_converted_;
 
     bool isWebApp(const std::string& prog) const;
+    size_t utf8CharCount(const std::string& str) const;
 
     bool is_forwarding_ = false;
 

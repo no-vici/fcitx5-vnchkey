@@ -145,4 +145,33 @@ Tích hợp sẵn danh sách nhận diện hơn 40 công cụ phát triển, fra
 - **Bước 2 (2nd Backspace liên tiếp)**: Nếu người dùng thực sự muốn hủy bỏ cụm từ đã bung, lần Backspace thứ hai sẽ xóa `"Việt Nam"` và phục hồi lại chuỗi phím tắt gốc (`"vn"`).
 - **Chống Lặp Vô Hạn (Suppression Guard)**: Từ phục hồi được đưa vào trạng thái `suppressed_macro`. Nếu người dùng quyết định giữ lại phím tắt đó và nhấn `Space`, từ sẽ không bị bung lặp vô hạn mà xuất ra khoảng trắng bình thường.
 
+---
+
+## 10. Tiện Ích Cứu Chữ & Cứu Dấu (Ngó Sen Style Rescue Innovations)
+
+Kế thừa phát kiến xuất sắc của bộ gõ Ngó Sen (`fcitx5-ngosen`), vnchKey tích hợp đồng bộ cả 2 giải pháp "chữa cháy" thông minh:
+
+### 10.1. Tự Động Cứu Chữ Khi Bật Bộ Gõ (On-Activation Word Rescue)
+- **Bản chất vấn đề**: Người dùng đang để bàn phím tiếng Anh, mải mê gõ một đoạn văn bản dài mà quên bật bộ gõ tiếng Việt (ví dụ: `Chaof banj, tieengs vieetj nef`). Khi nhận ra và bấm phím tắt chuyển sang vnchKey (`Ctrl + Space` hoặc `Super + Space`), ở các bộ gõ truyền thống, người dùng phải xóa đi gõ lại toàn bộ rất mất thời gian.
+- **Giải pháp của vnchKey**:
+  - Tại thời điểm nhận sự kiện kích hoạt (`VnchkeyEngine::activate`), addon tự động đọc chuỗi văn bản nằm ngay trước con trỏ thông qua `ic->surroundingText()`.
+  - Phân tích và đưa chuỗi thô qua bộ giải mã `vnchkey-core::rescue_sentence`.
+  - Nhận diện các từ vựng tiếng Việt có dấu (`Chaof banj, tieengs vieetj nef` $\to$ `Chào bạn, tiếng việt nè`), bảo toàn nguyên vẹn các từ tiếng Anh chuẩn (`server`, `linux`, `window`).
+  - Xóa chuỗi thô cũ và dán trực tiếp chuỗi tiếng Việt đã được cứu vào tài liệu.
+  - **Cơ chế Hoàn tác an toàn (Escape/Backspace Undo)**: Nếu việc tự động cứu chữ chưa đúng ý muốn người dùng, chỉ cần bấm phím **`Escape`** hoặc **`Backspace`**, bộ gõ sẽ hoàn trả nguyên trạng chuỗi thô ban đầu ngay lập tức.
+
+### 10.2. Cứu Dấu Trên Vùng Bôi Đen (Selection Accent Rescue)
+- **Bản chất vấn đề**: Người dùng có sẵn một từ trên màn hình nhưng muốn thêm dấu, đổi dấu thanh hoặc xóa dấu mà không muốn xóa cả từ.
+- **Giải pháp của vnchKey**:
+  - Người dùng dùng chuột hoặc bàn phím bôi đen (highlight) từ cần sửa (ví dụ `nhanh`).
+  - Gõ phím dấu thanh hoặc phím mũ nguyên âm:
+    - `nhanh` + `s` $\to$ `nhánh`
+    - `nhánh` + `f` $\to$ `nhành`
+    - `nhánh` + `z` $\to$ `nhanh` (xóa dấu)
+    - `hoa` + `r` $\to$ `hỏa`
+    - `tieng` + `s` $\to$ `tiếng`
+    - Chế độ VNI: `nhanh` + `1` $\to$ `nhánh`, `nước` + `0` $\to$ `nươc`.
+  - Nếu phím bấm không phải là phím dấu/mũ hợp lệ (ví dụ gõ chữ `k`), bộ gõ tự động giữ nguyên hành vi chuẩn của hệ thống (gõ đè ký tự mới lên vùng chọn).
+
+
 

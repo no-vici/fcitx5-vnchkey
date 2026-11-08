@@ -580,6 +580,12 @@ impl SettingsApp {
         );
         ui.add_space(8.0);
 
+        ui.checkbox(
+            &mut self.config.enable_word_rescue,
+            "Cứu chữ & Cứu dấu (Ngó Sen style): Tự động sửa tiếng Việt khi bật bộ gõ, bôi đen bấm phím để sửa dấu",
+        );
+        ui.add_space(8.0);
+
         ui.horizontal(|ui| {
             ui.label(egui::RichText::new("Độ trễ khi gõ Direct trên Web (Direct Delay)").size(13.0));
             ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {

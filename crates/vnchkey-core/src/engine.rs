@@ -454,6 +454,139 @@ impl Engine {
         }
     }
 
+    /// Rescues a single raw word by re-processing its characters as keystrokes (Ngó Sen Word Rescue).
+    /// E.g. "tieengs" -> "tiếng", "vieetj" -> "việt", "nef" -> "nè".
+    pub fn rescue_word(&self, raw_word: &str) -> String {
+        if self.auto_restore.is_english_keyword(raw_word) {
+            return raw_word.to_string();
+        }
+
+        let mut temp_engine = Engine::new(self.config.clone());
+        let mut result = String::new();
+        for ch in raw_word.chars() {
+            let out = temp_engine.process_key(ch, 0.0);
+            for _ in 0..out.backspaces {
+                result.pop();
+            }
+            result.push_str(&out.commit_text);
+        }
+
+        if !temp_engine.current_word.is_empty() {
+            temp_engine.current_word
+        } else {
+            result
+        }
+    }
+
+    /// Rescues a raw sentence or phrase by converting all eligible words to accented Vietnamese.
+    /// Preserves whitespace, capitalization and non-alphanumeric punctuation.
+    /// Returns Some(rescued_text) if any word was transformed into Vietnamese, or None if unchanged.
+    pub fn rescue_sentence(&self, text: &str) -> Option<String> {
+        if text.is_empty() {
+            return None;
+        }
+
+        let mut output = String::with_capacity(text.len());
+        let mut current_token = String::new();
+        let mut in_word = false;
+
+        for ch in text.chars() {
+            if ch.is_alphanumeric() {
+                if !in_word && !current_token.is_empty() {
+                    output.push_str(&current_token);
+                    current_token.clear();
+                }
+                in_word = true;
+                current_token.push(ch);
+            } else {
+                if in_word && !current_token.is_empty() {
+                    let rescued = self.rescue_word(&current_token);
+                    output.push_str(&rescued);
+                    current_token.clear();
+                }
+                in_word = false;
+                current_token.push(ch);
+            }
+        }
+
+        if !current_token.is_empty() {
+            if in_word {
+                let rescued = self.rescue_word(&current_token);
+                output.push_str(&rescued);
+            } else {
+                output.push_str(&current_token);
+            }
+        }
+
+        if output != text {
+            Some(output)
+        } else {
+            None
+        }
+    }
+
+    /// Applies a tone or diacritic key to a selected text (Selection Accent Rescue / Cứu Dấu).
+    /// If the selection contains multiple words, applies the modifier to the last syllable.
+    /// Returns Some(transformed_text) if a valid diacritic transformation occurred.
+    pub fn apply_accent_to_selection(&self, selection: &str, key: char) -> Option<String> {
+        if selection.is_empty() {
+            return None;
+        }
+
+        let trimmed_trailing = selection.trim_end_matches(char::is_whitespace);
+        let trailing_spaces = &selection[trimmed_trailing.len()..];
+
+        if trimmed_trailing.is_empty() {
+            return None;
+        }
+
+        // Find the last word boundary in trimmed_trailing
+        let split_pos = trimmed_trailing
+            .rfind(|c: char| !c.is_alphanumeric())
+            .map(|idx| idx + trimmed_trailing[idx..].chars().next().unwrap().len_utf8())
+            .unwrap_or(0);
+
+        let preceding = &trimmed_trailing[..split_pos];
+        let last_word = &trimmed_trailing[split_pos..];
+
+        if last_word.is_empty() {
+            return None;
+        }
+
+        // Apply key based on configured method
+        let (new_word, transformed) = match self.config.method {
+            InputMethod::Telex => {
+                let (w, tr, _) = self.telex.apply_key(last_word, key, last_word);
+                (w, tr)
+            }
+            InputMethod::Vni => {
+                let (w, tr, _) = self.vni.apply_key(last_word, key);
+                (w, tr)
+            }
+            InputMethod::Auto => {
+                let (w, tr, _) = self.telex.apply_key(last_word, key, last_word);
+                if tr {
+                    (w, tr)
+                } else if key.is_ascii_digit() {
+                    let (wv, trv, _) = self.vni.apply_key(last_word, key);
+                    (wv, trv)
+                } else {
+                    (w, false)
+                }
+            }
+            InputMethod::SimpleTelex => {
+                let (w, tr, _) = self.telex.apply_key(last_word, key, last_word);
+                (w, tr)
+            }
+        };
+
+        if transformed && new_word != last_word {
+            Some(format!("{}{}{}", preceding, new_word, trailing_spaces))
+        } else {
+            None
+        }
+    }
+
     /// Process a key press event.
     pub fn process_key(&mut self, ch: char, _timestamp_ms: f64) -> EngineOutput {
         self.last_completed_word = None;
@@ -1320,5 +1453,65 @@ mod tests {
             assert!(!out_char.consumed);
         }
         assert_eq!(engine.current_word(), "parseSyllable");
+    }
+
+    #[test]
+    fn test_word_and_sentence_rescue() {
+        let engine = Engine::new(EngineConfig {
+            method: InputMethod::Telex,
+            ..EngineConfig::default()
+        });
+
+        // Test single words
+        assert_eq!(engine.rescue_word("tieengs"), "tiếng");
+        assert_eq!(engine.rescue_word("vieetj"), "việt");
+        assert_eq!(engine.rescue_word("nef"), "nè");
+        assert_eq!(engine.rescue_word("English"), "English");
+
+        // Test sentence rescue
+        let raw = "Chaof banj, tieengs vieetj nef!";
+        let rescued = engine.rescue_sentence(raw);
+        assert_eq!(rescued, Some("Chào bạn, tiếng việt nè!".to_string()));
+
+        // Test English sentence with keywords (not transformed)
+        let english = "server linux browser window";
+        assert_eq!(engine.rescue_sentence(english), None);
+    }
+
+    #[test]
+    fn test_apply_accent_to_selection() {
+        let engine = Engine::new(EngineConfig {
+            method: InputMethod::Telex,
+            ..EngineConfig::default()
+        });
+
+        // 'nhanh' + 's' -> 'nhánh'
+        assert_eq!(engine.apply_accent_to_selection("nhanh", 's'), Some("nhánh".to_string()));
+
+        // 'nhánh' + 'f' -> 'nhành'
+        assert_eq!(engine.apply_accent_to_selection("nhánh", 'f'), Some("nhành".to_string()));
+
+        // 'nhánh' + 'z' -> 'nhanh' (remove tone)
+        assert_eq!(engine.apply_accent_to_selection("nhánh", 'z'), Some("nhanh".to_string()));
+
+        // Multi-word selection: 'chạy thật nhanh' + 's' -> 'chạy thật nhánh'
+        assert_eq!(
+            engine.apply_accent_to_selection("chạy thật nhanh", 's'),
+            Some("chạy thật nhánh".to_string())
+        );
+
+        // With trailing space: 'nhanh ' + 's' -> 'nhánh '
+        assert_eq!(engine.apply_accent_to_selection("nhanh ", 's'), Some("nhánh ".to_string()));
+
+        // Non-modifier key should return None
+        assert_eq!(engine.apply_accent_to_selection("nhanh", 'k'), None);
+
+        // Auto mode with VNI digit
+        let auto_engine = Engine::new(EngineConfig {
+            method: InputMethod::Auto,
+            ..EngineConfig::default()
+        });
+        assert_eq!(auto_engine.apply_accent_to_selection("nhanh", '1'), Some("nhánh".to_string()));
+        assert_eq!(auto_engine.apply_accent_to_selection("nhanh", '2'), Some("nhành".to_string()));
     }
 }

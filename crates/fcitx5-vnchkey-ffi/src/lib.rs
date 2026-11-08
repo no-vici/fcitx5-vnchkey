@@ -220,6 +220,55 @@ pub unsafe extern "C" fn fcitx5_vnchkey_undo_escape(
     }
 }
 
+/// Rescues a raw sentence or phrase (Ngó Sen Word Rescue / Cứu Chữ).
+/// If any words were converted to accented Vietnamese, allocates out_rescued and returns 1.
+#[no_mangle]
+pub unsafe extern "C" fn fcitx5_vnchkey_rescue_sentence(
+    ctx: *mut Fcitx5VnchkeyContext,
+    text: *const c_char,
+    out_rescued: *mut *mut c_char,
+) -> c_int {
+    if ctx.is_null() || text.is_null() || out_rescued.is_null() {
+        return 0;
+    }
+    let ctx = &mut *ctx;
+    if let Ok(c_str) = std::ffi::CStr::from_ptr(text).to_str() {
+        if let Some(rescued) = ctx.engine.rescue_sentence(c_str) {
+            let res_c = CString::new(rescued).unwrap_or_default();
+            *out_rescued = res_c.into_raw();
+            return 1;
+        }
+    }
+    0
+}
+
+/// Applies a tone or diacritic key to a selected text (Selection Accent Rescue / Cứu Dấu).
+/// If a valid accent modification occurred, allocates out_transformed and returns 1.
+#[no_mangle]
+pub unsafe extern "C" fn fcitx5_vnchkey_apply_accent_to_selection(
+    ctx: *mut Fcitx5VnchkeyContext,
+    selection: *const c_char,
+    ch: u32,
+    out_transformed: *mut *mut c_char,
+) -> c_int {
+    if ctx.is_null() || selection.is_null() || out_transformed.is_null() {
+        return 0;
+    }
+    let ctx = &mut *ctx;
+    let key_char = match char::from_u32(ch) {
+        Some(c) => c,
+        None => return 0,
+    };
+    if let Ok(c_str) = std::ffi::CStr::from_ptr(selection).to_str() {
+        if let Some(transformed) = ctx.engine.apply_accent_to_selection(c_str, key_char) {
+            let res_c = CString::new(transformed).unwrap_or_default();
+            *out_transformed = res_c.into_raw();
+            return 1;
+        }
+    }
+    0
+}
+
 /// Loads custom macros from a configuration file.
 #[no_mangle]
 pub unsafe extern "C" fn fcitx5_vnchkey_load_macros(

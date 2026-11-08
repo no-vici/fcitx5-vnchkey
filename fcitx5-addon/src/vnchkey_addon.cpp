@@ -362,8 +362,72 @@ void VnchkeyEngine::activate(const fcitx::InputMethodEntry &entry, fcitx::InputC
     if (ctx_auto_) fcitx5_vnchkey_reset(ctx_auto_);
     if (ctx_telex_) fcitx5_vnchkey_reset(ctx_telex_);
     if (ctx_vni_) fcitx5_vnchkey_reset(ctx_vni_);
+    last_rescue_raw_.clear();
+    last_rescue_converted_.clear();
+
     auto* ic = event.inputContext();
     if (ic) {
+        // Feature: On-Activation Word Rescue (Ngó Sen style Cứu Chữ)
+        // If the user forgot to enable Vietnamese IME and typed unaccented text (e.g. "tieengs vieetj nef"),
+        // when activating vnchKey, automatically convert it to accented Vietnamese!
+        if (config_word_rescue_ &&
+            ic->capabilityFlags().test(fcitx::CapabilityFlag::SurroundingText) &&
+            ic->surroundingText().isValid()) {
+            const auto& surrounding = ic->surroundingText();
+            if (surrounding.cursor() == surrounding.anchor() && surrounding.cursor() > 0) {
+                const std::string& full_text = surrounding.text();
+                // Map character index of cursor to byte index
+                size_t byte_cursor = 0;
+                size_t char_count = 0;
+                for (size_t i = 0; i < full_text.length(); ++i) {
+                    if (char_count == surrounding.cursor()) {
+                        byte_cursor = i;
+                        break;
+                    }
+                    if ((static_cast<unsigned char>(full_text[i]) & 0xC0) != 0x80) {
+                        char_count++;
+                    }
+                }
+                if (char_count == surrounding.cursor() && byte_cursor == 0) {
+                    byte_cursor = full_text.length();
+                }
+
+                std::string before_caret = full_text.substr(0, byte_cursor);
+                size_t last_nl = before_caret.rfind('\n');
+                size_t start_idx = (last_nl != std::string::npos) ? (last_nl + 1) : 0;
+                if (before_caret.length() - start_idx > 80) {
+                    start_idx = before_caret.length() - 80;
+                    size_t sp = before_caret.find(' ', start_idx);
+                    if (sp != std::string::npos && sp < before_caret.length()) {
+                        start_idx = sp + 1;
+                    }
+                }
+
+                std::string cand_raw = before_caret.substr(start_idx);
+                size_t lead_sp = cand_raw.find_first_not_of(" \t");
+                if (lead_sp != std::string::npos) {
+                    cand_raw = cand_raw.substr(lead_sp);
+                }
+
+                if (!cand_raw.empty() && cand_raw.length() >= 2) {
+                    void* ctx = getContext(entry.uniqueName());
+                    char* rescued = nullptr;
+                    if (ctx && fcitx5_vnchkey_rescue_sentence(ctx, cand_raw.c_str(), &rescued)) {
+                        if (rescued && std::string(rescued) != cand_raw) {
+                            size_t cand_char_len = utf8CharCount(cand_raw);
+                            ic->deleteSurroundingText(-static_cast<int>(cand_char_len), cand_char_len);
+                            ic->commitString(rescued);
+                            last_rescue_raw_ = cand_raw;
+                            last_rescue_converted_ = rescued;
+                        }
+                        if (rescued) {
+                            fcitx5_vnchkey_free_string(rescued);
+                        }
+                    }
+                }
+            }
+        }
+
         updateActionState(ic);
         ic->statusArea().clearGroup(fcitx::StatusGroup::InputMethod);
         if (actionOutputModeDirect_) ic->statusArea().addAction(fcitx::StatusGroup::InputMethod, actionOutputModeDirect_.get());
@@ -583,6 +647,8 @@ void VnchkeyEngine::loadConfig() {
                 config_persistent_guard_ = (line.find("False") == std::string::npos);
             } else if (line.rfind("SelectAndReplaceWeb=", 0) == 0) {
                 config_select_and_replace_web_ = (line.find("False") == std::string::npos && line.find("false") == std::string::npos);
+            } else if (line.rfind("EnableWordRescue=", 0) == 0) {
+                config_word_rescue_ = (line.find("False") == std::string::npos && line.find("false") == std::string::npos);
             } else if (line.rfind("DirectDelayMs=", 0) == 0) {
                 try {
                     config_direct_delay_ms_ = std::stoi(line.substr(14));
@@ -675,6 +741,7 @@ void VnchkeyEngine::saveConfig() {
         out << "PreeditTooltip=" << (config_preedit_tooltip_ ? "True" : "False") << "\n";
         out << "PersistentContextGuard=" << (config_persistent_guard_ ? "True" : "False") << "\n";
         out << "SelectAndReplaceWeb=" << (config_select_and_replace_web_ ? "True" : "False") << "\n";
+        out << "EnableWordRescue=" << (config_word_rescue_ ? "True" : "False") << "\n";
         out << "DirectDelayMs=" << config_direct_delay_ms_ << "\n";
         out << "AutoRestoreEnglish=" << (config_auto_restore_ ? "True" : "False") << "\n";
         out << "EnableMacro=" << (config_macro_ ? "True" : "False") << "\n";
@@ -803,6 +870,39 @@ void VnchkeyEngine::keyEvent(const fcitx::InputMethodEntry &entry, fcitx::KeyEve
         }
         fcitx5_vnchkey_reset(ctx);
         return;
+    }
+
+    // Word Rescue Undo (Escape or Backspace immediately after On-Activation rescue)
+    if (!last_rescue_raw_.empty()) {
+        if (sym == FcitxKey_Escape || sym == FcitxKey_BackSpace) {
+            if (ic) {
+                size_t conv_chars = utf8CharCount(last_rescue_converted_);
+                if (ic->capabilityFlags().test(fcitx::CapabilityFlag::SurroundingText) &&
+                    ic->surroundingText().isValid()) {
+                    ic->deleteSurroundingText(-static_cast<int>(conv_chars), conv_chars);
+                } else {
+                    bool is_web = isWebApp(ic->program());
+                    is_forwarding_ = true;
+                    if (config_select_and_replace_web_ && is_web) {
+                        for (size_t i = 0; i < conv_chars; ++i) {
+                            ic->forwardKey(fcitx::Key(FcitxKey_Left, fcitx::KeyState::Shift));
+                        }
+                    } else {
+                        for (size_t i = 0; i < conv_chars; ++i) {
+                            ic->forwardKey(fcitx::Key(FcitxKey_BackSpace));
+                        }
+                    }
+                    is_forwarding_ = false;
+                }
+                ic->commitString(last_rescue_raw_);
+            }
+            last_rescue_raw_.clear();
+            last_rescue_converted_.clear();
+            keyEvent.filterAndAccept();
+            return;
+        }
+        last_rescue_raw_.clear();
+        last_rescue_converted_.clear();
     }
 
     // Escape key
@@ -958,6 +1058,37 @@ void VnchkeyEngine::keyEvent(const fcitx::InputMethodEntry &entry, fcitx::KeyEve
     uint32_t ch = fcitx::Key::keySymToUnicode(sym);
     if (ch == 0) {
         return;
+    }
+
+    // Feature: Cứu Dấu (Selection Accent Rescue - Ngó Sen style)
+    // If text is currently highlighted / selected and the key pressed is a tone/diacritic modifier,
+    // transform the selected word with the diacritic instead of typing over it!
+    if (config_word_rescue_ && ic &&
+        ic->capabilityFlags().test(fcitx::CapabilityFlag::SurroundingText) &&
+        ic->surroundingText().isValid()) {
+        const auto& surrounding = ic->surroundingText();
+        if (surrounding.cursor() != surrounding.anchor()) {
+            std::string sel = surrounding.selectedText();
+            if (!sel.empty() && sel.length() <= 80) {
+                char* transformed = nullptr;
+                if (fcitx5_vnchkey_apply_accent_to_selection(ctx, sel.c_str(), ch, &transformed)) {
+                    if (transformed && std::string(transformed) != sel) {
+                        int start = std::min(surrounding.cursor(), surrounding.anchor());
+                        int end = std::max(surrounding.cursor(), surrounding.anchor());
+                        int sel_len = end - start;
+                        int offset = start - surrounding.cursor();
+                        ic->deleteSurroundingText(offset, sel_len);
+                        ic->commitString(transformed);
+                        fcitx5_vnchkey_free_string(transformed);
+                        keyEvent.filterAndAccept();
+                        return;
+                    }
+                    if (transformed) {
+                        fcitx5_vnchkey_free_string(transformed);
+                    }
+                }
+            }
+        }
     }
 
     auto now = std::chrono::steady_clock::now();
@@ -1123,6 +1254,14 @@ bool VnchkeyEngine::isWebApp(const std::string& prog) const {
         lower_prog.find("element") != std::string::npos ||
         lower_prog.find("teams") != std::string::npos
     );
+}
+
+size_t VnchkeyEngine::utf8CharCount(const std::string& str) const {
+    size_t count = 0;
+    for (unsigned char c : str) {
+        if ((c & 0xC0) != 0x80) count++;
+    }
+    return count;
 }
 
 fcitx::AddonInstance *VnchkeyEngineFactory::create(fcitx::AddonManager *manager) {

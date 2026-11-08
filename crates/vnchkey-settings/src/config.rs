@@ -17,6 +17,7 @@ pub struct VnchkeyConfig {
     pub preedit_tooltip: bool,
     pub persistent_context_guard: bool,
     pub select_and_replace_web: bool,
+    pub enable_word_rescue: bool,
     pub direct_delay_ms: i32,
     pub type_w_to_u: String,
     pub bracket_transform: String,
@@ -47,6 +48,7 @@ impl Default for VnchkeyConfig {
             preedit_tooltip: true,
             persistent_context_guard: true,
             select_and_replace_web: true,
+            enable_word_rescue: true,
             direct_delay_ms: 0,
             type_w_to_u: "Non-Start".to_string(),
             bracket_transform: "Disabled".to_string(),
@@ -153,6 +155,7 @@ impl ConfigManager {
             if let Some(v) = map.get("PreeditTooltip") { cfg.preedit_tooltip = v.eq_ignore_ascii_case("true"); }
             if let Some(v) = map.get("PersistentContextGuard") { cfg.persistent_context_guard = v.eq_ignore_ascii_case("true"); }
             if let Some(v) = map.get("SelectAndReplaceWeb") { cfg.select_and_replace_web = v.eq_ignore_ascii_case("true"); }
+            if let Some(v) = map.get("EnableWordRescue") { cfg.enable_word_rescue = v.eq_ignore_ascii_case("true"); }
             if let Some(v) = map.get("DirectDelayMs") { cfg.direct_delay_ms = v.parse().unwrap_or(0); }
             if let Some(v) = map.get("TypeW2U") { cfg.type_w_to_u = v.clone(); }
             if let Some(v) = map.get("BracketTransform") { cfg.bracket_transform = v.clone(); }
@@ -191,6 +194,7 @@ impl ConfigManager {
         lines.push(format!("PreeditTooltip={}", if cfg.preedit_tooltip { "True" } else { "False" }));
         lines.push(format!("PersistentContextGuard={}", if cfg.persistent_context_guard { "True" } else { "False" }));
         lines.push(format!("SelectAndReplaceWeb={}", if cfg.select_and_replace_web { "True" } else { "False" }));
+        lines.push(format!("EnableWordRescue={}", if cfg.enable_word_rescue { "True" } else { "False" }));
         lines.push(format!("DirectDelayMs={}", cfg.direct_delay_ms));
         lines.push(format!("TypeW2U={}", cfg.type_w_to_u));
         lines.push(format!("BracketTransform={}", cfg.bracket_transform));
