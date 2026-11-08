@@ -98,11 +98,11 @@ pub const DEFAULT_ENGLISH_WORDS: &[&str] = &[
     "yay", "zip", "zsh",
 ];
 
-/// Vietnamese Telex input sequences that happen to spell common English words (`thí`, `thế`, `thể`)
+/// Vietnamese Telex input sequences that happen to spell common English words (`thí`, `thế`, `thể`, `rết`, `cháo`)
 /// and must never override valid Vietnamese words unless the user explicitly forces them.
 const VIETNAMESE_COLLISION_EXCEPTIONS: &[&str] = &[
     "this", "these", "there", "those", "has", "his", "bus", "her", "see", "can", "man", "son", "con",
-    "chaos", "its", "boss", "less",
+    "chaos", "its", "boss", "less", "reset",
 ];
 
 /// High-speed dictionary for English auto-restore and user custom bypass words.

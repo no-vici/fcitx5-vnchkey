@@ -48,7 +48,6 @@ fn test_automated_english_trap_simulation() {
         ("text ", "text "),
         ("modern ", "modern "),
         ("exit ", "exit "),
-        ("reset ", "reset "),
         ("test ", "test "),
         ("window ", "window "),
         ("windows ", "windows "),
@@ -99,6 +98,7 @@ fn test_vietnamese_collision_exceptions_protected() {
         ("see ", "sê "),        // Sê-ri (NOT English 'see')
         ("these ", "thế "),    // Thực tế, thế giới (NOT English 'these')
         ("there ", "thể "),    // Có thể, cơ thể (NOT English 'there')
+        ("reset ", "rết "),    // Con rết, rắn rết (NOT English 'reset')
         ("son ", "son "),      // Son môi / son sắt (stays valid Vietnamese)
         ("con ", "con "),      // Con cái
     ];
