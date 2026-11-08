@@ -33,7 +33,7 @@ pub const DEFAULT_ENGLISH_WORDS: &[&str] = &[
     "clear", "color", "core", "cursor", "dear", "doctor", "driver", "error",
     "ever", "factor", "favor", "fear", "filter", "flavor", "for", "gear",
     "harbor", "hard", "hear", "horror", "junior", "labor", "letter", "master",
-    "matter", "mayor", "member", "mirror", "near", "never", "number", "order",
+    "matter", "mayor", "member", "mirror", "modern", "near", "never", "number", "order",
     "other", "over", "paper", "pear", "player", "power", "prior", "rear",
     "render", "router", "sector", "senior", "sensor", "server", "super", "tear",
     "their", "under", "user", "vapor", "vector", "vigor", "water", "wear",
@@ -84,8 +84,8 @@ pub const DEFAULT_ENGLISH_WORDS: &[&str] = &[
     "ping", "pip", "plasma", "playwright", "plugin", "pnpm", "point", "port",
     "post", "postgres", "postgresql", "print", "prisma", "props", "proto",
     "protobuf", "pub", "public", "pull", "push", "pytest", "python", "rate",
-    "react", "read", "readme", "rebase", "redis", "regex", "release", "repo",
-    "request", "response", "rest", "return", "road", "rust", "rustc", "saas",
+    "react", "read", "readme", "rebase", "redis", "refactor", "regex", "release", "repo",
+    "request", "reset", "response", "rest", "restore", "return", "road", "rust", "rustc", "saas",
     "safari", "save", "screen", "script", "scss", "seed", "self", "semver",
     "service", "setup", "shell", "site", "some", "sort", "source", "span",
     "sql", "sqlite", "ssh", "stash", "state", "steam", "string", "struct",
@@ -102,6 +102,7 @@ pub const DEFAULT_ENGLISH_WORDS: &[&str] = &[
 /// and must never override valid Vietnamese words unless the user explicitly forces them.
 const VIETNAMESE_COLLISION_EXCEPTIONS: &[&str] = &[
     "this", "these", "there", "those", "has", "his", "bus", "her", "see", "can", "man", "son", "con",
+    "chaos", "its", "boss", "less",
 ];
 
 /// High-speed dictionary for English auto-restore and user custom bypass words.
