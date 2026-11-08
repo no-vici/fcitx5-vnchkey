@@ -134,15 +134,33 @@ pub struct ReopenWordState {
     pub english_locked: bool,
 }
 
-/// Tracks the most recent macro expansion for one-step undo on Backspace.
+/// Stage of macro undo tracking on Backspace.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum MacroUndoStage {
+    /// Newly expanded macro (e.g. "vn" + ' ' -> "Việt Nam ")
+    Expanded,
+    /// Trailing space was deleted by first Backspace (e.g. "Việt Nam")
+    TrailingSpaceRemoved,
+}
+
+/// Tracks the most recent macro expansion for two-step undo on Backspace.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct LastMacroExpansion {
-    /// The original abbreviation keystroke sequence (e.g. "tvi")
+    /// The original abbreviation keystroke sequence (e.g. "vn")
     pub trigger: String,
-    /// The expanded replacement string (e.g. "Tiếng Việt")
+    /// The expanded replacement string (e.g. "Việt Nam")
     pub expansion: String,
     /// The delimiter character that triggered expansion (e.g. ' ')
     pub delimiter: char,
+    /// The current undo stage
+    pub stage: MacroUndoStage,
+}
+
+/// Returns whether a punctuation mark should snap directly to the preceding word
+/// without a leading space (e.g. ',', '.', '!', '?', ';', ':', ')', ']', '}', '>').
+#[inline]
+pub fn is_snappable_punctuation(ch: char) -> bool {
+    matches!(ch, ',' | '.' | '!' | '?' | ';' | ':' | ')' | ']' | '}' | '>')
 }
 
 impl Engine {
@@ -402,19 +420,35 @@ impl Engine {
         })
     }
 
-    /// Checks if the last action was a macro expansion and reverts it on Backspace.
+    /// Checks if the last action was a macro expansion and handles two-step undo on Backspace.
+    ///
+    /// - Step 1: If the macro ended with Space, the first Backspace deletes only the trailing Space
+    ///   so that the user can immediately type punctuation (e.g. ',', '.', '!', '?') without leading space.
+    /// - Step 2: If Backspace is pressed a second time immediately, it reverts the expansion
+    ///   back to the original trigger abbreviation and suppresses re-expansion on Space.
+    ///
     /// Returns (backspaces_to_send, text_to_commit) if reverted.
     pub fn undo_macro_expansion(&mut self) -> Option<(usize, String)> {
-        if let Some(macro_state) = self.last_macro.take() {
-            // To revert "Expansion + Delimiter" back to "Trigger":
-            // 1 delimiter character + all characters of the expansion
-            let delete_count = 1 + macro_state.expansion.chars().count();
-            let commit = macro_state.trigger.clone();
-            self.suppressed_macro = Some(macro_state.trigger.clone());
-            self.current_word = macro_state.trigger;
-            self.raw_strokes = self.current_word.clone();
-            self.manual_undo = false;
-            Some((delete_count, commit))
+        if let Some(mut macro_state) = self.last_macro.take() {
+            if macro_state.delimiter == ' ' && macro_state.stage == MacroUndoStage::Expanded {
+                // Step 1: delete only the trailing space
+                macro_state.stage = MacroUndoStage::TrailingSpaceRemoved;
+                self.last_macro = Some(macro_state);
+                Some((1, String::new()))
+            } else {
+                // Step 2 (or non-space delimiter): revert back to original trigger
+                let delete_count = if macro_state.stage == MacroUndoStage::TrailingSpaceRemoved {
+                    macro_state.expansion.chars().count()
+                } else {
+                    1 + macro_state.expansion.chars().count()
+                };
+                let commit = macro_state.trigger.clone();
+                self.suppressed_macro = Some(macro_state.trigger.clone());
+                self.current_word = macro_state.trigger;
+                self.raw_strokes = self.current_word.clone();
+                self.manual_undo = false;
+                Some((delete_count, commit))
+            }
         } else {
             None
         }
@@ -425,8 +459,26 @@ impl Engine {
         self.last_completed_word = None;
         let is_bracket = self.config.bracket_transform && matches!(ch, '[' | ']' | '{' | '}');
 
-        // Any new keypress (other than Backspace) cancels pending macro undo state
-        self.last_macro = None;
+        // Smart Punctuation Snapping:
+        // If the previous action was a macro expansion ending with Space (stage: Expanded),
+        // and the incoming key is a punctuation that attaches directly to the word,
+        // automatically eat the preceding space and snap the punctuation to the word!
+        if let Some(macro_state) = self.last_macro.take() {
+            if macro_state.delimiter == ' '
+                && macro_state.stage == MacroUndoStage::Expanded
+                && is_snappable_punctuation(ch)
+            {
+                return EngineOutput {
+                    backspaces: 1,
+                    commit_text: ch.to_string(),
+                    consumed: true,
+                    auto_restored: false,
+                    macro_expanded: false,
+                    adaptive_delay_ms: 0,
+                };
+            }
+            // For any other key, macro undo state is cleared
+        }
 
         // Word delimiter check (Space, Enter, Punctuation)
         if !ch.is_alphanumeric() && !is_bracket {
@@ -444,6 +496,7 @@ impl Engine {
                             trigger,
                             expansion: expansion.clone(),
                             delimiter: ch,
+                            stage: MacroUndoStage::Expanded,
                         });
                         self.last_completed_word = Some(target);
                         return EngineOutput {
@@ -1093,13 +1146,19 @@ mod tests {
         assert!(out.macro_expanded);
         assert_eq!(out.commit_text, "Việt Nam ");
 
-        // User immediately presses Backspace: macro expansion is undone!
-        let undo = engine.undo_macro_expansion();
-        assert!(undo.is_some());
-        let (bs, commit) = undo.unwrap();
-        // 1 (space) + 8 ("Việt Nam".chars().count()) = 9 backspaces
-        assert_eq!(bs, 9);
-        assert_eq!(commit, "vn");
+        // Step 1: First Backspace deletes only trailing space
+        let undo1 = engine.undo_macro_expansion();
+        assert!(undo1.is_some());
+        let (bs1, commit1) = undo1.unwrap();
+        assert_eq!(bs1, 1);
+        assert_eq!(commit1, "");
+
+        // Step 2: Second Backspace reverts "Việt Nam" back to original trigger "vn"
+        let undo2 = engine.undo_macro_expansion();
+        assert!(undo2.is_some());
+        let (bs2, commit2) = undo2.unwrap();
+        assert_eq!(bs2, 8); // "Việt Nam".chars().count()
+        assert_eq!(commit2, "vn");
         assert_eq!(engine.current_word(), "vn");
 
         // Subsequent Backspace has no more macro to undo
@@ -1119,12 +1178,58 @@ mod tests {
         assert!(out_future.macro_expanded);
         assert_eq!(out_future.commit_text, "Việt Nam ");
 
-        // Test 2: Typing another key cancels macro undo
+        // Test: Typing another key cancels macro undo
         for ch in ['v', 'n', ' '] {
             engine.process_key(ch, 0.0);
         }
         engine.process_key('a', 0.0);
         assert!(engine.undo_macro_expansion().is_none());
+    }
+
+    #[test]
+    fn test_smart_punctuation_snapping_after_macro() {
+        let mut engine = Engine::new(EngineConfig {
+            method: InputMethod::Telex,
+            enable_macro: true,
+            ..EngineConfig::default()
+        });
+
+        for ch in ['v', 'n'] {
+            engine.process_key(ch, 0.0);
+        }
+        let out = engine.process_key(' ', 0.0);
+        assert!(out.macro_expanded);
+        assert_eq!(out.commit_text, "Việt Nam ");
+
+        // Immediate comma snaps: eats trailing space and commits comma directly
+        let snap_comma = engine.process_key(',', 0.0);
+        assert_eq!(snap_comma.backspaces, 1);
+        assert_eq!(snap_comma.commit_text, ",");
+
+        // Test with exclamation mark
+        for ch in ['v', 'n'] {
+            engine.process_key(ch, 0.0);
+        }
+        let out2 = engine.process_key(' ', 0.0);
+        assert!(out2.macro_expanded);
+
+        let snap_excl = engine.process_key('!', 0.0);
+        assert_eq!(snap_excl.backspaces, 1);
+        assert_eq!(snap_excl.commit_text, "!");
+
+        // Test: First Backspace deletes space, then typing comma commits comma normally
+        for ch in ['v', 'n'] {
+            engine.process_key(ch, 0.0);
+        }
+        let out3 = engine.process_key(' ', 0.0);
+        assert!(out3.macro_expanded);
+
+        let undo_space = engine.undo_macro_expansion();
+        assert_eq!(undo_space, Some((1, String::new())));
+
+        let comma_after_bs = engine.process_key(',', 0.0);
+        assert_eq!(comma_after_bs.backspaces, 0);
+        assert_eq!(comma_after_bs.commit_text, ",");
     }
 
     #[test]

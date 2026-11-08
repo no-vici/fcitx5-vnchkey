@@ -130,3 +130,19 @@ Tích hợp sẵn danh sách nhận diện hơn 40 công cụ phát triển, fra
    - **Tương Thích Múi Giờ Toàn Cầu**: Tự động truy vấn thông qua múi giờ địa phương (local timezone) của hệ điều hành, đảm bảo hiển thị chuẩn xác cho người dùng ở bất kỳ quốc gia nào.
 2. **Tìm Kiếm Macro Tức Thì**:
    - Giao diện `vnchkey-settings` trang bị thanh tìm kiếm trực quan (`🔍`) giúp lọc nhanh hàng trăm phím tắt theo từ khóa chỉ trong vài mili-giây.
+
+---
+
+## 9. Đột Phá Trải Nghiệm Gõ Macro: Hoàn Tác 2 Bước & Tự Động Hút Dấu Câu
+
+### 9.1. Tự Động Hút Dấu Câu (Smart Punctuation Snapping)
+- **Vấn đề thực tế**: Khi người dùng gõ phím tắt `vn` + `Space` để bung cụm từ `"Việt Nam "`, đuôi từ luôn kèm một khoảng trắng. Nếu người dùng muốn viết tiếp dấu phẩy hay chấm (`"Việt Nam, "` hoặc `"Việt Nam!"`), việc xuất hiện khoảng trắng trước dấu câu là sai quy chuẩn chính tả nghiêm trọng.
+- **Giải pháp của vnchKey**: Khi phát hiện ký tự tiếp theo ngay sau khi bung macro là một dấu câu thuộc nhóm `[ , . ; : ! ? ) ] } > ]`:
+  - Engine tự động phát $1$ Backspace để triệt tiêu ký tự Space thừa và dán dấu câu dính sát vào đuôi từ (`"Việt Nam,"`). Người dùng gõ hoàn toàn tự nhiên mà không cần bận tâm về khoảng trắng.
+
+### 9.2. Hoàn Tác Macro 2 Bước (2-Step Macro Backspace Undo)
+- **Bước 1 (1st Backspace)**: Thay vì xóa sạch toàn bộ cụm từ vừa bung như các bộ gõ truyền thống, lần Backspace đầu tiên chỉ xóa đúng $1$ ký tự Space ở đuôi (`"Việt Nam "` $\to$ `"Việt Nam"`). Người dùng có thể tiếp tục gõ dấu câu hoặc ký tự tùy ý.
+- **Bước 2 (2nd Backspace liên tiếp)**: Nếu người dùng thực sự muốn hủy bỏ cụm từ đã bung, lần Backspace thứ hai sẽ xóa `"Việt Nam"` và phục hồi lại chuỗi phím tắt gốc (`"vn"`).
+- **Chống Lặp Vô Hạn (Suppression Guard)**: Từ phục hồi được đưa vào trạng thái `suppressed_macro`. Nếu người dùng quyết định giữ lại phím tắt đó và nhấn `Space`, từ sẽ không bị bung lặp vô hạn mà xuất ra khoảng trắng bình thường.
+
+

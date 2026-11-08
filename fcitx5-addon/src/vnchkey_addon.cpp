@@ -886,9 +886,16 @@ void VnchkeyEngine::keyEvent(const fcitx::InputMethodEntry &entry, fcitx::KeyEve
                         ic->surroundingText().isValid()) {
                         ic->deleteSurroundingText(-static_cast<int>(undo_bs), undo_bs);
                     } else {
+                        bool is_web = isWebApp(ic->program());
                         is_forwarding_ = true;
-                        for (size_t i = 0; i < undo_bs; ++i) {
-                            ic->forwardKey(fcitx::Key(FcitxKey_BackSpace));
+                        if (config_select_and_replace_web_ && is_web && undo_commit && undo_commit[0] != '\0') {
+                            for (size_t i = 0; i < undo_bs; ++i) {
+                                ic->forwardKey(fcitx::Key(FcitxKey_Left, fcitx::KeyState::Shift));
+                            }
+                        } else {
+                            for (size_t i = 0; i < undo_bs; ++i) {
+                                ic->forwardKey(fcitx::Key(FcitxKey_BackSpace));
+                            }
                         }
                         is_forwarding_ = false;
                     }
@@ -1018,24 +1025,7 @@ void VnchkeyEngine::keyEvent(const fcitx::InputMethodEntry &entry, fcitx::KeyEve
                         ic->surroundingText().isValid()) {
                         ic->deleteSurroundingText(-static_cast<int>(out_backspaces), out_backspaces);
                     } else {
-                        std::string prog = ic->program();
-                        std::string lower_prog = prog;
-                        for (char& c : lower_prog) c = std::tolower(c);
-                        bool is_web = (
-                            lower_prog.find("chrome") != std::string::npos ||
-                            lower_prog.find("firefox") != std::string::npos ||
-                            lower_prog.find("chromium") != std::string::npos ||
-                            lower_prog.find("brave") != std::string::npos ||
-                            lower_prog.find("edge") != std::string::npos ||
-                            lower_prog.find("opera") != std::string::npos ||
-                            lower_prog.find("vivaldi") != std::string::npos ||
-                            lower_prog.find("electron") != std::string::npos ||
-                            lower_prog.find("slack") != std::string::npos ||
-                            lower_prog.find("discord") != std::string::npos ||
-                            lower_prog.find("notion") != std::string::npos ||
-                            lower_prog.find("element") != std::string::npos ||
-                            lower_prog.find("teams") != std::string::npos
-                        );
+                        bool is_web = isWebApp(ic->program());
 
                         is_forwarding_ = true;
                         if (config_select_and_replace_web_ && is_web) {
@@ -1113,6 +1103,26 @@ void VnchkeyEngine::reset(const fcitx::InputMethodEntry &entry, fcitx::InputCont
     if (ctx) {
         fcitx5_vnchkey_reset(ctx);
     }
+}
+
+bool VnchkeyEngine::isWebApp(const std::string& prog) const {
+    std::string lower_prog = prog;
+    for (char& c : lower_prog) c = std::tolower(c);
+    return (
+        lower_prog.find("chrome") != std::string::npos ||
+        lower_prog.find("firefox") != std::string::npos ||
+        lower_prog.find("chromium") != std::string::npos ||
+        lower_prog.find("brave") != std::string::npos ||
+        lower_prog.find("edge") != std::string::npos ||
+        lower_prog.find("opera") != std::string::npos ||
+        lower_prog.find("vivaldi") != std::string::npos ||
+        lower_prog.find("electron") != std::string::npos ||
+        lower_prog.find("slack") != std::string::npos ||
+        lower_prog.find("discord") != std::string::npos ||
+        lower_prog.find("notion") != std::string::npos ||
+        lower_prog.find("element") != std::string::npos ||
+        lower_prog.find("teams") != std::string::npos
+    );
 }
 
 fcitx::AddonInstance *VnchkeyEngineFactory::create(fcitx::AddonManager *manager) {
