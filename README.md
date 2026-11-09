@@ -314,6 +314,7 @@ makepkg -si
 - 🔬 **[Phân Tích Kỹ Thuật Cơ Chế Non-Preedit UniKey vs Wayland](docs/NON_PREEDIT_WAYLAND_ANALYSIS.md)**: Phân tích chuyên sâu về sự khác biệt kiến trúc xử lý bàn phím giữa Windows và Linux Wayland, nguyên nhân gốc rễ gây lỗi nhảy chữ trên Web DOM và giải pháp toàn diện của vnchKey.
 - 📖 **[Nền Tảng Ngôn Ngữ Học & Âm Vị Học Tiếng Việt](docs/VIETNAMESE_LANGUAGE_SYSTEM.md)**: Cẩm nang chuyên sâu về cấu trúc âm tiết (Onset-Glide-Nucleus-Coda-Tone), quy tắc đặt dấu thanh (Mới vs Cũ), ràng buộc âm cuối tắc và bảng ma trận chuyển đổi vần.
 - ⚡ **[Kiến Trúc Kỹ Thuật Nhập Liệu & Các Đột Phá Công Nghệ](docs/INPUT_ENGINEERING_AND_INNOVATIONS.md)**: Phân tích cơ chế phát phím Micro-Diff, Select-and-Replace cho Web/Electron, hồi sinh từ sau phím cách, Escape to Undo, nhận diện camelCase và hệ thống Macro động theo múi giờ địa phương.
+- 🛡️ **[Kiến Trúc Kiểm Thử Đa Tầng & Báo Cáo Kiểm Định Chất Lượng (Multi-Tier Testing & ASan Guide)](docs/MULTI_TIER_TESTING_AND_VERIFICATION.md)**: Hướng dẫn toàn diện về hệ thống kiểm thử 3 tầng (Property-Based Fuzzing, Mô phỏng bẫy tiếng Anh vs bảo vệ tiếng Việt, kiểm định rò rỉ bộ nhớ C++ AddressSanitizer/UBSan qua FFI) dành cho lập trình viên.
 
 ---
 
