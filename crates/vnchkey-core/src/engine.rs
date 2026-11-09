@@ -128,6 +128,7 @@ pub struct Engine {
     reopen_state: Option<ReopenWordState>,
     last_delimiter: Option<char>,
     last_delimiter_spaced: bool,
+    last_keystroke_time_ms: f64,
 }
 
 /// Saved state of the previous word completed with a single Space,
@@ -377,6 +378,7 @@ impl Engine {
             reopen_state: None,
             last_delimiter: None,
             last_delimiter_spaced: false,
+            last_keystroke_time_ms: 0.0,
         }
     }
 
@@ -496,6 +498,7 @@ impl Engine {
     pub fn reset(&mut self) {
         self.reset_word_buffers();
         self.reopen_state = None;
+        self.last_keystroke_time_ms = 0.0;
     }
 
     /// Handles physical Backspace pressed by the user.
@@ -778,8 +781,23 @@ impl Engine {
     }
 
     /// Process a key press event.
-    pub fn process_key(&mut self, ch: char, _timestamp_ms: f64) -> EngineOutput {
+    pub fn process_key(&mut self, ch: char, timestamp_ms: f64) -> EngineOutput {
         self.last_completed_word = None;
+
+        // Keystroke Idle Timeout (800ms):
+        // If the pause between keystrokes is 800ms or longer, the user was thinking, reading code,
+        // or navigating in Normal mode (e.g. Neovim 'u' -> navigation pause -> 'i' -> '1').
+        // Finalize/flush any existing buffer so stale navigation keys never leak across paused contexts.
+        if timestamp_ms > 0.0 && self.last_keystroke_time_ms > 0.0 {
+            let elapsed = timestamp_ms - self.last_keystroke_time_ms;
+            if elapsed >= 800.0 && !self.current_word.is_empty() {
+                self.reset();
+            }
+        }
+        if timestamp_ms > 0.0 {
+            self.last_keystroke_time_ms = timestamp_ms;
+        }
+
         let is_bracket = self.config.bracket_transform && matches!(ch, '[' | ']' | '{' | '}');
 
         // Smart Punctuation Snapping:
@@ -1423,7 +1441,31 @@ mod tests {
         assert_eq!(type_word(&mut engine, "ibie6t1 "), "ibiết ");
         assert_eq!(type_word(&mut engine, "ikhong61 "), "ikhống ");
         assert_eq!(type_word(&mut engine, "achinh1 "), "achính ");
-        assert_eq!(type_word(&mut engine, "athuong72 "), "athường ");
+        // 3. VNI Numeric Guard: sequential digits must remain literal digits (never mutate into tones)
+        assert_eq!(type_word(&mut engine, "height=\"50\""), "height=\"50\"");
+        engine.reset();
+        assert_eq!(type_word(&mut engine, "501 "), "501 ");
+        assert_eq!(type_word(&mut engine, "12345 "), "12345 ");
+        assert_eq!(type_word(&mut engine, "width100 "), "width100 ");
+
+        // 4. Idle Timeout (>= 800ms): pauses in typing (e.g. Normal mode command 'u', then 1s pause, then 'i' and '1')
+        // must automatically flush old buffer so 'u' + 'i' + '1' does NOT produce "úi"!
+        let mut sim_engine = Engine::new(EngineConfig {
+            method: InputMethod::Vni,
+            ..EngineConfig::default()
+        });
+        // User presses 'u' in Normal mode at t = 0ms
+        let out_u = sim_engine.process_key('u', 0.0);
+        assert!(!out_u.consumed);
+        // User pauses 1500ms to navigate, then presses 'i' to enter Insert mode at t = 1500ms
+        let out_i = sim_engine.process_key('i', 1500.0);
+        assert!(!out_i.consumed);
+        // User pauses 1000ms, then types digit '1' at t = 2500ms
+        let out_1 = sim_engine.process_key('1', 2500.0);
+        // With idle timeout (>= 800ms), 'i' was flushed on pause, so '1' is committed cleanly as "1", not "í" or "úi"!
+        assert_eq!(out_1.commit_text, "1");
+        assert_eq!(out_1.backspaces, 0);
+        assert!(!out_1.consumed);
     }
 
     #[test]
