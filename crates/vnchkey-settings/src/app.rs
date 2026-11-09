@@ -1703,7 +1703,12 @@ impl SettingsApp {
             if let Some(tex) = &self.logo_texture {
                 ui.image(tex);
             } else {
-                ui.label(egui::RichText::new("🇻🇳").size(64.0));
+                // Fallback to Cờ Vàng Ba Sọc Đỏ icon representation
+                ui.label(
+                    egui::RichText::new("🟡")
+                        .size(64.0)
+                        .color(egui::Color32::from_rgb(0xFF, 0xD7, 0x00)),
+                );
             }
             ui.add_space(12.0);
 

@@ -105,6 +105,9 @@ sudo install -Dm755 "${TARGET_DIR}/fcitx5-vnchkey-settings" "$PREFIX/bin/fcitx5-
 sudo ln -sf fcitx5-vnchkey-settings "$PREFIX/bin/vnchkey-settings"
 sudo install -Dm644 data/org.fcitx.Fcitx5.Addon.Vnchkey.Settings.desktop "$PREFIX/share/applications/org.fcitx.Fcitx5.Addon.Vnchkey.Settings.desktop"
 
+# Neovim integration runtime plugin (Auto-loadable across system or user configs)
+sudo install -Dm644 data/neovim/lua/vnchkey.lua "$PREFIX/share/nvim/runtime/lua/vnchkey.lua" 2>/dev/null || true
+
 # Restart Fcitx5 to pick up new input methods
 echo -e "\n${GREEN}==> 5/5. Khởi động lại Fcitx5 để nạp bộ gõ mới...${NC}"
 fcitx5 -r -d 2>/dev/null || true
