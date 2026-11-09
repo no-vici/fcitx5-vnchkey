@@ -333,12 +333,11 @@ makepkg -si
 ## 7. Ý Nghĩa Biểu Tượng & Di Sản Tự Do
 
 Huy hiệu của **vnchKey** kết hợp hai yếu tố văn hóa và công nghệ:
-1. **Khối Squircle Bo Góc Mềm Mại Cờ Vàng Ba Sọc Đỏ (Hoàng Long & Ba Sọc Đỏ)**:
-   - Thiết kế bo góc nhẹ (~22% bán kính theo chuẩn GNOME Libadwaita / macOS) với công nghệ khử răng cưa subpixel (Lanczos anti-aliasing) giúp hiển thị mượt mà, tinh tế trên mọi khay hệ thống (Waybar, Swaybar, KDE Plasma tray, GNOME top bar từ 16px, 22px, 24px đến HiDPI 256px).
-   - Màu vàng biểu trưng cho đất nước, con người và sự phồn vinh của dân tộc Việt Nam.
-   - Ba sọc đỏ tượng trưng cho ba miền Bắc — Trung — Nam gắn bó keo sơn, gắn liền với di sản tinh thần **Tự Do — Dân Chủ — Phú Cường**.
-2. **Khối Phím Cơ 3D Dập Nổi Chữ `vn`**:
-   - Mang thông điệp: *Mỗi phím bấm là một tiếng nói tự do, độc lập và bảo tồn trọn vẹn ngôn ngữ mẹ đẻ trong thời đại số.*
+1. **Khối Keycap Cơ 3D Cờ Vàng Ba Sọc Đỏ (Hoàng Long & Ba Sọc Đỏ)**:
+   - Thiết kế keycap cơ 3D nổi khối với nền trong suốt (transparent background), 4 góc vát cong tự nhiên chuẩn công thái học (ergonomic keycap profile). Khi đặt lên thanh Waybar, Swaybar hay khay hệ thống KDE/GNOME (16px, 22px, 24px đến HiDPI 256px), biểu tượng hiển thị nổi bật, sáng rõ và sắc nét tuyệt đối.
+   - Nền vàng rực rỡ và ba sọc đỏ tượng trưng cho ba miền Bắc — Trung — Nam gắn bó keo sơn, gắn liền với di sản tinh thần **Tự Do — Dân Chủ — Phú Cường**.
+2. **Ký Tự `V` Khắc Chìm Trung Tâm (Việt Nam & V-Key)**:
+   - Ký tự `V` sắc sảo nằm ngay tâm phím mang ý nghĩa kép: đại diện cho chữ cái thiêng liêng **Việt Nam**, phím tắt bộ gõ **Vietnamese Key**, và biểu tượng chiến thắng tinh thần Tự Do.
 
 ---
 
