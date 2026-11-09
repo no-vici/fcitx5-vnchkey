@@ -27,8 +27,8 @@ build() {
     cd "$srcdir/fcitx5-vnchkey"
   fi
 
-  # 1. Biên dịch bộ máy Rust lõi
-  cargo build --release
+  # 1. Biên dịch bộ máy Rust lõi & toàn bộ workspace
+  cargo build --release --workspace
 
   # 2. Biên dịch Fcitx5 C++ Addon Shim
   if [ -d "fcitx5-addon" ]; then
