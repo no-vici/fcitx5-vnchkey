@@ -333,8 +333,8 @@ makepkg -si
 ## 7. Ý Nghĩa Biểu Tượng & Di Sản Tự Do
 
 Huy hiệu của **vnchKey** kết hợp hai yếu tố văn hóa và công nghệ:
-1. **Nền Vuông Cờ Vàng Ba Sọc Đỏ (Hoàng Long & Ba Sọc Đỏ)**:
-   - Thiết kế nền vuông sắc nét giúp hiển thị hoàn hảo, không bị răng cưa ở mọi kích thước khay hệ thống (System Tray 16px, 22px, 24px đến HiDPI 256px).
+1. **Khối Squircle Bo Góc Mềm Mại Cờ Vàng Ba Sọc Đỏ (Hoàng Long & Ba Sọc Đỏ)**:
+   - Thiết kế bo góc nhẹ (~22% bán kính theo chuẩn GNOME Libadwaita / macOS) với công nghệ khử răng cưa subpixel (Lanczos anti-aliasing) giúp hiển thị mượt mà, tinh tế trên mọi khay hệ thống (Waybar, Swaybar, KDE Plasma tray, GNOME top bar từ 16px, 22px, 24px đến HiDPI 256px).
    - Màu vàng biểu trưng cho đất nước, con người và sự phồn vinh của dân tộc Việt Nam.
    - Ba sọc đỏ tượng trưng cho ba miền Bắc — Trung — Nam gắn bó keo sơn, gắn liền với di sản tinh thần **Tự Do — Dân Chủ — Phú Cường**.
 2. **Khối Phím Cơ 3D Dập Nổi Chữ `vn`**:
