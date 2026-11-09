@@ -442,6 +442,24 @@ pub unsafe extern "C" fn fcitx5_vnchkey_set_tone_style(ctx: *mut Fcitx5VnchkeyCo
     }
 }
 
+/// Sets keystroke idle timeout in milliseconds (0 = disabled).
+#[no_mangle]
+pub unsafe extern "C" fn fcitx5_vnchkey_set_idle_timeout(ctx: *mut Fcitx5VnchkeyContext, ms: u64) {
+    if !ctx.is_null() {
+        (*ctx).engine.set_idle_timeout_ms(ms);
+    }
+}
+
+/// Returns keystroke idle timeout in milliseconds.
+#[no_mangle]
+pub unsafe extern "C" fn fcitx5_vnchkey_get_idle_timeout(ctx: *mut Fcitx5VnchkeyContext) -> u64 {
+    if !ctx.is_null() {
+        (*ctx).engine.idle_timeout_ms()
+    } else {
+        0
+    }
+}
+
 /// Returns tone style (0 = Modern: oà, uý; 1 = Classic: hòa, ủy).
 #[no_mangle]
 pub unsafe extern "C" fn fcitx5_vnchkey_get_tone_style(ctx: *mut Fcitx5VnchkeyContext) -> u32 {

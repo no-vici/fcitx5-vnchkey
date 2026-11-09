@@ -655,6 +655,12 @@ void VnchkeyEngine::loadConfig() {
                 } catch (...) {
                     config_direct_delay_ms_ = 0;
                 }
+            } else if (line.rfind("IdleTimeoutMs=", 0) == 0) {
+                try {
+                    config_idle_timeout_ms_ = std::stoull(line.substr(14));
+                } catch (...) {
+                    config_idle_timeout_ms_ = 800;
+                }
             } else if (line.rfind("AutoRestoreEnglish=", 0) == 0) {
                 config_auto_restore_ = (line.find("False") == std::string::npos);
             } else if (line.rfind("EnableMacro=", 0) == 0) {
@@ -699,6 +705,7 @@ void VnchkeyEngine::loadConfig() {
         fcitx5_vnchkey_set_w2u(ctx, config_w2u_);
         uint32_t charset_code = (config_charset_.find("Composite") != std::string::npos || config_charset_.find("Tổ hợp") != std::string::npos) ? 1 : 0;
         fcitx5_vnchkey_set_charset(ctx, charset_code);
+        fcitx5_vnchkey_set_idle_timeout(ctx, config_idle_timeout_ms_);
     }
 }
 
@@ -721,6 +728,7 @@ void VnchkeyEngine::saveConfig() {
                     l.rfind("PreeditTooltip=", 0) != 0 &&
                     l.rfind("PersistentContextGuard=", 0) != 0 &&
                     l.rfind("DirectDelayMs=", 0) != 0 &&
+                    l.rfind("IdleTimeoutMs=", 0) != 0 &&
                     l.rfind("AutoRestoreEnglish=", 0) != 0 &&
                     l.rfind("EnableMacro=", 0) != 0 &&
                     l.rfind("SpellCheck=", 0) != 0 &&
@@ -745,6 +753,7 @@ void VnchkeyEngine::saveConfig() {
         out << "SelectAndReplaceWeb=" << (config_select_and_replace_web_ ? "True" : "False") << "\n";
         out << "EnableWordRescue=" << (config_word_rescue_ ? "True" : "False") << "\n";
         out << "DirectDelayMs=" << config_direct_delay_ms_ << "\n";
+        out << "IdleTimeoutMs=" << config_idle_timeout_ms_ << "\n";
         out << "AutoRestoreEnglish=" << (config_auto_restore_ ? "True" : "False") << "\n";
         out << "EnableMacro=" << (config_macro_ ? "True" : "False") << "\n";
         out << "SpellCheck=" << (config_spell_check_ ? "True" : "False") << "\n";

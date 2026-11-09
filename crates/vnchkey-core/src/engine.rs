@@ -69,6 +69,8 @@ pub struct EngineConfig {
     pub bracket_transform: bool,
     /// Enable macro expansions
     pub enable_macro: bool,
+    /// Idle keystroke timeout in milliseconds (0 = disabled, default = 800ms)
+    pub idle_timeout_ms: u64,
 }
 
 impl Default for EngineConfig {
@@ -86,6 +88,7 @@ impl Default for EngineConfig {
             type_w_to_u: W2UType::NonStart,
             bracket_transform: false,
             enable_macro: true,
+            idle_timeout_ms: 800,
         }
     }
 }
@@ -457,6 +460,16 @@ impl Engine {
         self.config.enable_macro
     }
 
+    /// Sets keystroke idle timeout in milliseconds (0 = disabled).
+    pub fn set_idle_timeout_ms(&mut self, ms: u64) {
+        self.config.idle_timeout_ms = ms;
+    }
+
+    /// Returns keystroke idle timeout in milliseconds.
+    pub fn idle_timeout_ms(&self) -> u64 {
+        self.config.idle_timeout_ms
+    }
+
     /// Sets tone placement style.
     pub fn set_tone_style(&mut self, tone_style: ToneStyle) {
         self.config.tone_style = tone_style;
@@ -784,13 +797,14 @@ impl Engine {
     pub fn process_key(&mut self, ch: char, timestamp_ms: f64) -> EngineOutput {
         self.last_completed_word = None;
 
-        // Keystroke Idle Timeout (800ms):
-        // If the pause between keystrokes is 800ms or longer, the user was thinking, reading code,
-        // or navigating in Normal mode (e.g. Neovim 'u' -> navigation pause -> 'i' -> '1').
+        // Keystroke Idle Timeout:
+        // If the pause between keystrokes exceeds configured timeout, the user was thinking,
+        // reading code, or navigating in Normal mode (e.g. Neovim 'u' -> pause -> 'i' -> '1').
         // Finalize/flush any existing buffer so stale navigation keys never leak across paused contexts.
-        if timestamp_ms > 0.0 && self.last_keystroke_time_ms > 0.0 {
+        let timeout_ms = self.config.idle_timeout_ms as f64;
+        if timeout_ms > 0.0 && timestamp_ms > 0.0 && self.last_keystroke_time_ms > 0.0 {
             let elapsed = timestamp_ms - self.last_keystroke_time_ms;
-            if elapsed >= 800.0 && !self.current_word.is_empty() {
+            if elapsed >= timeout_ms && !self.current_word.is_empty() {
                 self.reset();
             }
         }

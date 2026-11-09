@@ -598,6 +598,26 @@ impl SettingsApp {
                 ui.add(egui::Slider::new(&mut self.config.direct_delay_ms, 0..=20).suffix(" ms (0 = Tự động 4ms)"));
             });
         });
+        ui.add_space(8.0);
+
+        ui.horizontal(|ui| {
+            ui.label(
+                egui::RichText::new("Khoảng lặng ngắt từ (Idle Keystroke Timeout)")
+                    .size(13.0),
+            );
+            ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                ui.add(
+                    egui::Slider::new(&mut self.config.idle_timeout_ms, 0..=2000)
+                        .step_by(50.0)
+                        .suffix(" ms (0 = Tắt, Mặc định 800ms)"),
+                );
+            });
+        });
+        ui.label(
+            egui::RichText::new("   💡 Tự động chốt từ và dọn sạch bộ đệm khi dừng gõ. Chống kẹt phím lệnh Vim / Neovim.")
+                .size(11.0)
+                .color(egui::Color32::from_rgb(0xa6, 0xad, 0xc8)),
+        );
 
         self.render_group_header(ui, "Typing");
 

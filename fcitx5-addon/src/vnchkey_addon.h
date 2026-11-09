@@ -55,6 +55,8 @@ extern "C" {
     void fcitx5_vnchkey_set_tone_style(void* ctx, uint32_t style);
     uint32_t fcitx5_vnchkey_get_tone_style(void* ctx);
     void fcitx5_vnchkey_set_charset(void* ctx, uint32_t charset);
+    void fcitx5_vnchkey_set_idle_timeout(void* ctx, uint64_t ms);
+    uint64_t fcitx5_vnchkey_get_idle_timeout(void* ctx);
 
     char* fcitx5_vnchkey_get_current_word(void* ctx);
     char* fcitx5_vnchkey_get_completed_word(void* ctx);
@@ -100,6 +102,7 @@ private:
     bool config_preedit_tooltip_ = true;
     bool config_persistent_guard_ = true;
     int config_direct_delay_ms_ = 0; // 0 = auto (0ms for editors, 4ms for web browsers)
+    uint64_t config_idle_timeout_ms_ = 800; // 0 = disabled, default = 800ms
     std::unordered_map<std::string, std::string> app_output_modes_;
 
     // Grace Period Focus Tracker for Java IDEs & Wine
