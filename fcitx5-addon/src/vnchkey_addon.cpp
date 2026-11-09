@@ -665,6 +665,10 @@ void VnchkeyEngine::loadConfig() {
                 config_auto_restore_ = (line.find("False") == std::string::npos);
             } else if (line.rfind("EnableMacro=", 0) == 0) {
                 config_macro_ = (line.find("False") == std::string::npos);
+            } else if (line.rfind("CapitalizeMacro=", 0) == 0) {
+                // Read into config if needed
+            } else if (line.rfind("EscRestoreRaw=", 0) == 0) {
+                config_esc_restore_raw_ = (line.find("True") != std::string::npos || line.find("true") != std::string::npos);
             } else if (line.rfind("SpellCheck=", 0) == 0) {
                 config_spell_check_ = (line.find("False") == std::string::npos);
             } else if (line.rfind("EnableDictionary=", 0) == 0) {
@@ -731,6 +735,7 @@ void VnchkeyEngine::saveConfig() {
                     l.rfind("IdleTimeoutMs=", 0) != 0 &&
                     l.rfind("AutoRestoreEnglish=", 0) != 0 &&
                     l.rfind("EnableMacro=", 0) != 0 &&
+                    l.rfind("EscRestoreRaw=", 0) != 0 &&
                     l.rfind("SpellCheck=", 0) != 0 &&
                     l.rfind("EnableDictionary=", 0) != 0) {
                     lines.push_back(l);
@@ -756,6 +761,7 @@ void VnchkeyEngine::saveConfig() {
         out << "IdleTimeoutMs=" << config_idle_timeout_ms_ << "\n";
         out << "AutoRestoreEnglish=" << (config_auto_restore_ ? "True" : "False") << "\n";
         out << "EnableMacro=" << (config_macro_ ? "True" : "False") << "\n";
+        out << "EscRestoreRaw=" << (config_esc_restore_raw_ ? "True" : "False") << "\n";
         out << "SpellCheck=" << (config_spell_check_ ? "True" : "False") << "\n";
         out << "EnableDictionary=" << (config_dictionary_ ? "True" : "False") << "\n";
     }
@@ -917,12 +923,15 @@ void VnchkeyEngine::keyEvent(const fcitx::InputMethodEntry &entry, fcitx::KeyEve
     }
 
     // Escape key handling:
-    // - Shift + Escape: Revert active composing word to raw typed strokes (Dokey style Undo to Raw)
-    // - Bare Escape: Finalize/commit active word and pass Escape directly to app (so Neovim exits INSERT mode on 1st press!)
+    // - If config_esc_restore_raw_ is true (Gõ Nhanh / UniKey style):
+    //   Bare Escape reverts active composing word to raw typed strokes.
+    // - If config_esc_restore_raw_ is false (Default / Neovim-friendly mode):
+    //   Shift + Escape reverts to raw typed strokes, while bare Escape passes directly to app (so Neovim exits INSERT mode on 1st press!)
     if (sym == FcitxKey_Escape) {
         const bool isShiftEscape = states.test(fcitx::KeyState::Shift);
+        const bool shouldUndoToRaw = (config_esc_restore_raw_ && !isShiftEscape) || isShiftEscape;
 
-        if (isShiftEscape && fcitx5_vnchkey_has_active_word(ctx)) {
+        if (shouldUndoToRaw && fcitx5_vnchkey_has_active_word(ctx)) {
             size_t esc_bs = 0;
             char* esc_commit = nullptr;
             if (fcitx5_vnchkey_undo_escape(ctx, &esc_bs, &esc_commit)) {

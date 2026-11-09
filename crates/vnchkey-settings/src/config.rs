@@ -32,6 +32,7 @@ pub struct VnchkeyConfig {
     pub fast_consonant_doubling: bool,
     pub enable_macro: bool,
     pub capitalize_macro: bool,
+    pub esc_restore_raw: bool,
     pub switch_shortcut: String,
     pub temp_english_mode: String,
     pub tray_icon_theme: String,
@@ -64,6 +65,7 @@ impl Default for VnchkeyConfig {
             fast_consonant_doubling: false,
             enable_macro: true,
             capitalize_macro: true,
+            esc_restore_raw: false,
             switch_shortcut: "Ctrl+Shift".to_string(),
             temp_english_mode: "Disabled".to_string(),
             tray_icon_theme: "Default".to_string(),
@@ -172,6 +174,7 @@ impl ConfigManager {
             if let Some(v) = map.get("FastConsonantDoubling") { cfg.fast_consonant_doubling = v.eq_ignore_ascii_case("true"); }
             if let Some(v) = map.get("EnableMacro") { cfg.enable_macro = v.eq_ignore_ascii_case("true"); }
             if let Some(v) = map.get("CapitalizeMacro") { cfg.capitalize_macro = v.eq_ignore_ascii_case("true"); }
+            if let Some(v) = map.get("EscRestoreRaw") { cfg.esc_restore_raw = v.eq_ignore_ascii_case("true"); }
             if let Some(v) = map.get("SwitchShortcut") { cfg.switch_shortcut = v.clone(); }
             if let Some(v) = map.get("TempEnglishMode") { cfg.temp_english_mode = v.clone(); }
             if let Some(v) = map.get("TrayIconTheme") { cfg.tray_icon_theme = v.clone(); }
@@ -212,6 +215,7 @@ impl ConfigManager {
         lines.push(format!("FastConsonantDoubling={}", if cfg.fast_consonant_doubling { "True" } else { "False" }));
         lines.push(format!("EnableMacro={}", if cfg.enable_macro { "True" } else { "False" }));
         lines.push(format!("CapitalizeMacro={}", if cfg.capitalize_macro { "True" } else { "False" }));
+        lines.push(format!("EscRestoreRaw={}", if cfg.esc_restore_raw { "True" } else { "False" }));
         lines.push(format!("SwitchShortcut={}", cfg.switch_shortcut));
         lines.push(format!("TempEnglishMode={}", cfg.temp_english_mode));
         lines.push(format!("TrayIconTheme={}", cfg.tray_icon_theme));

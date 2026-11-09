@@ -705,6 +705,17 @@ impl SettingsApp {
             &mut self.config.fast_consonant_doubling,
             "Gõ nhanh phụ âm đầu (cc -> ch, gg -> gi, kk -> kh)",
         );
+        ui.add_space(6.0);
+
+        ui.checkbox(
+            &mut self.config.esc_restore_raw,
+            "Phím Esc: Nhấn Esc đơn thuần để hoàn nguyên từ về chữ thô (Bỏ chọn nếu dùng Vim/Neovim)",
+        );
+        ui.label(
+            egui::RichText::new("   💡 Khi bỏ chọn (mặc định): Esc thoát lệnh Neovim ngay lập tức; dùng Shift + Esc khi muốn hoàn nguyên.")
+                .size(11.0)
+                .color(egui::Color32::from_rgb(0xa6, 0xad, 0xc8)),
+        );
     }
 
     // 3. Applications Page

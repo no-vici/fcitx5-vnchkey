@@ -141,10 +141,10 @@ Một vấn đề cố hữu của các bộ gõ trên terminal emulator là cá
   - Trong kiểu gõ VNI, các chuỗi số liên tiếp (`501`, `12345`, `width="100"`) được engine bảo đảm giữ nguyên định dạng số tự nhiên nguyên bản (literal digits), tuyệt đối không tự động biến âm thành dấu thanh hay phát xung Backspace làm xáo trộn code.
 - **Khoảng Lặng Ngắt Từ Tự Động (Keystroke Idle Timeout)**:
   - Khi người dùng dừng gõ $\ge \text{timeout}$ (mặc định $800\text{ms}$), engine tự động chốt dứt điểm và dọn sạch bộ đệm.
-  - Khi bạn ở Neovim Normal mode thực hiện các lệnh như `u` (undo) hay di chuyển, khoảng nghỉ suy nghĩ trước khi bấm `i` vào Insert mode sẽ tự động xóa sạch các phím lệnh cũ, bảo đảm khi vào Insert mode bộ đệm luôn tinh khôi $100\%$.
+  - Khi bạn ở Neovim Normal mode thực hiện các lệnh như `u` (undo) hay di chuyển, khoảng nghỉ suy nghĩ trước khi bấm `i` vào Insert mode sẽ tự động xóa sạch các phím lệnh cũ, bảo đảm khi vào Insert mode bộ đệm luôn tinh khôi $100\%$. Những người gõ VNI thường dính trường hợp này, thí dụ: trong code của họ có một variable được set với một giá trị nào đó, height="50", và nếu trước đó họ có dùng undo command `u` thì khi bấm `i` để vô `INSERT` mode rồi gõ số 1 phía sau 50; họ sẽ nhận được `úi`. Lệnh `u` và `i` bị kẹt trong bộ đệm và khi họ gõ `1` thì `ui` sẽ biến thành `úi`. Các bộ gõ trên Mac OS cũng thường bị bịnh này khi gõ trong Neovim bằng VNI. Tính năng **VNI Numeric Guard** trị được khoảng $80\%$ hiện tượng nói trên, và người dùng gõ bình thường có thể không cần đến một lua module để toggle khi nhảy ra nhảy vô `INSERT` mode của Neovim.
   - **Tùy chỉnh linh hoạt trong GUI Settings**: Người dùng có thể kéo thanh trượt từ $0\text{ms}$ (tắt) đến $2000\text{ms}$ tùy theo tốc độ gõ cá nhân trong tab **General**.
 - **Module Tích Hợp Sẵn Cho Neovim (`vnchkey.lua`)**:
-  - Gói sẵn module chính thức tại `data/neovim/lua/vnchkey.lua` (tự động cài vào `/usr/share/nvim/runtime/lua/vnchkey.lua`).
+  - Gói sẵn module chính thức tại `data/neovim/lua/vnchkey.lua` (tự động cài vô `/usr/share/nvim/runtime/lua/vnchkey.lua`).
   - Hỗ trợ cơ chế **One-time Load Guard** (ngăn chặn duplicate load), chuyển đổi IME bất đồng bộ qua `vim.uv.spawn` với độ trễ bằng $0$, và hỗ trợ phím thoát siêu tốc `jk` / `<Esc>`.
   - Cách dùng trong Neovim khi cần:
     ```vim

@@ -117,6 +117,7 @@ private:
     bool config_modern_style_ = true;
     bool config_bracket_transform_ = false;
     uint32_t config_w2u_ = 0;
+    bool config_esc_restore_raw_ = false; // false = Esc passes through to app (Neovim mode), Shift+Esc undos; true = Esc undos to raw
     bool config_select_and_replace_web_ = true;
     bool config_word_rescue_ = true;
 
