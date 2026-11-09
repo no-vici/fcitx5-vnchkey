@@ -75,5 +75,8 @@ package() {
   install -Dm755 target/release/fcitx5-vnchkey-settings "$pkgdir/usr/bin/fcitx5-vnchkey-settings"
   ln -sf fcitx5-vnchkey-settings "$pkgdir/usr/bin/vnchkey-settings"
   install -Dm644 data/org.fcitx.Fcitx5.Addon.Vnchkey.Settings.desktop "$pkgdir/usr/share/applications/org.fcitx.Fcitx5.Addon.Vnchkey.Settings.desktop"
+
+  # Cài đặt Neovim integration runtime module
+  install -Dm644 data/neovim/lua/vnchkey.lua "$pkgdir/usr/share/nvim/runtime/lua/vnchkey.lua" 2>/dev/null || true
 }
 
