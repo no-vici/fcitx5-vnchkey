@@ -907,44 +907,72 @@ void VnchkeyEngine::keyEvent(const fcitx::InputMethodEntry &entry, fcitx::KeyEve
         last_rescue_converted_.clear();
     }
 
-    // Escape key
+    // Escape key handling:
+    // - Shift + Escape: Revert active composing word to raw typed strokes (Dokey style Undo to Raw)
+    // - Bare Escape: Finalize/commit active word and pass Escape directly to app (so Neovim exits INSERT mode on 1st press!)
     if (sym == FcitxKey_Escape) {
+        const bool isShiftEscape = states.test(fcitx::KeyState::Shift);
+
+        if (isShiftEscape && fcitx5_vnchkey_has_active_word(ctx)) {
+            size_t esc_bs = 0;
+            char* esc_commit = nullptr;
+            if (fcitx5_vnchkey_undo_escape(ctx, &esc_bs, &esc_commit)) {
+                if (isPreeditMode && ic) {
+                    // In Preedit Mode, replace preedit with raw word or update preedit
+                    char* cur = fcitx5_vnchkey_get_current_word(ctx);
+                    if (cur && cur[0] != '\0') {
+                        std::string prog = ic->program();
+                        fcitx::Text text(cur, fcitx::TextFormatFlag::Underline);
+                        ic->inputPanel().setClientPreedit(text);
+                        if (config_preedit_tooltip_ || isWpsOffice(prog)) {
+                            ic->inputPanel().setPreedit(text);
+                        }
+                        ic->updatePreedit();
+                        ic->updateUserInterface(fcitx::UserInterfaceComponent::InputPanel);
+                        fcitx5_vnchkey_free_string(cur);
+                    }
+                } else if (ic) {
+                    if (esc_bs > 0) {
+                        if (ic->capabilityFlags().test(fcitx::CapabilityFlag::SurroundingText) &&
+                            ic->surroundingText().isValid()) {
+                            ic->deleteSurroundingText(-static_cast<int>(esc_bs), esc_bs);
+                        } else {
+                            bool is_web = isWebApp(ic->program());
+                            is_forwarding_ = true;
+                            if (config_select_and_replace_web_ && is_web && esc_commit && esc_commit[0] != '\0') {
+                                for (size_t i = 0; i < esc_bs; ++i) {
+                                    ic->forwardKey(fcitx::Key(FcitxKey_Left, fcitx::KeyState::Shift));
+                                }
+                            } else {
+                                for (size_t i = 0; i < esc_bs; ++i) {
+                                    ic->forwardKey(fcitx::Key(FcitxKey_BackSpace));
+                                }
+                            }
+                            is_forwarding_ = false;
+                        }
+                    }
+                    if (esc_commit && esc_commit[0] != '\0') {
+                        ic->commitString(esc_commit);
+                    }
+                }
+                if (esc_commit) {
+                    fcitx5_vnchkey_free_string(esc_commit);
+                }
+                keyEvent.filterAndAccept();
+                return;
+            }
+        }
+
+        // Bare Escape: commit active Preedit word if any, reset engine buffer, and let Escape pass through to Neovim/App!
         if (isPreeditMode && ic && fcitx5_vnchkey_has_active_word(ctx)) {
-            // Cancel preedit composition without committing
-            fcitx5_vnchkey_reset(ctx);
+            char* cur = fcitx5_vnchkey_get_current_word(ctx);
+            if (cur && cur[0] != '\0') {
+                ic->commitString(cur);
+                fcitx5_vnchkey_free_string(cur);
+            }
             ic->inputPanel().reset();
             ic->updatePreedit();
             ic->updateUserInterface(fcitx::UserInterfaceComponent::InputPanel);
-            keyEvent.filterAndAccept();
-            return;
-        }
-
-        // Direct Mode: revert active word to raw typed strokes (Escape to Undo - Dokey style)
-        size_t esc_bs = 0;
-        char* esc_commit = nullptr;
-        if (fcitx5_vnchkey_undo_escape(ctx, &esc_bs, &esc_commit)) {
-            if (ic) {
-                if (esc_bs > 0) {
-                    if (ic->capabilityFlags().test(fcitx::CapabilityFlag::SurroundingText) &&
-                        ic->surroundingText().isValid()) {
-                        ic->deleteSurroundingText(-static_cast<int>(esc_bs), esc_bs);
-                    } else {
-                        is_forwarding_ = true;
-                        for (size_t i = 0; i < esc_bs; ++i) {
-                            ic->forwardKey(fcitx::Key(FcitxKey_BackSpace));
-                        }
-                        is_forwarding_ = false;
-                    }
-                }
-                if (esc_commit && esc_commit[0] != '\0') {
-                    ic->commitString(esc_commit);
-                }
-            }
-            if (esc_commit) {
-                fcitx5_vnchkey_free_string(esc_commit);
-            }
-            keyEvent.filterAndAccept();
-            return;
         }
 
         fcitx5_vnchkey_reset(ctx);

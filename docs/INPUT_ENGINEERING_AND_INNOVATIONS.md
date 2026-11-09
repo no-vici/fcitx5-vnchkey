@@ -78,14 +78,16 @@ Người dùng gõ xong chữ cái, theo thói quen gõ phím cách (`tiêng `) 
 
 ---
 
-## 5. Hoàn Nguyên Chữ Thô Bằng Phím Escape (Escape to Undo)
+## 5. Hoàn Nguyên Chữ Thô Bằng Phím `Shift + Escape` & Bảo Toàn `Escape` Cho Neovim
 
-- **Ngữ cảnh**: Khi đang gõ mã lệnh hoặc một từ tiếng Anh lạ mà bộ gõ vô tình biến thành tiếng Việt (ví dụ `tieengs` $\to$ `tiếng`).
-- **Giải pháp**: Người dùng chỉ cần nhấn phím **`Escape`**.
-- **Luồng xử lý**:
-  1. Engine tính toán Micro-Diff giữa từ tiếng Việt hiện tại và chuỗi phím thô đã gõ (`tieengs`).
-  2. Phát số lượng Backspace tối thiểu và chèn lại đúng chuỗi phím gốc.
-  3. Đánh dấu cờ khóa tiếng Anh (`english_locked = true`) cho từ hiện tại để người dùng có thể tiếp tục gõ mà không bị biến đổi lại.
+- **Bài toán thực tế trên Linux / Neovim**: Khi lập trình viên gõ tiếng Việt trong Neovim (ví dụ `xin chào`) rồi bấm `Escape` để thoát `INSERT` mode mà không bấm `Space` cuối câu, nếu bộ gõ bắt phím `Escape` đơn thuần để hủy dấu thì chữ `chào` sẽ bị biến thành `chaof` và phím `Escape` bị nuốt mất.
+- **Giải pháp hài hòa của vnchKey**:
+  1. **Khi nhấn `Escape` đơn thuần**:
+     - Bộ gõ giữ nguyên chữ tiếng Việt vừa gõ (`chào`), chốt bộ đệm từ và **truyền thẳng sự kiện `Escape` xuống cho ứng dụng** (Neovim thoát `INSERT` mode ngay lập tức ở lần bấm đầu tiên; VS Code/Zed đóng bảng gợi ý Autocomplete mượt mà).
+  2. **Khi nhấn `Shift + Escape` (hoặc `Ctrl + Shift + Z`)**:
+     - Engine tính toán Micro-Diff giữa từ tiếng Việt hiện tại (`tiếng`) và chuỗi phím thô đã gõ (`tieengs`).
+     - Phát số lượng Backspace tối thiểu và chèn lại đúng chuỗi phím gốc.
+     - Đánh dấu cờ khóa tiếng Anh (`english_locked = true`) cho từ hiện tại để người dùng có thể tiếp tục gõ mà không bị biến đổi lại.
 
 ---
 
