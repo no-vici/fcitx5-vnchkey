@@ -167,3 +167,4 @@ g++ -O1 -g -fsanitize=address,undefined fcitx5-addon/tests/ffi_asan_test.cpp \
 | **C++ AddressSanitizer & UBSan (FFI Boundary)** | `fcitx5-addon/tests/ffi_asan_test.cpp` | >10.000 FFI calls (LSan heap check) | **0 Bytes Leaked** |
 | **Settings GUI Deduplication** | `crates/vnchkey-settings/src/config.rs` | 1 unit test | **PASS 100%** |
 | **An toàn Mã nguồn Lõi (`vnchkey-core`)** | `#![forbid(unsafe_code)]` | Toàn bộ crate lõi | **100% Safe Rust** |
+

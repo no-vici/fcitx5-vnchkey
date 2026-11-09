@@ -175,16 +175,21 @@ Kế thừa thuật toán từ điển tĩnh từ **GoNhanh**:
 
 ---
 
-### 3.8. Bảng Gõ Tắt Mở Rộng Tức Thì & Hoàn Tác Thông Minh (Macro Expansion & Smart Undo)
+### 3.8. Bảng Gõ Tắt Mở Rộng Tức Thì, Hoàn Tác 2 Bước & Hút Dấu Câu Thông Minh
 - Tự động mở rộng từ viết tắt khi gõ phím phân cách (Space, dấu câu): ví dụ `vn` + phím cách $\to$ `Việt Nam `.
-- **Hoàn tác Macro một chạm (One-Step Macro Revert on Backspace)**:
-  - Nếu vừa bung macro mà người dùng nhấn ngay phím `Backspace`, engine tự động tính toán và gửi số lượng Backspace chính xác để thu hồi toàn bộ cụm từ đã bung cùng dấu cách, phục hồi lại nguyên vẹn chuỗi viết tắt gốc (`Việt Nam ` $\xrightarrow{\text{Backspace}}$ `vn`).
+- **Hoàn tác Macro 2 bước thông minh bằng `Backspace` (2-Step Macro Undo)**:
+  - **Nhấn `Backspace` lần 1**: Chỉ xóa khoảng trắng thừa ở cuối (`Việt Nam ` $\to$ `Việt Nam`), giữ nguyên cụm từ đã bung để bạn đặt dấu câu hoặc gõ nối tiếp mà không cần dùng phím mũi tên trái.
+  - **Nhấn `Backspace` lần 2 liên tiếp**: Thu hồi toàn bộ cụm từ đã bung và phục hồi lại nguyên vẹn phím tắt gốc (`Việt Nam` $\to$ `vn`) để sửa hoặc giữ nguyên chữ `vn`.
+- **Tự động Hút Dấu Câu Sát Đuôi Macro (Smart Punctuation Snapping)**:
+  - Sau khi bung macro bằng phím `Space` (`vn` + `Space` $\to$ `Việt Nam `), nếu bạn gõ ngay dấu câu (`,`, `.`, `;`, `:`, `!`, `?`, `)`, `]`, `}`, `>`), bộ gõ tự động "nuốt" khoảng trắng thừa phía trước để dấu câu bám sát vào từ (`Việt Nam,`), đúng chuẩn quy tắc trình bày văn bản.
+- **Biến Động Theo Múi Giờ Địa Phương (`$DATE`, `$TIME`, `$DATETIME`, `$CLIPBOARD`)**:
+  - Hỗ trợ chèn nhanh ngày giờ lấy từ đồng hồ hệ thống local của người dùng và nội dung Clipboard hiện tại.
+- **Tương thích Đa Định Dạng (Universal Macro Sync)**:
+  - Hỗ trợ đọc trực tiếp cả 3 ký tự phân cách `=`, `:`, `;` — cho phép nạp thẳng tệp gõ tắt từ **UniKey** (`ukmacro.txt`), **EVKey**, **Ngó Sen** mà không cần chỉnh sửa định dạng.
 - **Cơ chế Chống Lặp Vô Hạn (Infinite Loop Suppression)**:
-  - Điểm cải tiến vượt trội so với các bộ gõ truyền thống: Khi macro vừa được hoàn tác về lại từ viết tắt gốc (ví dụ `vn`), nếu người dùng nhấn tiếp phím `Space` (vì thực sự muốn gõ chữ `vn ` như trong `vn index`), engine sẽ **tạm khóa việc bung macro** cho từ đó. Phím Space đi qua tự nhiên mà không bao giờ bị bẫy trong vòng lặp vô tận (`vn` $\to$ `Việt Nam ` $\to$ `vn` $\to$ `Việt Nam `).
-  - Trạng thái tạm khóa tự động giải phóng ngay khi chuyển sang từ tiếp theo, bảo đảm các lần gõ tắt sau đó vẫn hoạt động trơn tru 100%.
+  - Khi macro vừa được hoàn tác về lại từ viết tắt gốc (ví dụ `vn`), nếu người dùng nhấn tiếp phím `Space` (vì thực sự muốn gõ chữ `vn ` như trong `vn index`), engine sẽ **tạm khóa việc bung macro** cho từ đó.
 - **Preset Macro Sài Gòn Xưa Tích Hợp Sẵn (`~/.config/fcitx5/conf/saigon-xua-macro.conf`)**:
   - Tích hợp sẵn bộ gõ tắt hơn 60 thành ngữ và khẩu ngữ Nam Kỳ quen thuộc: `sdz` $\to$ `số dzách`, `tq` $\to$ `trớt quớt`, `bcbc` $\to$ `bá cháy bù chét`, `crct` $\to$ `cà rịch cà tang`, `tlml` $\to$ `tào lao mía lao`, `hxq` $\to$ `hết xí quách`, `hgqn` $\to$ `hổng quởn`, `mdo` $\to$ `mèn đéc ơi`...
-  - Lưu trữ trực tiếp trong thư mục cấu hình người dùng `~/.config/fcitx5/conf/saigon-xua-macro.conf` để dễ dàng chỉnh sửa cá nhân hóa, hoặc nhấp nút **"📜 Nạp Mẫu Sài Gòn Xưa"** trong Tab Macros của bảng Cài Đặt.
 
 ---
 
@@ -229,14 +234,21 @@ Chắt lọc và nâng cấp từ thuật toán hoán đổi dấu phụ của *
 
 ---
 
-### 3.12. Phím Tắt Lật Từ Tức Thì (Flip Word — `Ctrl + Shift + Z`)
-- Khi đang gõ mã lệnh hoặc tài liệu song ngữ, việc vô tình gõ một từ tiếng Anh thành tiếng Việt (hoặc ngược lại) xảy ra rất thường xuyên.
-- **Tính năng Flip Word**:
-  - Nhấn tổ hợp phím **`Ctrl + Shift + Z`** (hoặc phím tắt cấu hình trong Settings) để đảo ngược trạng thái của từ vừa gõ:
-    - `thể` $\longleftrightarrow$ `theer`
-    - `công` $\longleftrightarrow$ `coong`
-    - `việt` $\longleftrightarrow$ `vieetj`
-  - Giúp lập trình viên và người viết lách sửa nhanh lỗi gõ nhầm mà không cần nhấn Backspace nhiều lần rồi gõ lại từ đầu.
+### 3.12. Tổ Hợp Phím Tắt Thông Minh & Hệ Thống "Cứu Chữ / Cứu Dấu"
+- **Lật Từ Tức Thì (`Ctrl + Shift + Z` — Flip Word)**:
+  - Đảo ngược qua lại trạng thái của từ hiện tại giữa Tiếng Việt và chuỗi phím thô (`thể` $\longleftrightarrow$ `theer`, `việt` $\longleftrightarrow$ `vieetj`).
+- **Hoàn Nguyên Từ Thô Bằng `Shift + Esc` & Bảo Toàn `Esc` Cho Neovim**:
+  - **Nhấn `Esc` đơn thuần**: Giữ nguyên từ tiếng Việt vừa gõ, chốt bộ đệm và truyền thẳng `Esc` cho ứng dụng — giúp lập trình viên **thoát `INSERT` mode của Neovim ngay lập tức ở lần bấm đầu tiên** mà không bị mất dấu hay biến dạng chữ!
+  - **Nhấn `Shift + Esc`**: Hoàn nguyên ngay lập tức từ đang gõ về chuỗi phím thô (`tiếng` $\to$ `tieengs`) và tạm khóa tiếng Anh cho từ đó.
+- **Hồi Sinh Từ Trước Sau Phím Space (`Backspace` — Reopen Word)**:
+  - Lỡ gõ `tiêng ` (quên bỏ dấu sắc) rồi đã bấm `Space`? Chỉ cần bấm `Backspace` một lần để xóa dấu cách rồi gõ luôn phím `s` $\to$ từ tự động hồi sinh và biến thành `tiếng` mà không cần xóa cả chữ!
+- **Cứu Chữ & Cứu Dấu Kiểu Ngó Sen (Word & Accent Rescue)**:
+  - **Cứu Chữ tự động khi bật bộ gõ**: Nếu bạn quên bật bộ gõ và lỡ gõ cả câu tiếng Anh thô (`chaof banj, tieengs vieetj`), chỉ cần bấm phím chuyển sang vnchKey — toàn bộ câu vừa gõ sẽ tự động hóa phép thành **`chào bạn, tiếng việt`**! (Nhấn `Backspace` hoặc `Esc` ngay sau đó nếu muốn hoàn tác về chữ thô).
+  - **Cứu Dấu khi bôi đen từ**: Dùng chuột hoặc bàn phím bôi đen một từ bất kỳ (ví dụ `tiêng`) rồi bấm phím dấu (`s` hoặc `1`), từ đang bôi đen sẽ lập tức biến thành **`tiếng`**.
+- **Tự Động Bỏ Qua Ký Tự Lập Trình (Developer Code Auto-Bypass)**:
+  - Tự động nhận diện và khóa tiếng Anh cho các định danh mã nguồn: biến bắt đầu bằng gạch dưới (`_variable`, `__init__`), chuỗi `snake_case` (`user_id`, `parse_string`), chuỗi truy cập thuộc tính qua dấu chấm (`db.collection.findOne`), và `camelCase` / `PascalCase` (`useState`, `ClassName`).
+- **Hỗ Trợ Bảng Mã Unicode Tổ Hợp (NFD Composite Charset)**:
+  - Cho phép chuyển đổi linh hoạt giữa **Unicode Dựng Sẵn (NFC)** và **Unicode Tổ Hợp (NFD)** ngay trong bảng Cài Đặt để tương thích tuyệt đối với các phần mềm đồ họa XWayland đặc thù.
 
 ---
 
@@ -321,7 +333,8 @@ makepkg -si
 ## 7. Ý Nghĩa Biểu Tượng & Di Sản Tự Do
 
 Huy hiệu của **vnchKey** kết hợp hai yếu tố văn hóa và công nghệ:
-1. **Nền Tròn Cờ Vàng Ba Sọc Đỏ (Hoàng Long & Ba Sọc Đỏ)**:
+1. **Nền Vuông Cờ Vàng Ba Sọc Đỏ (Hoàng Long & Ba Sọc Đỏ)**:
+   - Thiết kế nền vuông sắc nét giúp hiển thị hoàn hảo, không bị răng cưa ở mọi kích thước khay hệ thống (System Tray 16px, 22px, 24px đến HiDPI 256px).
    - Màu vàng biểu trưng cho đất nước, con người và sự phồn vinh của dân tộc Việt Nam.
    - Ba sọc đỏ tượng trưng cho ba miền Bắc — Trung — Nam gắn bó keo sơn, gắn liền với di sản tinh thần **Tự Do — Dân Chủ — Phú Cường**.
 2. **Khối Phím Cơ 3D Dập Nổi Chữ `vn`**:

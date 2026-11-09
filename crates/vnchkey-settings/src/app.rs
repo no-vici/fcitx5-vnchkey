@@ -1580,7 +1580,12 @@ impl SettingsApp {
                          6: Dấu nón (^ cho â, ê, ô)  |  7: Dấu râu (ơ, ư)  |  8: Dấu trăng (ă)  |  9: Chữ đ\n\n\
                          • Telex:\n\
                          s: Sắc  |  f: Huyền  |  r: Hỏi  |  x: Ngã  |  j: Nặng  |  z: Xoá dấu\n\
-                         aa: â  |  ee: ê  |  oo: ô  |  dd: đ  |  aw/w: ă  |  ow/w: ơ  |  uw/w: ư"
+                         aa: â  |  ee: ê  |  oo: ô  |  dd: đ  |  aw/w: ă  |  ow/w: ơ  |  uw/w: ư\n\n\
+                         • Phím Tắt Thông Minh (Smart Shortcuts):\n\
+                         Shift + Esc      : Hoàn nguyên từ đang gõ về chữ thô (giữ nguyên Esc cho Neovim)\n\
+                         Ctrl + Shift + Z : Lật nhanh từ hiện tại giữa Tiếng Việt <-> Chữ thô (Flip Word)\n\
+                         Backspace sau Space : Hồi sinh từ vừa chốt để sửa dấu; hoặc hoàn tác Macro 2 bước\n\
+                         Bôi đen + Phím dấu  : Cứu dấu trực tiếp trên từ đang bôi đen (Ngó Sen style)"
                     )
                     .monospace()
                     .size(13.0)
