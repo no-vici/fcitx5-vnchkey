@@ -131,12 +131,26 @@ Giải quyết triệt để vấn đề kinh điển của các bộ gõ trên 
 
 ---
 
-### 3.3. Tách Âm Tiết Cuối Tối Ưu Cho Neovim / WezTerm / Vim
-Một vấn đề cố hữu của các bộ gõ trên terminal emulator là các phím lệnh Normal mode (như `ci"`, `cw`, `i`, `a`, `jk`) hoặc các ký tự đứng sát trước con trỏ dễ bị kẹt trong bộ đệm từ, phá vỡ việc bỏ dấu VNI:
-- **Giải pháp của vnchKey**: Tích hợp hàm `extract_last_syllable_index()`:
+### 3.3. Tách Âm Tiết Cuối, VNI Numeric Guard & Khoảng Lặng Ngắt Từ (Đặc Trị Neovim / Terminal)
+Một vấn đề cố hữu của các bộ gõ trên terminal emulator là các phím lệnh Normal mode (như `ci"`, `cw`, `i`, `a`, `jk`, `u`) hoặc các chuỗi số đứng sát trước con trỏ dễ bị kẹt trong bộ đệm từ, gây hiện tượng đột biến chữ (ví dụ gõ `1` sau `height="50"` bị biến thành `heigh="úi"`):
+- **Giải pháp bóc tách âm tiết cuối**: Tích hợp hàm `extract_last_syllable_index()`:
   - Khi gõ chuỗi phím số VNI (như `biet61`), engine tự động bóc tách âm tiết Tiếng Việt hợp lệ đứng cuối cùng (`biet`) để áp dụng dấu thành `biết`.
   - Giữ nguyên vẹn văn bản đứng trước, gõ mượt mà ngay cả khi con trỏ đứng sát dấu ngoặc kép `""` hoặc sau các lệnh vim.
   - Tự động khóa khôi phục Tiếng Anh đối với từ gõ phím số VNI khi thoát Insert mode bằng phím tắt `jk`.
+- **Bảo vệ Chuỗi Số VNI (VNI Numeric Guard)**:
+  - Trong kiểu gõ VNI, các chuỗi số liên tiếp (`501`, `12345`, `width="100"`) được engine bảo đảm giữ nguyên định dạng số tự nhiên nguyên bản (literal digits), tuyệt đối không tự động biến âm thành dấu thanh hay phát xung Backspace làm xáo trộn code.
+- **Khoảng Lặng Ngắt Từ Tự Động (Keystroke Idle Timeout)**:
+  - Khi người dùng dừng gõ $\ge \text{timeout}$ (mặc định $800\text{ms}$), engine tự động chốt dứt điểm và dọn sạch bộ đệm.
+  - Khi bạn ở Neovim Normal mode thực hiện các lệnh như `u` (undo) hay di chuyển, khoảng nghỉ suy nghĩ trước khi bấm `i` vào Insert mode sẽ tự động xóa sạch các phím lệnh cũ, bảo đảm khi vào Insert mode bộ đệm luôn tinh khôi $100\%$.
+  - **Tùy chỉnh linh hoạt trong GUI Settings**: Người dùng có thể kéo thanh trượt từ $0\text{ms}$ (tắt) đến $2000\text{ms}$ tùy theo tốc độ gõ cá nhân trong tab **General**.
+- **Module Tích Hợp Sẵn Cho Neovim (`vnchkey.lua`)**:
+  - Gói sẵn module chính thức tại `data/neovim/lua/vnchkey.lua` (tự động cài vào `/usr/share/nvim/runtime/lua/vnchkey.lua`).
+  - Hỗ trợ cơ chế **One-time Load Guard** (ngăn chặn duplicate load), chuyển đổi IME bất đồng bộ qua `vim.uv.spawn` với độ trễ bằng $0$, và hỗ trợ phím thoát siêu tốc `jk` / `<Esc>`.
+  - Cách dùng trong Neovim khi cần:
+    ```vim
+    :lua require('vnchkey').load()
+    ```
+    *(Module sẽ kích hoạt ngay và hiển thị thông báo; nếu gõ lại lần 2 sẽ hiện cảnh báo đã nạp rồi).*
 
 ---
 
