@@ -236,3 +236,111 @@ fn test_vietc_combinatorial_snapshots() {
         );
     }
 }
+
+#[test]
+fn test_mixed_casing_and_phonology_violations() {
+    let mut engine = Engine::new(EngineConfig {
+        method: InputMethod::Auto,
+        auto_restore_english: true,
+        spell_check: true,
+        enable_dictionary: true,
+        ..EngineConfig::default()
+    });
+
+    // 1. Hardcore Mixed Corpus: camelCase, alternating case, & developer tokens
+    assert_eq!(type_word(&mut engine, "TEXT "), "TEXT ");
+    engine.reset();
+    assert_eq!(type_word(&mut engine, "mIxEd "), "mIxEd ");
+    engine.reset();
+    assert_eq!(type_word(&mut engine, "lUxUrY "), "lUxUrY ");
+    engine.reset();
+    assert_eq!(type_word(&mut engine, "useState "), "useState ");
+    engine.reset();
+    assert_eq!(type_word(&mut engine, "loWeRcAsE "), "loWeRcAsE ");
+    engine.reset();
+    assert_eq!(type_word(&mut engine, "$mixed_CORPUS "), "$mixed_CORPUS ");
+
+    // 2. 5-Component Syllable Parser with Tây Nguyên & Southern dialect words (Auto Telex/VNI)
+    engine.reset();
+    assert_eq!(type_word(&mut engine, "D9a8k1 La8k1 "), "Đắk Lắk ");
+    engine.reset();
+    assert_eq!(type_word(&mut engine, "Ddawks Lawks "), "Đắk Lắk ");
+    engine.reset();
+    assert_eq!(type_word(&mut engine, "quon73 "), "quởn ");
+    engine.reset();
+    assert_eq!(type_word(&mut engine, "quonwr "), "quởn ");
+}
+
+#[test]
+fn test_property_based_phonotactic_invariants() {
+    use vnchkey_core::syllable_parser::{parse_syllable, ToneMark};
+
+    let telex = TelexEngine::new(ToneStyle::Modern);
+    let vni = VniEngine::new(ToneStyle::Modern);
+
+    // Property 1: Stop-coda syllables (-c, -ch, -p, -t) must NEVER carry Huyền (2), Hỏi (3), or Ngã (4)
+    let onsets = ["", "b", "c", "ch", "d", "dd", "g", "gh", "gi", "h", "k", "kh", "l", "m", "n", "ng", "ngh", "nh", "p", "ph", "qu", "r", "s", "t", "th", "tr", "v", "x"];
+    let vowels = ["a", "aw", "aa", "e", "ee", "i", "o", "oo", "ow", "u", "uw", "ie", "uo", "ua"];
+    let stop_codas = ["c", "ch", "p", "t"];
+    let forbidden_telex_tones = ['f', 'r', 'x'];
+    let forbidden_vni_tones = ['2', '3', '4'];
+
+    let mut checked_combinations = 0;
+    for onset in onsets {
+        for vowel in vowels {
+            for coda in stop_codas {
+                for &t_key in &forbidden_telex_tones {
+                    let seq = format!("{onset}{vowel}{coda}{t_key}");
+                    let (out, _) = telex.feed(&seq);
+                    if let Some(parsed) = parse_syllable(&out) {
+                        if parsed.has_stop_coda() {
+                            assert!(
+                                !matches!(parsed.tone, ToneMark::Grave | ToneMark::HookAbove | ToneMark::Tilde),
+                                "Phonotactic violation on Telex '{seq}' -> '{out}' (tone {:?} on stop coda)",
+                                parsed.tone
+                            );
+                        }
+                    }
+                    checked_combinations += 1;
+                }
+                for &v_key in &forbidden_vni_tones {
+                    let seq = format!("{onset}{vowel}{coda}{v_key}");
+                    let (out, _) = vni.feed(&seq);
+                    if let Some(parsed) = parse_syllable(&out) {
+                        if parsed.has_stop_coda() {
+                            assert!(
+                                !matches!(parsed.tone, ToneMark::Grave | ToneMark::HookAbove | ToneMark::Tilde),
+                                "Phonotactic violation on VNI '{seq}' -> '{out}' (tone {:?} on stop coda)",
+                                parsed.tone
+                            );
+                        }
+                    }
+                    checked_combinations += 1;
+                }
+            }
+        }
+    }
+    assert!(checked_combinations >= 9000, "Verified {checked_combinations} combinatorial stop-coda states");
+
+    // Property 2: Deterministic PRNG fuzzing (10,000 random keystroke streams)
+    // Engine must never panic or corrupt UTF-8 state under any sequence of ASCII/Unicode inputs.
+    let mut engine = Engine::new(EngineConfig::default());
+    let mut seed: u64 = 0x5DEECE66D;
+    let alphabet: &[char] = &[
+        'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm',
+        'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z',
+        'A', 'E', 'O', 'W', 'S', 'F', 'R', 'X', 'J', 'Z',
+        '0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
+        ' ', '.', ',', '_', '-', '/', '`', '[', ']', '\n',
+    ];
+
+    for _ in 0..10_000 {
+        seed = seed.wrapping_mul(6364136223846793005).wrapping_add(1442695040888963407);
+        let idx = ((seed >> 32) as usize) % alphabet.len();
+        let ch = alphabet[idx];
+        let out = engine.process_key(ch, 10.0);
+        // Output commit_text must always be valid UTF-8 (guaranteed by Rust String, verify char count consistency)
+        assert!(out.commit_text.chars().count() <= 64);
+    }
+}
+

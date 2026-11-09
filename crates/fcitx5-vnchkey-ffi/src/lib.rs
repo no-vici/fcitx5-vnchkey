@@ -454,3 +454,118 @@ pub unsafe extern "C" fn fcitx5_vnchkey_get_tone_style(ctx: *mut Fcitx5VnchkeyCo
         0
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::ffi::CStr;
+    use std::ptr;
+
+    unsafe fn take_ffi_string(ptr: *mut c_char) -> String {
+        if ptr.is_null() {
+            return String::new();
+        }
+        let s = CStr::from_ptr(ptr).to_string_lossy().into_owned();
+        fcitx5_vnchkey_free_string(ptr);
+        s
+    }
+
+    #[test]
+    fn test_ffi_null_pointer_safety() {
+        unsafe {
+            // Every FFI entry point must gracefully handle null pointers without crashing or UB
+            let mut bs: usize = 0;
+            let mut commit: *mut c_char = ptr::null_mut();
+            assert_eq!(fcitx5_vnchkey_process_key(ptr::null_mut(), 'a' as u32, 0.0, &mut bs, &mut commit), 0);
+            fcitx5_vnchkey_reset(ptr::null_mut());
+            fcitx5_vnchkey_set_charset(ptr::null_mut(), 1);
+            fcitx5_vnchkey_handle_backspace(ptr::null_mut());
+            assert!(fcitx5_vnchkey_get_current_word(ptr::null_mut()).is_null());
+            assert!(fcitx5_vnchkey_get_completed_word(ptr::null_mut()).is_null());
+            assert!(!fcitx5_vnchkey_has_active_word(ptr::null_mut()));
+            assert_eq!(fcitx5_vnchkey_flip_word(ptr::null_mut(), &mut bs, &mut commit), 0);
+            assert_eq!(fcitx5_vnchkey_undo_macro(ptr::null_mut(), &mut bs, &mut commit), 0);
+            assert_eq!(fcitx5_vnchkey_undo_escape(ptr::null_mut(), &mut bs, &mut commit), 0);
+            assert_eq!(fcitx5_vnchkey_rescue_sentence(ptr::null_mut(), ptr::null(), &mut commit), 0);
+            assert_eq!(fcitx5_vnchkey_apply_accent_to_selection(ptr::null_mut(), ptr::null(), 's' as u32, &mut commit), 0);
+            fcitx5_vnchkey_free_string(ptr::null_mut());
+            fcitx5_vnchkey_free(ptr::null_mut());
+        }
+    }
+
+    #[test]
+    fn test_ffi_full_lifecycle_and_memory_management() {
+        unsafe {
+            let ctx = fcitx5_vnchkey_init_with_method(1); // Telex
+            assert!(!ctx.is_null());
+
+            // Verify configuration getters & setters over C-ABI
+            assert_eq!(fcitx5_vnchkey_get_method(ctx), 1);
+            fcitx5_vnchkey_set_auto_restore(ctx, true);
+            assert!(fcitx5_vnchkey_get_auto_restore(ctx));
+            fcitx5_vnchkey_set_spell_check(ctx, true);
+            assert!(fcitx5_vnchkey_get_spell_check(ctx));
+
+            // Type "tieengs" -> "tiếng"
+            let mut buffer = String::new();
+            for (i, ch) in "tieengs".chars().enumerate() {
+                let mut bs: usize = 0;
+                let mut out_ptr: *mut c_char = ptr::null_mut();
+                let consumed = fcitx5_vnchkey_process_key(ctx, ch as u32, (i * 20) as f64, &mut bs, &mut out_ptr);
+                let commit = take_ffi_string(out_ptr);
+                if consumed != 0 {
+                    let keep = buffer.chars().count().saturating_sub(bs);
+                    buffer = buffer.chars().take(keep).collect();
+                    buffer.push_str(&commit);
+                } else {
+                    buffer.push(ch);
+                }
+            }
+            assert_eq!(buffer, "tiếng");
+            assert!(fcitx5_vnchkey_has_active_word(ctx));
+
+            let current = take_ffi_string(fcitx5_vnchkey_get_current_word(ctx));
+            assert_eq!(current, "tiếng");
+
+            // Test Ngó Sen Word Rescue over FFI
+            let raw_c = CString::new("chaof banj").unwrap();
+            let mut rescued_ptr: *mut c_char = ptr::null_mut();
+            let rescued_ok = fcitx5_vnchkey_rescue_sentence(ctx, raw_c.as_ptr(), &mut rescued_ptr);
+            assert_eq!(rescued_ok, 1);
+            assert_eq!(take_ffi_string(rescued_ptr), "chào bạn");
+
+            // Test Selection Accent Rescue over FFI
+            let sel_c = CString::new("tiêng").unwrap();
+            let mut sel_out: *mut c_char = ptr::null_mut();
+            let sel_ok = fcitx5_vnchkey_apply_accent_to_selection(ctx, sel_c.as_ptr(), 's' as u32, &mut sel_out);
+            assert_eq!(sel_ok, 1);
+            assert_eq!(take_ffi_string(sel_out), "tiếng");
+
+            fcitx5_vnchkey_free(ctx);
+        }
+    }
+
+    #[test]
+    fn test_ffi_rapid_focus_switch_stress() {
+        unsafe {
+            let ctx = fcitx5_vnchkey_init();
+            // Simulate 5,000 rapid window focus switches (Alt+Tab between Terminal Direct and Browser Preedit)
+            for i in 0..5_000 {
+                let mut bs: usize = 0;
+                let mut out_ptr: *mut c_char = ptr::null_mut();
+                fcitx5_vnchkey_process_key(ctx, 'v' as u32, i as f64, &mut bs, &mut out_ptr);
+                fcitx5_vnchkey_free_string(out_ptr);
+
+                let mut out_ptr2: *mut c_char = ptr::null_mut();
+                fcitx5_vnchkey_process_key(ctx, 'i' as u32, (i + 1) as f64, &mut bs, &mut out_ptr2);
+                fcitx5_vnchkey_free_string(out_ptr2);
+
+                // Immediate focus switch reset mid-syllable
+                fcitx5_vnchkey_reset(ctx);
+                assert!(!fcitx5_vnchkey_has_active_word(ctx));
+            }
+            fcitx5_vnchkey_free(ctx);
+        }
+    }
+}
+

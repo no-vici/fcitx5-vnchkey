@@ -41,6 +41,15 @@ build() {
   fi
 }
 
+check() {
+  if [ -d "$srcdir/fcitx5-vnchkey" ]; then
+    cd "$srcdir/fcitx5-vnchkey"
+  fi
+
+  # Chạy bộ kiểm thử đa tầng (Unit, VietC Regression, Property-Based & C-ABI FFI)
+  cargo test --release --workspace
+}
+
 package() {
   if [ -d "$srcdir/fcitx5-vnchkey" ]; then
     cd "$srcdir/fcitx5-vnchkey"

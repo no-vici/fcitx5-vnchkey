@@ -112,6 +112,18 @@ impl VniEngine {
                             return (letters.into_iter().collect(), true, true);
                         } else {
                             // Apply or change tone
+                            let mut test_letters = letters.clone();
+                            apply_smart_uo_horn(&mut test_letters);
+                            let word_str: String = test_letters.iter().collect();
+                            if let Some(parsed) = crate::syllable_parser::parse_syllable(&word_str) {
+                                let new_tone = crate::syllable_parser::ToneMark::from_index(tone);
+                                if !parsed.with_tone(new_tone).is_valid() {
+                                    // Phonetic violation (e.g. stop coda -c, -ch, -p, -t taking huyền, hỏi, ngã)
+                                    letters.push(ch);
+                                    return (letters.into_iter().collect(), false, false);
+                                }
+                            }
+
                             apply_smart_uo_horn(&mut letters);
                             rebalance_tone(&mut letters, tone, self.tone_style);
                             return (letters.into_iter().collect(), true, false);

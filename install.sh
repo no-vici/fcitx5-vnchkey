@@ -32,11 +32,14 @@ fi
 
 TARGET_DIR="${CARGO_TARGET_DIR:-target}/release"
 
-echo -e "\n${GREEN}==> 1/4. Biên dịch mã nguồn Rust (Release Mode - LTO Fat)...${NC}"
+echo -e "\n${GREEN}==> 1/5. Chạy bộ kiểm thử tự động đa tầng (Core, VietC, Property & FFI)...${NC}"
+cargo test --workspace
+
+echo -e "\n${GREEN}==> 2/5. Biên dịch mã nguồn Rust (Release Mode - LTO Fat)...${NC}"
 cargo build --release
 
 ADDON_SO=""
-echo -e "\n${GREEN}==> 2/4. Biên dịch Fcitx5 Native C++ Addon Module...${NC}"
+echo -e "\n${GREEN}==> 3/5. Biên dịch Fcitx5 Native C++ Addon Module...${NC}"
 if command -v cmake >/dev/null 2>&1; then
     if [[ "$WORKSPACE_DIR" == *:* ]]; then
         SHADOW_BUILD_DIR="/tmp/vnchkey-addon-build"
@@ -72,7 +75,7 @@ else
     echo -e "${YELLOW}[CẢNH BÁO] Không tìm thấy CMake. Bỏ qua bước biên dịch C++ addon.${NC}"
 fi
 
-echo -e "\n${GREEN}==> 3/4. Cài đặt các tệp vào hệ thống (/usr)...${NC}"
+echo -e "\n${GREEN}==> 4/5. Cài đặt các tệp vào hệ thống (/usr)...${NC}"
 PREFIX="/usr"
 
 # Core libraries
@@ -103,7 +106,7 @@ sudo ln -sf fcitx5-vnchkey-settings "$PREFIX/bin/vnchkey-settings"
 sudo install -Dm644 data/org.fcitx.Fcitx5.Addon.Vnchkey.Settings.desktop "$PREFIX/share/applications/org.fcitx.Fcitx5.Addon.Vnchkey.Settings.desktop"
 
 # Restart Fcitx5 to pick up new input methods
-echo -e "\n${GREEN}==> Khởi động lại Fcitx5 để nạp bộ gõ mới...${NC}"
+echo -e "\n${GREEN}==> 5/5. Khởi động lại Fcitx5 để nạp bộ gõ mới...${NC}"
 fcitx5 -r -d 2>/dev/null || true
 
 echo -e "\n${BLUE}══════════════════════════════════════════════════════════════${NC}"
