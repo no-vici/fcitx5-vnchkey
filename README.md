@@ -40,7 +40,7 @@
    - [3.12. Phím Tắt Lật Từ Tức Thì (Flip Word — Ctrl + Shift + Z)](#312-phím-tắt-lật-từ-tức-thì-flip-word--ctrl--shift--z)
    - [3.13. Bộ Lọc & Đặc Trị Thực Chiến Linux / Wayland (Hardened Runtime Fixes)](#313-bộ-lọc--đặc-trị-thực-chiến-linux--wayland-hardened-runtime-fixes)
 4. [Giao Diện Cài Đặt Trực Quan (Rust + egui GUI)](#4-giao-diện-cài-đặt-trực-quan-rust--egui-gui)
-5. [Hướng Dẫn Cài Đặt Cho Arch Linux](#5-hướng-dẫn-cài-đặt-cho-arch-linux)
+5. [Hướng Dẫn Cài Đặt Cho Linux, macOS & Windows](#5-hướng-dẫn-cài-đặt-cho-linux-macos--windows)
 6. [Lộ Trình Phát Triển & Tài Liệu Kỹ Thuật (Roadmap & Docs)](#6-lộ-trình-phát-triển--tài-liệu-kỹ-thuật-roadmap--docs)
 7. [Ý Nghĩa Biểu Tượng & Di Sản Tự Do](#7-ý-nghĩa-biểu-tượng--di-sản-tự-do)
 8. [Lời Cảm Ơn / Ghi Chú Phát Triển](#8-lời-cảm-ơn--ghi-chú-phát-triển)
@@ -300,9 +300,9 @@ vnchkey-settings
 
 ---
 
-## 5. Hướng Dẫn Cài Đặt Cho Arch Linux
+## 5. Hướng Dẫn Cài Đặt Cho Linux, macOS & Windows
 
-### 5.1. Cài đặt tự động bằng `install.sh` (Khuyên Dùng ⭐)
+### 5.1. Cài đặt trên Arch Linux bằng `install.sh` (Khuyên Dùng ⭐)
 Script tự động biên dịch thư viện Rust, build module C++ addon, cài đặt vào hệ thống `/usr` và khởi động lại Fcitx5:
 
 ```bash
@@ -325,10 +325,30 @@ makepkg -si
 
 ---
 
-### 5.3. Kích hoạt bộ gõ
+### 5.3. Kích hoạt bộ gõ trên Linux (Fcitx5)
 1. Mở công cụ cấu hình Fcitx5: `fcitx5-configtool`.
 2. Tìm kiếm và thêm **vnchKey** vào danh sách bộ gõ.
 3. Nhấn phím chuyển đổi bộ gõ (mặc định `Ctrl + Space` hoặc `Ctrl + Shift`) để bắt đầu sử dụng.
+
+---
+
+### 5.4. Build & Cài đặt trên macOS (`vnchKey.app`)
+Xem hướng dẫn chi tiết từng bước và cách xử lý quyền Trợ năng (Accessibility / TCC) tại **[macos/README.md](macos/README.md)**:
+
+```bash
+git clone https://github.com/no-vici/fcitx5-vnchkey.git
+cd fcitx5-vnchkey/macos
+make clean && make app
+killall vnchKey 2>/dev/null || true
+cp -R build/vnchKey.app /Applications/
+open /Applications/vnchKey.app
+```
+> **Lưu ý quan trọng trên macOS**: Mỗi khi build lại bản mới, bạn nhớ vào **System Settings > Privacy & Security > Accessibility**, xoá mục `vnchKey` cũ bằng nút `(-)` (hoặc tắt rồi bật lại công tắc) và mở lại `/Applications/vnchKey.app` để macOS cấp quyền bắt phím cho binary mới.
+
+---
+
+### 5.5. Build & Chạy trên Windows (`VnCharKey.exe`)
+Phiên bản dành cho Windows sử dụng tên gọi trung tính **VnCharKey** kèm biểu tượng **Nón Lá Việt Nam**. Xem chi tiết tại **[windows/README.md](windows/README.md)**.
 
 ---
 
