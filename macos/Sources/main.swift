@@ -10,6 +10,10 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         loadIcons()
+        if let appIconPath = Bundle.main.path(forResource: "AppIcon", ofType: "png"),
+           let appIconImg = NSImage(contentsOfFile: appIconPath) {
+            NSApp.applicationIconImage = appIconImg
+        }
         keyManager = KeyTapManager(method: UInt32(defaults.integer(forKey: "vnchkey.method")))
         applySavedPreferences()
         setupStatusBar()
@@ -153,20 +157,70 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
         menu.addItem(NSMenuItem.separator())
 
-        // 5. Quản lý Gõ Tắt (Macros) & Từ Điển Cá Nhân (Custom Dictionary)
+        // 5. Quản lý Gõ Tắt (Macros) & Từ Điển Cá Nhân (Custom Dictionary) - Kiểu xKey trực tiếp trên Menu
         let macroToggleItem = NSMenuItem(title: "Bật Gõ Tắt (Macro)", action: #selector(toggleMacro(_:)), keyEquivalent: "")
         macroToggleItem.state = km.getMacroEnabled() ? .on : .off
         menu.addItem(macroToggleItem)
 
-        let editMacroItem = NSMenuItem(title: "Chỉnh sửa bảng Gõ Tắt (macros.conf)...", action: #selector(openMacrosFile), keyEquivalent: "")
-        menu.addItem(editMacroItem)
+        let addMacroItem = NSMenuItem(title: "➕ Thêm Gõ Tắt mới...", action: #selector(promptAddMacro), keyEquivalent: "m")
+        menu.addItem(addMacroItem)
+
+        let macrosList = km.readMacrosList()
+        let macroSubmenu = NSMenu()
+        if macrosList.isEmpty {
+            let emptyItem = NSMenuItem(title: "(Chưa có mục Gõ Tắt nào)", action: nil, keyEquivalent: "")
+            emptyItem.isEnabled = false
+            macroSubmenu.addItem(emptyItem)
+        } else {
+            let hintItem = NSMenuItem(title: "Bấm vào mục bất kỳ để Sửa hoặc Xoá:", action: nil, keyEquivalent: "")
+            hintItem.isEnabled = false
+            macroSubmenu.addItem(hintItem)
+            macroSubmenu.addItem(NSMenuItem.separator())
+            for (trigger, expansion) in macrosList {
+                let item = NSMenuItem(title: "\(trigger)  →  \(expansion)", action: #selector(editOrRemoveMacroItem(_:)), keyEquivalent: "")
+                item.representedObject = trigger
+                macroSubmenu.addItem(item)
+            }
+        }
+        macroSubmenu.addItem(NSMenuItem.separator())
+        macroSubmenu.addItem(NSMenuItem(title: "Mở tập tin macros.conf bằng TextEdit...", action: #selector(openMacrosFile), keyEquivalent: ""))
+
+        let macroListParent = NSMenuItem(title: "Danh sách Gõ Tắt (\(macrosList.count))", action: nil, keyEquivalent: "")
+        macroListParent.submenu = macroSubmenu
+        menu.addItem(macroListParent)
+
+        menu.addItem(NSMenuItem.separator())
 
         let dictToggleItem = NSMenuItem(title: "Bật Từ Điển Cá Nhân", action: #selector(toggleDictionary(_:)), keyEquivalent: "")
         dictToggleItem.state = km.getDictionaryEnabled() ? .on : .off
         menu.addItem(dictToggleItem)
 
-        let editDictItem = NSMenuItem(title: "Chỉnh sửa Từ Điển Cá Nhân (dictionary.conf)...", action: #selector(openDictionaryFile), keyEquivalent: "")
-        menu.addItem(editDictItem)
+        let addDictItem = NSMenuItem(title: "➕ Thêm từ mới vô Từ Điển...", action: #selector(promptAddDictionaryWord), keyEquivalent: "d")
+        menu.addItem(addDictItem)
+
+        let dictWords = km.readDictionaryWords()
+        let dictSubmenu = NSMenu()
+        if dictWords.isEmpty {
+            let emptyItem = NSMenuItem(title: "(Chưa có từ nào trong Từ Điển)", action: nil, keyEquivalent: "")
+            emptyItem.isEnabled = false
+            dictSubmenu.addItem(emptyItem)
+        } else {
+            let hintItem = NSMenuItem(title: "Bấm vào từ bất kỳ để Xoá khỏi Từ Điển:", action: nil, keyEquivalent: "")
+            hintItem.isEnabled = false
+            dictSubmenu.addItem(hintItem)
+            dictSubmenu.addItem(NSMenuItem.separator())
+            for word in dictWords {
+                let item = NSMenuItem(title: word, action: #selector(removeDictionaryWordItem(_:)), keyEquivalent: "")
+                item.representedObject = word
+                dictSubmenu.addItem(item)
+            }
+        }
+        dictSubmenu.addItem(NSMenuItem.separator())
+        dictSubmenu.addItem(NSMenuItem(title: "Mở tập tin dictionary.conf bằng TextEdit...", action: #selector(openDictionaryFile), keyEquivalent: ""))
+
+        let dictListParent = NSMenuItem(title: "Danh sách Từ Điển Cá Nhân (\(dictWords.count))", action: nil, keyEquivalent: "")
+        dictListParent.submenu = dictSubmenu
+        menu.addItem(dictListParent)
 
         let reloadFilesItem = NSMenuItem(title: "Nạp lại Gõ Tắt & Từ Điển", action: #selector(reloadConfigFiles), keyEquivalent: "r")
         menu.addItem(reloadFilesItem)
@@ -298,8 +352,124 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         openConfigFileInTextEditor(km.dictionaryFilePath())
     }
 
+    @objc func promptAddMacro() {
+        showMacroDialog(initialTrigger: "", initialExpansion: "", isEditing: false)
+    }
+
+    @objc func editOrRemoveMacroItem(_ sender: NSMenuItem) {
+        guard let km = keyManager, let trigger = sender.representedObject as? String else { return }
+        let currentExpansion = km.readMacrosList().first(where: { $0.0.lowercased() == trigger.lowercased() })?.1 ?? ""
+        showMacroDialog(initialTrigger: trigger, initialExpansion: currentExpansion, isEditing: true)
+    }
+
+    private func showMacroDialog(initialTrigger: String, initialExpansion: String, isEditing: Bool) {
+        guard let km = keyManager else { return }
+        NSApp.activate(ignoringOtherApps: true)
+
+        let alert = NSAlert()
+        alert.messageText = isEditing ? "Chỉnh sửa mục Gõ Tắt" : "Thêm mục Gõ Tắt mới"
+        alert.informativeText = "Nhập từ viết tắt và cụm từ đầy đủ (hỗ trợ $DATE, $TIME, $YEAR, $NOW, $DATETIME):"
+        alert.alertStyle = .informational
+        if let appIconPath = Bundle.main.path(forResource: "AppIcon", ofType: "png"),
+           let iconImg = NSImage(contentsOfFile: appIconPath) {
+            alert.icon = iconImg
+        }
+
+        let container = NSView(frame: NSRect(x: 0, y: 0, width: 340, height: 112))
+
+        let triggerLabel = NSTextField(labelWithString: "Từ viết tắt (ví dụ: vnch, sg):")
+        triggerLabel.frame = NSRect(x: 0, y: 90, width: 340, height: 18)
+        container.addSubview(triggerLabel)
+
+        let triggerField = NSTextField(frame: NSRect(x: 0, y: 62, width: 340, height: 24))
+        triggerField.placeholderString = "Ví dụ: vnch"
+        triggerField.stringValue = initialTrigger
+        container.addSubview(triggerField)
+
+        let expansionLabel = NSTextField(labelWithString: "Cụm từ thay thế:")
+        expansionLabel.frame = NSRect(x: 0, y: 34, width: 340, height: 18)
+        container.addSubview(expansionLabel)
+
+        let expansionField = NSTextField(frame: NSRect(x: 0, y: 6, width: 340, height: 24))
+        expansionField.placeholderString = "Ví dụ: Việt Nam Cộng Hòa"
+        expansionField.stringValue = initialExpansion
+        container.addSubview(expansionField)
+
+        alert.accessoryView = container
+        alert.addButton(withTitle: isEditing ? "Lưu thay đổi" : "Thêm mới")
+        alert.addButton(withTitle: "Huỷ")
+        if isEditing {
+            alert.addButton(withTitle: "Xoá mục này")
+        }
+
+        alert.window.initialFirstResponder = isEditing ? expansionField : triggerField
+        let response = alert.runModal()
+
+        if response == .alertFirstButtonReturn {
+            let newTrigger = triggerField.stringValue.trimmingCharacters(in: .whitespaces)
+            let newExpansion = expansionField.stringValue.trimmingCharacters(in: .whitespaces)
+            if !newTrigger.isEmpty && !newExpansion.isEmpty {
+                if isEditing && newTrigger.lowercased() != initialTrigger.lowercased() {
+                    km.removeMacro(trigger: initialTrigger)
+                }
+                km.addOrUpdateMacro(trigger: newTrigger, expansion: newExpansion)
+                rebuildMenu()
+            }
+        } else if isEditing && response == .alertThirdButtonReturn {
+            km.removeMacro(trigger: initialTrigger)
+            rebuildMenu()
+        }
+    }
+
+    @objc func promptAddDictionaryWord() {
+        guard let km = keyManager else { return }
+        NSApp.activate(ignoringOtherApps: true)
+
+        let alert = NSAlert()
+        alert.messageText = "Thêm từ mới vô Từ Điển Cá Nhân"
+        alert.informativeText = "Nhập từ tiếng Anh hoặc thuật ngữ riêng mà bạn muốn vnchKey luôn giữ nguyên (không bỏ dấu Tiếng Việt):"
+        alert.alertStyle = .informational
+        if let appIconPath = Bundle.main.path(forResource: "AppIcon", ofType: "png"),
+           let iconImg = NSImage(contentsOfFile: appIconPath) {
+            alert.icon = iconImg
+        }
+
+        let wordField = NSTextField(frame: NSRect(x: 0, y: 0, width: 320, height: 24))
+        wordField.placeholderString = "Ví dụ: macbook, kubernetes, tailwind..."
+        alert.accessoryView = wordField
+        alert.addButton(withTitle: "Thêm vô Từ Điển")
+        alert.addButton(withTitle: "Huỷ")
+
+        alert.window.initialFirstResponder = wordField
+        if alert.runModal() == .alertFirstButtonReturn {
+            let word = wordField.stringValue.trimmingCharacters(in: .whitespaces)
+            if !word.isEmpty {
+                km.addDictionaryWord(word)
+                rebuildMenu()
+            }
+        }
+    }
+
+    @objc func removeDictionaryWordItem(_ sender: NSMenuItem) {
+        guard let km = keyManager, let word = sender.representedObject as? String else { return }
+        NSApp.activate(ignoringOtherApps: true)
+
+        let alert = NSAlert()
+        alert.messageText = "Xoá từ khỏi Từ Điển Cá Nhân?"
+        alert.informativeText = "Bạn có muốn xoá từ \"\(word)\" khỏi danh sách từ điển riêng không?"
+        alert.alertStyle = .warning
+        alert.addButton(withTitle: "Xoá")
+        alert.addButton(withTitle: "Huỷ")
+
+        if alert.runModal() == .alertFirstButtonReturn {
+            km.removeDictionaryWord(word)
+            rebuildMenu()
+        }
+    }
+
     @objc func reloadConfigFiles() {
         keyManager?.reloadMacrosAndDictionary()
+        rebuildMenu()
     }
 
     @objc func checkPermissionAction() {

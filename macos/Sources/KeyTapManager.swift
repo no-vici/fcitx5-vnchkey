@@ -90,6 +90,125 @@ public class KeyTapManager {
         reloadMacrosAndDictionary()
     }
 
+    /// Đọc danh sách các cặp Gõ Tắt (viết_tắt, cụm_từ) từ macros.conf
+    public func readMacrosList() -> [(String, String)] {
+        ensureDefaultConfigFiles()
+        guard let content = try? String(contentsOfFile: macrosFilePath(), encoding: .utf8) else {
+            return []
+        }
+        var result: [(String, String)] = []
+        for line in content.components(separatedBy: .newlines) {
+            let trimmed = line.trimmingCharacters(in: .whitespaces)
+            if trimmed.isEmpty || trimmed.hasPrefix("#") { continue }
+            if let eqRange = trimmed.range(of: "=") {
+                let trigger = String(trimmed[..<eqRange.lowerBound]).trimmingCharacters(in: .whitespaces)
+                let expansion = String(trimmed[eqRange.upperBound...]).trimmingCharacters(in: .whitespaces)
+                if !trigger.isEmpty && !expansion.isEmpty {
+                    result.append((trigger, expansion))
+                }
+            }
+        }
+        return result
+    }
+
+    /// Lưu danh sách Gõ Tắt vào macros.conf và nạp lại vào Engine
+    public func saveMacrosList(_ list: [(String, String)]) {
+        var lines: [String] = [
+            "# Bảng Gõ Tắt (Macros) của vnchKey",
+            "# Cú pháp: viết_tắt=cụm_từ_đầy_đủ",
+            "# Hỗ trợ biến động: $DATE, $TIME, $YEAR, $NOW, $DATETIME"
+        ]
+        var seen = Set<String>()
+        for (k, v) in list {
+            let key = k.trimmingCharacters(in: .whitespaces)
+            let val = v.trimmingCharacters(in: .whitespaces)
+            let norm = key.lowercased()
+            if !norm.isEmpty && !val.isEmpty && !seen.contains(norm) {
+                seen.insert(norm)
+                lines.append("\(key)=\(val)")
+            }
+        }
+        let output = lines.joined(separator: "\n") + "\n"
+        try? output.write(toFile: macrosFilePath(), atomically: true, encoding: .utf8)
+        reloadMacrosAndDictionary()
+    }
+
+    /// Thêm hoặc cập nhật 1 mục Gõ Tắt rồi nạp lại ngay lập tức
+    public func addOrUpdateMacro(trigger: String, expansion: String) {
+        let cleanTrigger = trigger.trimmingCharacters(in: .whitespaces)
+        let cleanExpansion = expansion.trimmingCharacters(in: .whitespaces)
+        guard !cleanTrigger.isEmpty, !cleanExpansion.isEmpty else { return }
+
+        var list = readMacrosList()
+        if let idx = list.firstIndex(where: { $0.0.lowercased() == cleanTrigger.lowercased() }) {
+            list[idx] = (cleanTrigger, cleanExpansion)
+        } else {
+            list.append((cleanTrigger, cleanExpansion))
+        }
+        saveMacrosList(list)
+    }
+
+    /// Xoá 1 mục Gõ Tắt theo từ viết tắt
+    public func removeMacro(trigger: String) {
+        let norm = trigger.trimmingCharacters(in: .whitespaces).lowercased()
+        let list = readMacrosList().filter { $0.0.lowercased() != norm }
+        saveMacrosList(list)
+    }
+
+    /// Đọc danh sách các từ trong Từ Điển Cá Nhân (dictionary.conf)
+    public func readDictionaryWords() -> [String] {
+        ensureDefaultConfigFiles()
+        guard let content = try? String(contentsOfFile: dictionaryFilePath(), encoding: .utf8) else {
+            return []
+        }
+        var words: [String] = []
+        for line in content.components(separatedBy: .newlines) {
+            let trimmed = line.trimmingCharacters(in: .whitespaces)
+            if !trimmed.isEmpty && !trimmed.hasPrefix("#") {
+                words.append(trimmed)
+            }
+        }
+        return words
+    }
+
+    /// Lưu danh sách Từ Điển Cá Nhân vào dictionary.conf và nạp lại vào Engine
+    public func saveDictionaryWords(_ words: [String]) {
+        var lines: [String] = [
+            "# Từ Điển Cá Nhân (Custom English / Bypass Words)",
+            "# Mỗi từ trên 1 dòng. Khi gõ các từ này, vnchKey sẽ giữ nguyên tiếng Anh."
+        ]
+        var seen = Set<String>()
+        for w in words {
+            let clean = w.trimmingCharacters(in: .whitespaces)
+            let norm = clean.lowercased()
+            if !norm.isEmpty && !seen.contains(norm) {
+                seen.insert(norm)
+                lines.append(clean)
+            }
+        }
+        let output = lines.joined(separator: "\n") + "\n"
+        try? output.write(toFile: dictionaryFilePath(), atomically: true, encoding: .utf8)
+        reloadMacrosAndDictionary()
+    }
+
+    /// Thêm 1 từ mới vào Từ Điển Cá Nhân rồi nạp lại ngay lập tức
+    public func addDictionaryWord(_ word: String) {
+        let clean = word.trimmingCharacters(in: .whitespaces)
+        guard !clean.isEmpty else { return }
+        var words = readDictionaryWords()
+        if !words.contains(where: { $0.lowercased() == clean.lowercased() }) {
+            words.append(clean)
+            saveDictionaryWords(words)
+        }
+    }
+
+    /// Xoá 1 từ khỏi Từ Điển Cá Nhân
+    public func removeDictionaryWord(_ word: String) {
+        let norm = word.trimmingCharacters(in: .whitespaces).lowercased()
+        let words = readDictionaryWords().filter { $0.lowercased() != norm }
+        saveDictionaryWords(words)
+    }
+
     public func reloadMacrosAndDictionary() {
         guard let engine = self.engine else { return }
         let macroPath = macrosFilePath()

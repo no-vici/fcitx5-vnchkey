@@ -31,6 +31,8 @@ app: rust
 <dict>\
     <key>CFBundleExecutable</key>\
     <string>$(APP_NAME)</string>\
+    <key>CFBundleIconFile</key>\
+    <string>AppIcon</string>\
     <key>CFBundleIdentifier</key>\
     <string>com.vnchkey.macos</string>\
     <key>CFBundleName</key>\
