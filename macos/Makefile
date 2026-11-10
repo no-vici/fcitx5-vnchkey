@@ -14,7 +14,7 @@ DMG_NAME = $(BUILD_DIR)/$(APP_NAME)-0.3.0.dmg
 
 all: dmg
 
-# 1. Build Rust FFI static library
+# 1. Build Rust FFI static library (Universal Binary: cả Intel và Apple Silicon)
 rust:
 	cd .. && cargo build --release -p fcitx5-vnchkey-ffi
 
@@ -39,6 +39,8 @@ app: rust
     <string>APPL</string>\
     <key>CFBundleShortVersionString</key>\
     <string>0.3.0</string>\
+    <key>LSMinimumSystemVersion</key>\
+    <string>11.0</string>\
     <key>LSUIElement</key>\
     <true/>\
     <key>NSHighResolutionCapable</key>\
@@ -50,6 +52,9 @@ app: rust
 		-import-objc-header $(BRIDGING_HEADER) \
 		-L $(TARGET_DIR) -lfcitx5_vnchkey_ffi \
 		-o $(MACOS_DIR)/$(APP_NAME)
+	
+	# Ad-hoc code signing để macOS không chặn app chưa đăng ký
+	codesign --force --deep --sign - $(APP_BUNDLE)
 	
 	@echo "✅ Đã tạo xong $(APP_BUNDLE)"
 	@echo "👉 Bạn có thể chạy thử: open $(APP_BUNDLE)"

@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="256" height="256" viewBox="0 0 256 256" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background Keycap -->
+  <rect x="16" y="16" width="224" height="224" rx="48" fill="#1E1E2E" stroke="#45475A" stroke-width="8"/>
+  <!-- Conical Hat (Non La) / Circumflex Accent -->
+  <path d="M128 44L44 112H212L128 44Z" fill="#F9E2AF" stroke="#FAB387" stroke-width="6" stroke-linejoin="round"/>
+  <path d="M72 90H184" stroke="#EBA0AC" stroke-width="4" stroke-linecap="round" opacity="0.6"/>
+  <path d="M98 69H158" stroke="#EBA0AC" stroke-width="4" stroke-linecap="round" opacity="0.6"/>
+  <!-- Stylized Letter V -->
+  <path d="M76 132L128 212L180 132" stroke="#89DCEB" stroke-width="24" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

@@ -63,3 +63,36 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+  build-windows:
+    name: Build & Package Windows (VnCharKey.exe)
+    runs-on: windows-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Install Rust Toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Build VnCharKey for Windows
+        run: |
+          cd windows
+          cargo build --release
+
+      - name: Package Windows Zip
+        shell: pwsh
+        run: |
+          mkdir dist
+          Copy-Item windows/target/release/VnCharKey.exe dist/
+          Copy-Item windows/assets/vncharkey.ico dist/
+          Copy-Item windows/README.md dist/
+          Compress-Archive -Path dist/* -DestinationPath VnCharKey-Windows-x64.zip
+
+      - name: Upload Windows Release Assets
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            VnCharKey-Windows-x64.zip
+            windows/target/release/VnCharKey.exe
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
