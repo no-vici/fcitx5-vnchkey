@@ -762,7 +762,7 @@ mod win_app {
                 st.bracket_transform,
                 st.macro_enabled,
                 st.dict_enabled,
-                st.shortcut,
+                st.shortcut.clone(),
             )
         });
 
@@ -1099,30 +1099,35 @@ mod win_app {
                             );
                         }
                         ID_TOGGLE_SPELLCHECK => {
-                            st.spell_check = !st.spell_check;
-                            st.engine.set_spell_check(st.spell_check);
+                            let val = !st.spell_check;
+                            st.spell_check = val;
+                            st.engine.set_spell_check(val);
                         }
                         ID_TOGGLE_AUTORESTORE => {
-                            st.auto_restore = !st.auto_restore;
-                            st.engine.set_auto_restore_english(st.auto_restore);
+                            let val = !st.auto_restore;
+                            st.auto_restore = val;
+                            st.engine.set_auto_restore_english(val);
                         }
                         ID_TOGGLE_ESCRESTORE => {
                             st.esc_restore = !st.esc_restore;
                         }
                         ID_TOGGLE_BRACKET => {
-                            st.bracket_transform = !st.bracket_transform;
-                            st.engine.set_bracket_transform(st.bracket_transform);
+                            let val = !st.bracket_transform;
+                            st.bracket_transform = val;
+                            st.engine.set_bracket_transform(val);
                         }
                         ID_TOGGLE_MACRO => {
-                            st.macro_enabled = !st.macro_enabled;
-                            st.engine.set_enable_macro(st.macro_enabled);
+                            let val = !st.macro_enabled;
+                            st.macro_enabled = val;
+                            st.engine.set_enable_macro(val);
                         }
                         ID_OPEN_MACROS => {
                             open_file_in_notepad(macros_path());
                         }
                         ID_TOGGLE_DICT => {
-                            st.dict_enabled = !st.dict_enabled;
-                            st.engine.set_enable_dictionary(st.dict_enabled);
+                            let val = !st.dict_enabled;
+                            st.dict_enabled = val;
+                            st.engine.set_enable_dictionary(val);
                         }
                         ID_OPEN_DICT => {
                             open_file_in_notepad(dict_path());
