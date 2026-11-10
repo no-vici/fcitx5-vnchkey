@@ -291,13 +291,13 @@ public class KeyTapManager {
             return Unmanaged.passRetained(event)
         }
 
-        // Xử lý phím Escape (kVK_Escape = 53): hoàn nguyên từ thô về Dokey style
+                // Xử lý phím Escape (kVK_Escape = 53): hoàn nguyên từ thô về Dokey style
         if keyCode == 53 {
             if escRestoreEnabled {
                 var backspaces: Int = 0
                 var outCommit: UnsafeMutablePointer<CChar>? = nil
                 if fcitx5_vnchkey_undo_escape(engine, &backspaces, &outCommit) == 1 {
-                    emitOutput(proxy: proxy, backspaces: backspaces, commitPtr: outCommit)
+                    emitOutput(backspaces: backspaces, commitPtr: outCommit)
                     return nil
                 }
             }
@@ -310,7 +310,7 @@ public class KeyTapManager {
             var backspaces: Int = 0
             var outCommit: UnsafeMutablePointer<CChar>? = nil
             if fcitx5_vnchkey_undo_macro(engine, &backspaces, &outCommit) == 1 {
-                emitOutput(proxy: proxy, backspaces: backspaces, commitPtr: outCommit)
+                emitOutput(backspaces: backspaces, commitPtr: outCommit)
                 return nil
             }
             fcitx5_vnchkey_handle_backspace(engine)
@@ -339,20 +339,20 @@ public class KeyTapManager {
         )
 
         if handled == 1 {
-            emitOutput(proxy: proxy, backspaces: backspaces, commitPtr: outCommit)
+            emitOutput(backspaces: backspaces, commitPtr: outCommit)
             return nil // Chặn phím gốc
         }
 
         return Unmanaged.passRetained(event)
     }
 
-    private func emitOutput(proxy: CGEventTapProxy, backspaces: Int, commitPtr: UnsafeMutablePointer<CChar>?) {
-        let src = CGEventSource(stateID: .privateState)
+    private func emitOutput(backspaces: Int, commitPtr: UnsafeMutablePointer<CChar>?) {
+        let src = CGEventSource(stateID: .hidSystemState)
 
         // 1. Giả lập phím Backspace để xóa ký tự cũ
         if backspaces > 0 {
             for _ in 0..<backspaces {
-                postVirtualKey(proxy: proxy, src: src, keyCode: 51) // 51 = macOS Backspace
+                postVirtualKey(src: src, keyCode: 51) // 51 = macOS Backspace
             }
         }
 
@@ -360,36 +360,32 @@ public class KeyTapManager {
         if let commitPtr = commitPtr {
             let commitStr = String(cString: commitPtr)
             if !commitStr.isEmpty {
-                postUnicodeString(proxy: proxy, src: src, string: commitStr)
+                postUnicodeString(src: src, string: commitStr)
             }
             fcitx5_vnchkey_free_string(commitPtr)
         }
     }
 
-    private func postVirtualKey(proxy: CGEventTapProxy, src: CGEventSource?, keyCode: CGKeyCode) {
+    private func postVirtualKey(src: CGEventSource?, keyCode: CGKeyCode) {
         if let down = CGEvent(keyboardEventSource: src, virtualKey: keyCode, keyDown: true),
            let up = CGEvent(keyboardEventSource: src, virtualKey: keyCode, keyDown: false) {
-            down.flags = [] // Xoá cờ modifier nếu có
-            up.flags = []
             down.setIntegerValueField(.eventSourceUserData, value: VNCHKEY_SYNTHETIC_TAG)
             up.setIntegerValueField(.eventSourceUserData, value: VNCHKEY_SYNTHETIC_TAG)
-            down.tapPostEvent(proxy)
-            up.tapPostEvent(proxy)
+            down.post(tap: .cghidEventTap)
+            up.post(tap: .cghidEventTap)
         }
     }
 
-    private func postUnicodeString(proxy: CGEventTapProxy, src: CGEventSource?, string: String) {
+    private func postUnicodeString(src: CGEventSource?, string: String) {
         let utf16 = Array(string.utf16)
         if let down = CGEvent(keyboardEventSource: src, virtualKey: 0, keyDown: true),
            let up = CGEvent(keyboardEventSource: src, virtualKey: 0, keyDown: false) {
-            down.flags = []
-            up.flags = []
             down.setIntegerValueField(.eventSourceUserData, value: VNCHKEY_SYNTHETIC_TAG)
             up.setIntegerValueField(.eventSourceUserData, value: VNCHKEY_SYNTHETIC_TAG)
             down.keyboardSetUnicodeString(stringLength: utf16.count, unicodeString: utf16)
             up.keyboardSetUnicodeString(stringLength: utf16.count, unicodeString: utf16)
-            down.tapPostEvent(proxy)
-            up.tapPostEvent(proxy)
+            down.post(tap: .cghidEventTap)
+            up.post(tap: .cghidEventTap)
         }
     }
 }

@@ -1061,7 +1061,7 @@ impl Engine {
                                 let consumed = backspaces > 0 || commit_text != ch.to_string();
                                 return EngineOutput {
                                     backspaces,
-                                    commit_text,
+                                    commit_text: self.format_commit(&commit_text),
                                     consumed,
                                     auto_restored: false,
                                     macro_expanded: false,
@@ -1089,7 +1089,7 @@ impl Engine {
                     let consumed = backspaces > 0 || commit_text != ch.to_string();
                     return EngineOutput {
                         backspaces,
-                        commit_text,
+                        commit_text: self.format_commit(&commit_text),
                         consumed,
                         auto_restored: false,
                         macro_expanded: false,
@@ -1127,7 +1127,7 @@ impl Engine {
                                 let consumed = backspaces > 0 || commit_text != ch.to_string();
                                 return EngineOutput {
                                     backspaces,
-                                    commit_text,
+                                    commit_text: self.format_commit(&commit_text),
                                     consumed,
                                     auto_restored: false,
                                     macro_expanded: false,
@@ -1155,7 +1155,7 @@ impl Engine {
                     let consumed = backspaces > 0 || commit_text != ch.to_string();
                     return EngineOutput {
                         backspaces,
-                        commit_text,
+                        commit_text: self.format_commit(&commit_text),
                         consumed,
                         auto_restored: false,
                         macro_expanded: false,
@@ -1874,5 +1874,27 @@ mod tests {
         let out_s = engine.process_key('s', 0.0);
         // The output commit on 's' must be in Unicode Tổ Hợp (NFD)
         assert!(out_s.commit_text.contains('\u{0302}') || out_s.commit_text.contains('\u{0301}'));
+    }
+
+    #[test]
+    fn test_vni_dau61_and_common_words() {
+        let mut engine = Engine::new(EngineConfig {
+            method: InputMethod::Vni,
+            ..EngineConfig::default()
+        });
+
+        let mut screen = String::new();
+        for ch in "dau61".chars() {
+            let out = engine.process_key(ch, 0.0);
+            if out.consumed {
+                let keep = screen.chars().count().saturating_sub(out.backspaces);
+                screen = screen.chars().take(keep).collect();
+                screen.push_str(&out.commit_text);
+            } else {
+                screen.push(ch);
+            }
+        }
+        assert_eq!(screen, "dấu");
+        assert_eq!(engine.current_word(), "dấu");
     }
 }

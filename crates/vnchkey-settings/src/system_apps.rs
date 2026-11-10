@@ -4,6 +4,7 @@ use std::collections::HashMap;
 use std::fs;
 use std::path::{Path, PathBuf};
 
+#[cfg(unix)]
 extern "C" {
     fn getuid() -> u32;
 }

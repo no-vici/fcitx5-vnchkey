@@ -15,12 +15,13 @@ pub extern "C" fn fcitx5_vnchkey_init() -> *mut Fcitx5VnchkeyContext {
     fcitx5_vnchkey_init_with_method(0)
 }
 
-/// Initializes a new vnchKey engine instance with a specific method (0 = Auto, 1 = Telex, 2 = VNI).
+/// Initializes a new vnchKey engine instance with a specific method (0 = Auto, 1 = Telex, 2 = VNI, 3 = SimpleTelex).
 #[no_mangle]
 pub extern "C" fn fcitx5_vnchkey_init_with_method(method: u32) -> *mut Fcitx5VnchkeyContext {
     let input_method = match method {
         1 => vnchkey_core::InputMethod::Telex,
         2 => vnchkey_core::InputMethod::Vni,
+        3 => vnchkey_core::InputMethod::SimpleTelex,
         _ => vnchkey_core::InputMethod::Auto,
     };
     let config = EngineConfig {
@@ -309,13 +310,14 @@ pub unsafe extern "C" fn fcitx5_vnchkey_load_dictionary(
     }
 }
 
-/// Sets active input method (0 = Auto, 1 = Telex, 2 = VNI).
+/// Sets active input method (0 = Auto, 1 = Telex, 2 = VNI, 3 = SimpleTelex).
 #[no_mangle]
 pub unsafe extern "C" fn fcitx5_vnchkey_set_method(ctx: *mut Fcitx5VnchkeyContext, method: u32) {
     if !ctx.is_null() {
         let m = match method {
             1 => vnchkey_core::InputMethod::Telex,
             2 => vnchkey_core::InputMethod::Vni,
+            3 => vnchkey_core::InputMethod::SimpleTelex,
             _ => vnchkey_core::InputMethod::Auto,
         };
         (*ctx).engine.set_method(m);

@@ -271,18 +271,31 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         rebuildMenu()
     }
 
+    private func openConfigFileInTextEditor(_ filePath: String) {
+        let task = Process()
+        task.executableURL = URL(fileURLWithPath: "/usr/bin/open")
+        task.arguments = ["-t", filePath] // "-t" buộc macOS mở bằng TextEdit hoặc trình sửa văn bản mặc định
+        do {
+            try task.run()
+        } catch {
+            let alert = NSAlert()
+            alert.messageText = "Không thể mở tập tin cấu hình"
+            alert.informativeText = "Đường dẫn: \(filePath)\nLỗi: \(error.localizedDescription)"
+            alert.alertStyle = .warning
+            alert.runModal()
+        }
+    }
+
     @objc func openMacrosFile() {
         guard let km = keyManager else { return }
         km.ensureDefaultConfigFiles()
-        let url = URL(fileURLWithPath: km.macrosFilePath())
-        NSWorkspace.shared.open(url)
+        openConfigFileInTextEditor(km.macrosFilePath())
     }
 
     @objc func openDictionaryFile() {
         guard let km = keyManager else { return }
         km.ensureDefaultConfigFiles()
-        let url = URL(fileURLWithPath: km.dictionaryFilePath())
-        NSWorkspace.shared.open(url)
+        openConfigFileInTextEditor(km.dictionaryFilePath())
     }
 
     @objc func reloadConfigFiles() {
