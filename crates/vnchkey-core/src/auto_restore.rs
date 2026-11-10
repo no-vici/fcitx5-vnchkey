@@ -12,6 +12,7 @@ use std::fs;
 /// (ported from OpenViet IME's `COMMON_ENGLISH_WORDS` / `DEFAULT_USER_WORDS`).
 pub const DEFAULT_ENGLISH_WORDS: &[&str] = &[
     // Telex trap: words ending with 's' (sắc)
+    "as", "is", "os", "us", "vs",
     "always", "access", "address", "alias", "basis", "bonus", "boss", "business",
     "campus", "canvas", "census", "chaos", "chorus", "circus", "class", "corpus",
     "crisis", "cross", "dress", "express", "famous", "focus", "genius", "glass",
@@ -61,6 +62,7 @@ pub const DEFAULT_ENGLISH_WORDS: &[&str] = &[
     "jungle", "junk", "junkie", "jupiter", "juror", "jury", "just", "justice",
     "justify",
     // Tech, Developer & Linux Words
+    "in", "or", "of", "if", "on", "to", "at", "by", "do", "go", "no", "so", "up",
     "alacritty", "api", "app", "arch", "assets", "async", "await", "back", "base",
     "bash", "because", "best", "blog", "branch", "bug", "build", "bundle", "cargo",
     "case", "catch", "cell", "chat", "chrome", "circle", "city", "class", "click",
@@ -148,7 +150,7 @@ impl EnglishAutoRestore {
     #[inline]
     pub fn is_english_keyword(&self, raw: &str) -> bool {
         let clean = raw.trim().to_lowercase();
-        if clean.len() < 3 || clean.chars().any(|c| c.is_ascii_digit()) {
+        if clean.len() < 2 || clean.chars().any(|c| c.is_ascii_digit()) {
             return false;
         }
         if VIETNAMESE_COLLISION_EXCEPTIONS.contains(&clean.as_str()) {
@@ -163,8 +165,8 @@ impl EnglishAutoRestore {
         let raw_clean = raw_strokes.trim().to_lowercase();
         let cur_clean = current_word.trim().to_lowercase();
 
-        // Rule 1: Never restore VNI digit sequences or very short words (< 3 raw strokes or <= 1 char result)
-        if raw_clean.len() < 3
+        // Rule 1: Never restore VNI digit sequences or very short words (< 2 raw strokes or <= 1 char result)
+        if raw_clean.len() < 2
             || cur_clean.chars().count() <= 1
             || raw_clean.chars().any(|c| c.is_ascii_digit())
         {
