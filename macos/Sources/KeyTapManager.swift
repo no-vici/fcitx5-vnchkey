@@ -5,6 +5,11 @@ public class KeyTapManager {
     private var engine: OpaquePointer?
     private var eventTap: CFMachPort?
     private var runLoopSource: CFRunLoopSource?
+
+    /// Giá trị định danh gắn vào CGEventUserData để phân biệt phím do vnchKey phát ra
+    /// với phím vật lý người dùng bấm (tránh vòng lặp re-entrancy làm lỗi dau61 -> dâấ)
+    private let VNCHKEY_SYNTHETIC_TAG: Int64 = 0x564E4348 // "VNCH"
+
     public var isEnabled: Bool = true {
         didSet {
             if !isEnabled {
@@ -13,8 +18,11 @@ public class KeyTapManager {
         }
     }
 
-    public init(method: UInt32 = 0) { // 0: Auto, 1: Telex, 2: VNI
+    public var escRestoreEnabled: Bool = true
+
+    public init(method: UInt32 = 0) { // 0: Auto, 1: Telex, 2: VNI, 3: SimpleTelex
         self.engine = fcitx5_vnchkey_init_with_method(method)
+        ensureDefaultConfigFiles()
     }
 
     deinit {
@@ -24,11 +32,161 @@ public class KeyTapManager {
         }
     }
 
+    // MARK: - Quản lý thư mục cấu hình (~/.config/vnchkey/)
+
+    public func configDirPath() -> String {
+        let home = FileManager.default.homeDirectoryForCurrentUser.path
+        return "\(home)/.config/vnchkey"
+    }
+
+    public func macrosFilePath() -> String {
+        return "\(configDirPath())/macros.conf"
+    }
+
+    public func dictionaryFilePath() -> String {
+        return "\(configDirPath())/dictionary.conf"
+    }
+
+    public func ensureDefaultConfigFiles() {
+        let fm = FileManager.default
+        let dir = configDirPath()
+        if !fm.fileExists(atPath: dir) {
+            try? fm.createDirectory(atPath: dir, withIntermediateDirectories: true)
+        }
+
+        let macroFile = macrosFilePath()
+        if !fm.fileExists(atPath: macroFile) {
+            let defaultMacros = """
+            # Bảng Gõ Tắt (Macros) của vnchKey
+            # Cú pháp: viết_tắt=cụm_từ_đầy_đủ
+            # Hỗ trợ biến động: $DATE, $TIME, $YEAR, $NOW, $DATETIME
+            vn=Việt Nam
+            vnch=Việt Nam Cộng Hòa
+            td=Tự Do
+            sg=Sài Gòn
+            dc=được
+            ko=không
+            ng=người
+            hn=hôm nay
+            cv=công việc
+            """
+            try? defaultMacros.write(toFile: macroFile, atomically: true, encoding: .utf8)
+        }
+
+        let dictFile = dictionaryFilePath()
+        if !fm.fileExists(atPath: dictFile) {
+            let defaultDict = """
+            # Từ Điển Cá Nhân (Custom English / Bypass Words)
+            # Mỗi từ trên 1 dòng. Khi gõ các từ này, vnchKey sẽ giữ nguyên tiếng Anh.
+            macbook
+            xcode
+            swift
+            github
+            terminal
+            """
+            try? defaultDict.write(toFile: dictFile, atomically: true, encoding: .utf8)
+        }
+
+        reloadMacrosAndDictionary()
+    }
+
+    public func reloadMacrosAndDictionary() {
+        guard let engine = self.engine else { return }
+        let macroPath = macrosFilePath()
+        let dictPath = dictionaryFilePath()
+        macroPath.withCString { ptr in
+            fcitx5_vnchkey_load_macros(engine, ptr)
+        }
+        dictPath.withCString { ptr in
+            fcitx5_vnchkey_load_dictionary(engine, ptr)
+        }
+    }
+
+    // MARK: - Các hàm Cấu Hình Engine (Getters / Setters)
+
     public func setMethod(_ method: UInt32) {
         if let engine = self.engine {
-            fcitx5_vnchkey_free(engine)
+            fcitx5_vnchkey_set_method(engine, method)
+            fcitx5_vnchkey_reset(engine)
         }
-        self.engine = fcitx5_vnchkey_init_with_method(method)
+    }
+
+    public func getMethod() -> UInt32 {
+        guard let engine = self.engine else { return 0 }
+        return fcitx5_vnchkey_get_method(engine)
+    }
+
+    public func setSpellCheck(_ enabled: Bool) {
+        if let engine = self.engine {
+            fcitx5_vnchkey_set_spell_check(engine, enabled)
+        }
+    }
+
+    public func getSpellCheck() -> Bool {
+        guard let engine = self.engine else { return true }
+        return fcitx5_vnchkey_get_spell_check(engine)
+    }
+
+    public func setAutoRestore(_ enabled: Bool) {
+        if let engine = self.engine {
+            fcitx5_vnchkey_set_auto_restore(engine, enabled)
+        }
+    }
+
+    public func getAutoRestore() -> Bool {
+        guard let engine = self.engine else { return true }
+        return fcitx5_vnchkey_get_auto_restore(engine)
+    }
+
+    public func setMacroEnabled(_ enabled: Bool) {
+        if let engine = self.engine {
+            fcitx5_vnchkey_set_macro_enabled(engine, enabled)
+        }
+    }
+
+    public func getMacroEnabled() -> Bool {
+        guard let engine = self.engine else { return true }
+        return fcitx5_vnchkey_get_macro_enabled(engine)
+    }
+
+    public func setDictionaryEnabled(_ enabled: Bool) {
+        if let engine = self.engine {
+            fcitx5_vnchkey_set_dictionary_enabled(engine, enabled)
+        }
+    }
+
+    public func getDictionaryEnabled() -> Bool {
+        guard let engine = self.engine else { return true }
+        return fcitx5_vnchkey_get_dictionary_enabled(engine)
+    }
+
+    public func setToneStyle(_ style: UInt32) { // 0: Modern (oà, uý), 1: Classic (hòa, ủy)
+        if let engine = self.engine {
+            fcitx5_vnchkey_set_tone_style(engine, style)
+        }
+    }
+
+    public func getToneStyle() -> UInt32 {
+        guard let engine = self.engine else { return 0 }
+        return fcitx5_vnchkey_get_tone_style(engine)
+    }
+
+    public func setCharset(_ charset: UInt32) { // 0: Unicode NFC, 1: Composite NFD
+        if let engine = self.engine {
+            fcitx5_vnchkey_set_charset(engine, charset)
+        }
+    }
+
+    public func setBracketTransform(_ enabled: Bool) {
+        if let engine = self.engine {
+            fcitx5_vnchkey_set_bracket_transform(engine, enabled)
+        }
+    }
+
+    public func setW2U(_ mode: UInt32) { // 0: NonStart, 1: Always, 2: Disabled
+        if let engine = self.engine {
+            fcitx5_vnchkey_set_w2u(engine, mode)
+        }
     }
 
     public func resetEngine() {
@@ -37,20 +195,19 @@ public class KeyTapManager {
         }
     }
 
-    /// Kiểm tra và mở popup xin quyền Trợ Năng (Accessibility) nếu chưa có
+    // MARK: - Quản lý Quyền Accessibility & CGEventTap
+
     public func checkAccessibilityPermission(prompt: Bool = true) -> Bool {
         let options: NSDictionary = [kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String: prompt]
         return AXIsProcessTrustedWithOptions(options)
     }
 
-    /// Bắt đầu lắng nghe bàn phím hệ thống
     public func start() -> Bool {
         guard checkAccessibilityPermission(prompt: true) else {
             print("⚠️ [vnchKey] Chưa có quyền Accessibility. Vui lòng cấp quyền trong System Settings.")
             return false
         }
 
-        // Bắt sự kiện KeyDown và chuột click để reset bộ gõ
         let eventMask = (1 << CGEventType.keyDown.rawValue) |
                         (1 << CGEventType.leftMouseDown.rawValue) |
                         (1 << CGEventType.rightMouseDown.rawValue)
@@ -109,6 +266,12 @@ public class KeyTapManager {
     }
 
     private func handleKeyEvent(proxy: CGEventTapProxy, type: CGEventType, event: CGEvent) -> Unmanaged<CGEvent>? {
+        // QUAN TRỌNG: Bỏ qua các phím giả lập do chính vnchKey vừa phát ra!
+        // Điều này ngăn chặn lỗi gõ VNI dau61 -> dâấ do phím Backspace/Unicode bị bắt lại vào Engine.
+        if event.getIntegerValueField(.eventSourceUserData) == VNCHKEY_SYNTHETIC_TAG {
+            return Unmanaged.passRetained(event)
+        }
+
         guard isEnabled, let engine = self.engine else {
             return Unmanaged.passRetained(event)
         }
@@ -116,19 +279,27 @@ public class KeyTapManager {
         let flags = event.flags
         let keyCode = event.getIntegerValueField(.keyboardEventKeycode)
 
-        // Bỏ qua nếu đang bấm các phím tổ hợp Command hoặc Control (copy, paste, quit, terminal shortcuts, ...)
-        if flags.contains(.maskCommand) || flags.contains(.maskControl) {
+        // Bỏ qua nếu đang bấm các phím tổ hợp Command, Control hoặc Option
+        if flags.contains(.maskCommand) || flags.contains(.maskControl) || flags.contains(.maskAlternate) {
+            resetEngine()
+            return Unmanaged.passRetained(event)
+        }
+
+        // Xử lý phím điều hướng (Mũi tên, Home, End, PageUp, PageDown, Tab, Return/Enter): Reset từ đang gõ
+        if [123, 124, 125, 126, 115, 119, 116, 121, 48, 36, 76].contains(keyCode) {
             resetEngine()
             return Unmanaged.passRetained(event)
         }
 
         // Xử lý phím Escape (kVK_Escape = 53): hoàn nguyên từ thô về Dokey style
         if keyCode == 53 {
-            var backspaces: Int = 0
-            var outCommit: UnsafeMutablePointer<CChar>? = nil
-            if fcitx5_vnchkey_undo_escape(engine, &backspaces, &outCommit) == 1 {
-                emitOutput(backspaces: backspaces, commitPtr: outCommit)
-                return nil
+            if escRestoreEnabled {
+                var backspaces: Int = 0
+                var outCommit: UnsafeMutablePointer<CChar>? = nil
+                if fcitx5_vnchkey_undo_escape(engine, &backspaces, &outCommit) == 1 {
+                    emitOutput(proxy: proxy, backspaces: backspaces, commitPtr: outCommit)
+                    return nil
+                }
             }
             resetEngine()
             return Unmanaged.passRetained(event)
@@ -136,18 +307,17 @@ public class KeyTapManager {
 
         // Xử lý phím Delete/Backspace (kVK_Delete = 51)
         if keyCode == 51 {
-            // Kiểm tra xem có đang undo macro không
             var backspaces: Int = 0
             var outCommit: UnsafeMutablePointer<CChar>? = nil
             if fcitx5_vnchkey_undo_macro(engine, &backspaces, &outCommit) == 1 {
-                emitOutput(backspaces: backspaces, commitPtr: outCommit)
+                emitOutput(proxy: proxy, backspaces: backspaces, commitPtr: outCommit)
                 return nil
             }
             fcitx5_vnchkey_handle_backspace(engine)
             return Unmanaged.passRetained(event)
         }
 
-        // Lấy ký tự Unicode
+        // Lấy ký tự Unicode từ sự kiện phím vật lý
         var length: Int = 0
         var chars = [UniChar](repeating: 0, count: 4)
         event.keyboardGetUnicodeString(maxStringLength: 4, actualStringLength: &length, unicodeString: &chars)
@@ -169,18 +339,20 @@ public class KeyTapManager {
         )
 
         if handled == 1 {
-            emitOutput(backspaces: backspaces, commitPtr: outCommit)
+            emitOutput(proxy: proxy, backspaces: backspaces, commitPtr: outCommit)
             return nil // Chặn phím gốc
         }
 
         return Unmanaged.passRetained(event)
     }
 
-    private func emitOutput(backspaces: Int, commitPtr: UnsafeMutablePointer<CChar>?) {
+    private func emitOutput(proxy: CGEventTapProxy, backspaces: Int, commitPtr: UnsafeMutablePointer<CChar>?) {
+        let src = CGEventSource(stateID: .privateState)
+
         // 1. Giả lập phím Backspace để xóa ký tự cũ
         if backspaces > 0 {
             for _ in 0..<backspaces {
-                postVirtualKey(keyCode: 51) // macOS Backspace
+                postVirtualKey(proxy: proxy, src: src, keyCode: 51) // 51 = macOS Backspace
             }
         }
 
@@ -188,31 +360,36 @@ public class KeyTapManager {
         if let commitPtr = commitPtr {
             let commitStr = String(cString: commitPtr)
             if !commitStr.isEmpty {
-                postUnicodeString(commitStr)
+                postUnicodeString(proxy: proxy, src: src, string: commitStr)
             }
             fcitx5_vnchkey_free_string(commitPtr)
         }
     }
 
-    private func postVirtualKey(keyCode: CGKeyCode) {
-        let src = CGEventSource(stateID: .hidSystemState)
-        let down = CGEvent(keyboardEventSource: src, virtualKey: keyCode, keyDown: true)
-        let up = CGEvent(keyboardEventSource: src, virtualKey: keyCode, keyDown: false)
-        down?.post(tap: .cghidEventTap)
-        up?.post(tap: .cghidEventTap)
+    private func postVirtualKey(proxy: CGEventTapProxy, src: CGEventSource?, keyCode: CGKeyCode) {
+        if let down = CGEvent(keyboardEventSource: src, virtualKey: keyCode, keyDown: true),
+           let up = CGEvent(keyboardEventSource: src, virtualKey: keyCode, keyDown: false) {
+            down.flags = [] // Xoá cờ modifier nếu có
+            up.flags = []
+            down.setIntegerValueField(.eventSourceUserData, value: VNCHKEY_SYNTHETIC_TAG)
+            up.setIntegerValueField(.eventSourceUserData, value: VNCHKEY_SYNTHETIC_TAG)
+            down.tapPostEvent(proxy)
+            up.tapPostEvent(proxy)
+        }
     }
 
-    private func postUnicodeString(_ string: String) {
-        let src = CGEventSource(stateID: .hidSystemState)
+    private func postUnicodeString(proxy: CGEventTapProxy, src: CGEventSource?, string: String) {
         let utf16 = Array(string.utf16)
-        let down = CGEvent(keyboardEventSource: src, virtualKey: 0, keyDown: true)
-        let up = CGEvent(keyboardEventSource: src, virtualKey: 0, keyDown: false)
-
-        down?.keyboardSetUnicodeString(stringLength: utf16.count, unicodeString: utf16)
-        up?.keyboardSetUnicodeString(stringLength: utf16.count, unicodeString: utf16)
-
-        down?.post(tap: .cghidEventTap)
-        up?.post(tap: .cghidEventTap)
+        if let down = CGEvent(keyboardEventSource: src, virtualKey: 0, keyDown: true),
+           let up = CGEvent(keyboardEventSource: src, virtualKey: 0, keyDown: false) {
+            down.flags = []
+            up.flags = []
+            down.setIntegerValueField(.eventSourceUserData, value: VNCHKEY_SYNTHETIC_TAG)
+            up.setIntegerValueField(.eventSourceUserData, value: VNCHKEY_SYNTHETIC_TAG)
+            down.keyboardSetUnicodeString(stringLength: utf16.count, unicodeString: utf16)
+            up.keyboardSetUnicodeString(stringLength: utf16.count, unicodeString: utf16)
+            down.tapPostEvent(proxy)
+            up.tapPostEvent(proxy)
+        }
     }
 }
-
