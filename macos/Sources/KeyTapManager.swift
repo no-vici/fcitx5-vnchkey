@@ -22,11 +22,6 @@ public class KeyTapManager {
 
     public init(method: UInt32 = 0) { // 0: Auto, 1: Telex, 2: VNI, 3: SimpleTelex
         self.engine = fcitx5_vnchkey_init_with_method(method)
-        if let engine = self.engine {
-            // Tắt idle timeout mặc định (800ms) trên macOS để khi người dùng gõ VNI hoặc Telex chậm
-            // (ví dụ gõ "dau" rồi dừng > 0.8 giây mới tìm phím số "6", "1") bộ đệm âm tiết không bị xoá!
-            fcitx5_vnchkey_set_idle_timeout(engine, 0)
-        }
         ensureDefaultConfigFiles()
     }
 
@@ -452,10 +447,12 @@ public class KeyTapManager {
 
         var backspaces: Int = 0
         var outCommit: UnsafeMutablePointer<CChar>? = nil
+        let timestamp = Date().timeIntervalSince1970 * 1000.0
+
         let handled = fcitx5_vnchkey_process_key(
             engine,
             scalar.value,
-            0.0, // Truyền 0.0 trên macOS để không bao giờ bị timeout xoá bộ đệm khi dừng tay tìm phím số VNI
+            timestamp,
             &backspaces,
             &outCommit
         )
