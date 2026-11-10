@@ -1,6 +1,44 @@
 import Cocoa
 import CoreGraphics
 
+/// Các tổ hợp phím tắt toàn cục để Bật / Tắt nhanh chế độ gõ Tiếng Việt (kiểu xKey / OpenKey)
+public enum ToggleShortcutPreset: Int, CaseIterable {
+    case ctrlShift = 0      // Control + Shift (Nhấn rồi thả)
+    case cmdShift = 1       // Command + Shift (Nhấn rồi thả)
+    case ctrlOption = 2     // Control + Option (Nhấn rồi thả)
+    case ctrlSpace = 3      // Control + Space
+    case optionZ = 4        // Option + Z
+    case ctrlShiftZ = 5     // Control + Shift + Z
+    case cmdShiftV = 6      // Command + Shift + V
+    case disabled = 7       // Tắt phím tắt chuyển nhanh
+
+    public var title: String {
+        switch self {
+        case .ctrlShift:  return "⌃⇧  Control + Shift (Mặc định)"
+        case .cmdShift:   return "⌘⇧  Command + Shift"
+        case .ctrlOption: return "⌃⌥  Control + Option"
+        case .ctrlSpace:  return "⌃Space  Control + Space"
+        case .optionZ:    return "⌥Z  Option + Z"
+        case .ctrlShiftZ: return "⌃⇧Z  Control + Shift + Z"
+        case .cmdShiftV:  return "⌘⇧V  Command + Shift + V"
+        case .disabled:   return "Tắt phím tắt chuyển nhanh"
+        }
+    }
+
+    public var shortBadge: String {
+        switch self {
+        case .ctrlShift:  return "⌃⇧"
+        case .cmdShift:   return "⌘⇧"
+        case .ctrlOption: return "⌃⌥"
+        case .ctrlSpace:  return "⌃Space"
+        case .optionZ:    return "⌥Z"
+        case .ctrlShiftZ: return "⌃⇧Z"
+        case .cmdShiftV:  return "⌘⇧V"
+        case .disabled:   return ""
+        }
+    }
+}
+
 public class KeyTapManager {
     private var engine: OpaquePointer?
     private var eventTap: CFMachPort?
@@ -19,6 +57,12 @@ public class KeyTapManager {
     }
 
     public var escRestoreEnabled: Bool = true
+    public var toggleShortcut: ToggleShortcutPreset = .ctrlShift
+    public var onToggleEnabledByShortcut: (() -> Void)?
+
+    // Trạng thái theo dõi tổ hợp phím chỉ gồm Modifier (Ctrl+Shift, Cmd+Shift, Ctrl+Option)
+    private var modifierChordArmed: Bool = false
+    private var otherKeyPressedDuringChord: Bool = false
 
     public init(method: UInt32 = 0) { // 0: Auto, 1: Telex, 2: VNI, 3: SimpleTelex
         self.engine = fcitx5_vnchkey_init_with_method(method)
@@ -308,6 +352,17 @@ public class KeyTapManager {
         }
     }
 
+    public func setIdleTimeout(_ ms: UInt64) {
+        if let engine = self.engine {
+            fcitx5_vnchkey_set_idle_timeout(engine, ms)
+        }
+    }
+
+    public func getIdleTimeout() -> UInt64 {
+        guard let engine = self.engine else { return 800 }
+        return fcitx5_vnchkey_get_idle_timeout(engine)
+    }
+
     public func resetEngine() {
         if let engine = self.engine {
             fcitx5_vnchkey_reset(engine)
@@ -328,6 +383,7 @@ public class KeyTapManager {
         }
 
         let eventMask = (1 << CGEventType.keyDown.rawValue) |
+                        (1 << CGEventType.flagsChanged.rawValue) |
                         (1 << CGEventType.leftMouseDown.rawValue) |
                         (1 << CGEventType.rightMouseDown.rawValue)
 
@@ -384,6 +440,68 @@ public class KeyTapManager {
         }
     }
 
+    private func handleFlagsChanged(event: CGEvent) {
+        let flags = event.flags
+        let ctrl = flags.contains(.maskControl)
+        let shift = flags.contains(.maskShift)
+        let cmd = flags.contains(.maskCommand)
+        let opt = flags.contains(.maskAlternate)
+
+        let targetArmed: Bool
+        switch toggleShortcut {
+        case .ctrlShift:
+            targetArmed = ctrl && shift && !cmd && !opt
+        case .cmdShift:
+            targetArmed = cmd && shift && !ctrl && !opt
+        case .ctrlOption:
+            targetArmed = ctrl && opt && !cmd && !shift
+        default:
+            modifierChordArmed = false
+            otherKeyPressedDuringChord = false
+            return
+        }
+
+        if targetArmed {
+            modifierChordArmed = true
+        } else {
+            // Khi tất cả các phím modifier được thả ra hoàn toàn sau khi đã nhấn tổ hợp mục tiêu
+            if !ctrl && !shift && !cmd && !opt {
+                if modifierChordArmed && !otherKeyPressedDuringChord {
+                    isEnabled.toggle()
+                    DispatchQueue.main.async { [weak self] in
+                        self?.onToggleEnabledByShortcut?()
+                    }
+                }
+                modifierChordArmed = false
+                otherKeyPressedDuringChord = false
+            }
+        }
+    }
+
+    private func matchesKeyDownToggleShortcut(keyCode: Int64, flags: CGEventFlags) -> Bool {
+        let ctrl = flags.contains(.maskControl)
+        let shift = flags.contains(.maskShift)
+        let cmd = flags.contains(.maskCommand)
+        let opt = flags.contains(.maskAlternate)
+
+        switch toggleShortcut {
+        case .ctrlSpace:
+            // kVK_Space = 49
+            return keyCode == 49 && ctrl && !shift && !cmd && !opt
+        case .optionZ:
+            // kVK_ANSI_Z = 6
+            return keyCode == 6 && opt && !ctrl && !shift && !cmd
+        case .ctrlShiftZ:
+            // kVK_ANSI_Z = 6
+            return keyCode == 6 && ctrl && shift && !cmd && !opt
+        case .cmdShiftV:
+            // kVK_ANSI_V = 9
+            return keyCode == 9 && cmd && shift && !ctrl && !opt
+        default:
+            return false
+        }
+    }
+
     private func handleKeyEvent(proxy: CGEventTapProxy, type: CGEventType, event: CGEvent) -> Unmanaged<CGEvent>? {
         // QUAN TRỌNG: Bỏ qua các phím giả lập do chính vnchKey vừa phát ra!
         // Điều này ngăn chặn lỗi gõ VNI dau61 -> dâấ do phím Backspace/Unicode bị bắt lại vào Engine.
@@ -391,12 +509,31 @@ public class KeyTapManager {
             return Unmanaged.passRetained(event)
         }
 
-        guard isEnabled, let engine = self.engine else {
+        if type == .flagsChanged {
+            handleFlagsChanged(event: event)
             return Unmanaged.passRetained(event)
+        }
+
+        // Nếu có phím thường được bấm trong lúc đang giữ tổ hợp modifier, huỷ kích hoạt chord
+        if modifierChordArmed {
+            otherKeyPressedDuringChord = true
         }
 
         let flags = event.flags
         let keyCode = event.getIntegerValueField(.keyboardEventKeycode)
+
+        // Kiểm tra phím tắt Bật/Tắt nhanh dạng tổ hợp có phím ký tự (Ctrl+Space, Option+Z, Ctrl+Shift+Z, Cmd+Shift+V)
+        if matchesKeyDownToggleShortcut(keyCode: keyCode, flags: flags) {
+            isEnabled.toggle()
+            DispatchQueue.main.async { [weak self] in
+                self?.onToggleEnabledByShortcut?()
+            }
+            return nil // Chặn tổ hợp phím tắt không cho truyền xuống ứng dụng đang mở
+        }
+
+        guard isEnabled, let engine = self.engine else {
+            return Unmanaged.passRetained(event)
+        }
 
         // Bỏ qua nếu đang bấm các phím tổ hợp Command, Control hoặc Option
         if flags.contains(.maskCommand) || flags.contains(.maskControl) || flags.contains(.maskAlternate) {
