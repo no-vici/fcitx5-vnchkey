@@ -1019,10 +1019,6 @@ void VnchkeyEngine::keyEvent(const fcitx::InputMethodEntry &entry, fcitx::KeyEve
 
     // Backspace handling
     if (sym == FcitxKey_BackSpace) {
-        if (rawKey.isVirtual()) {
-            return;
-        }
-
         // Macro Undo (OpenViet style): if previous action was a macro expansion and user presses Backspace immediately,
         // revert the expansion back to the original abbreviation strokes.
         size_t undo_bs = 0;
