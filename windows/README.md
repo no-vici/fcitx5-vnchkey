@@ -1,37 +1,41 @@
 # VnCharKey for Windows
 
-**VnCharKey** là phiên bản bộ gõ tiếng Việt tốc độ cao, siêu nhẹ và trung tính dành cho hệ điều hành **Windows (Windows 10 / Windows 11)**, sử dụng chung lõi thuật toán Rust `vnchkey-core` với biểu tượng **Nón Lá Việt Nam (Conical Hat)**.
+**VnCharKey** là phiên bản bộ gõ Tiếng Việt tốc độ cao, siêu nhẹ và trung tính dành cho hệ điều hành **Windows (Windows 10 / Windows 11)**, sử dụng chung lõi thuật toán Rust [`vnchkey-core`](../crates/vnchkey-core) với biểu tượng **Nón Lá Việt Nam (Conical Hat)** thanh lịch trên nền trong suốt.
 
 ---
 
-## ✨ Điểm Nổi Bật
+## ✨ Điểm Nổi Bật & Tinh Thần Tự Do
 
-- **Biểu tượng Nón Lá (Conical Hat) & Tên gọi Trung Tính (`VnCharKey`)**: Thân thiện, thanh lịch, phù hợp sử dụng ở mọi môi trường văn phòng, doanh nghiệp, trường học.
-- **Thuật toán Micro-Diff chống chớp chữ**: Sử dụng `SendInput` gửi gói sự kiện nguyên tử (Atomic Input Batch), chỉ xóa đúng các ký tự cần đổi dấu thay vì xóa cả từ.
-- **100% Native Rust + Win32 API (`WH_KEYBOARD_LL`)**: Không cần cài .NET Runtime, không cần WebView/Electron. File thực thi `.exe` độc lập (Portable) chỉ nặng ~200 KB, chạy ngay không cần quyền Administrator.
-- **Tính năng thông minh**:
-  - Tự động nhận diện kiểu gõ **Auto (Telex + VNI)**, hoặc chọn riêng **Telex** / **VNI**.
-  - Phím tắt **`Ctrl + Shift`** (hoặc click trái vào icon dưới khay hệ thống) để Bật / Tắt nhanh Tiếng Việt.
-  - Nhấn **`Esc`** để hoàn nguyên từ đang gõ về chuỗi ký tự thô tiếng Anh.
-  - Kiểm tra Chánh Tả & Tự động khôi phục từ tiếng Anh (`Restore English`).
+- **Biểu tượng Nón Lá Nền Trong Suốt & Tên gọi Trung Tính (`VnCharKey`)**: 
+  - Biểu tượng Nón Lá vàng ấm cùng ký tự `V` xanh ngọc và viền bo mềm mại trên nền trong suốt (transparent), hiển thị sắc nét trên cả Light theme và Dark theme của Windows Taskbar.
+- **Menu Khay Hệ Thống (System Tray) Đầy Đủ Tùy Chọn**:
+  - **4 Kiểu gõ linh hoạt**: Tự động (`Auto: Telex + VNI`), `Telex`, `VNI`, và `Simple Telex`.
+  - **Bảng mã & Dấu thanh**: Chuyển đổi giữa Unicode Dựng Sẵn (NFC) / Unicode Tổ Hợp (NFD) và Dấu mới (`oà`, `uý`) / Dấu cũ (`hòa`, `ủy`).
+  - **Phím tắt chuyển Việt / Anh hoàn toàn tự do (Live Keystroke Recorder)**:
+    - Bấm **"⌨️ Bấm để đặt phím tắt mới (Tự do)..."** rồi bấm bất kỳ tổ hợp phím nào bạn muốn (`Ctrl + Alt + V`, `Win + Shift + Space`, `Alt + Shift`, `Ctrl + Shift`, `Alt + Z`, `Ctrl + Space`...) hoặc chọn danh sách phím tắt thông dụng dựng sẵn.
+    - Phím tắt được lưu vĩnh viễn trong file cấu hình `%APPDATA%\VnCharKey\config.conf`.
+  - **Tính năng thông minh**: Bật/tắt *Kiểm tra Chánh Tả*, *Tự động khôi phục Tiếng Anh*, *Hoàn nguyên từ bằng Esc*, *Gõ `[` `]` thành `ơ` `ư`*.
+  - **Quản lý Gõ Tắt (Macros) & Từ Điển Cá Nhân**: Mở và chỉnh sửa trực tiếp `macros.conf` và `dictionary.conf` bằng Notepad, nút "Nạp lại Gõ Tắt & Từ Điển" tức thì.
+- **Thuật toán Micro-Diff chống chớp giật chữ**: Gửi gói phím nguyên tử qua `SendInput`, tối ưu cho Visual Studio, VS Code, Notepad, Office và trình duyệt web.
+- **100% Native Rust + Win32 API (`WH_KEYBOARD_LL`)**: File thực thi `.exe` độc lập (Portable), chỉ ~200 KB, chạy ngay không cần cài đặt hay quyền Administrator.
 
 ---
 
-## 🛠️ Hướng Dẫn Build Trên Windows
+## 🛠️ Hướng Dẫn Build & Sử Dụng
 
-### Yêu cầu:
-- Đã cài đặt [Rust](https://rustup.rs/) trên Windows (`x86_64-pc-windows-msvc`).
+### 1. Yêu cầu:
+- Máy tính chạy Windows 10/11 có cài đặt [Rust](https://rustup.rs/) (`x86_64-pc-windows-msvc`).
 
-### Lệnh biên dịch:
-Mở PowerShell hoặc Command Prompt:
-
+### 2. Biên dịch:
 ```powershell
 cd windows
 cargo build --release
 ```
 
-File chạy độc lập sẽ được tạo tại:
+File thực thi độc lập sẽ được tạo tại:
 👉 `windows\target\release\VnCharKey.exe`
 
-Bạn có thể copy file `VnCharKey.exe` này đi bất kỳ máy Windows nào và click đúp chạy ngay!
-
+### 3. Vị trí lưu cấu hình trên Windows:
+- Cấu hình phím tắt tự do: `%APPDATA%\VnCharKey\config.conf`
+- Bảng Gõ Tắt: `%APPDATA%\VnCharKey\macros.conf`
+- Từ Điển Cá Nhân: `%APPDATA%\VnCharKey\dictionary.conf`
