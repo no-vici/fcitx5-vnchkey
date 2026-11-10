@@ -144,10 +144,13 @@ cargo test --test english_trap_simulation_tests
 # 2. Chỉ chạy kiểm thử VietC, Tây Nguyên & Property-Based Fuzzing:
 cargo test --test vietc_regression_tests
 
-# 3. Chỉ chạy kiểm thử cầu nối C-ABI FFI bằng Rust:
+# 3. Chạy kiểm thử trực tiếp Headless Engine (Cú pháp code, từ khóa ngắn as/for/in, và ngữ cảnh thực tế):
+cargo run --example test_headless -p vnchkey-core
+
+# 4. Chỉ chạy kiểm thử cầu nối C-ABI FFI bằng Rust:
 cargo test -p fcitx5-vnchkey-ffi
 
-# 4. Biên dịch và chạy riêng bài test C++ AddressSanitizer:
+# 5. Biên dịch và chạy riêng bài test C++ AddressSanitizer:
 cargo build -p fcitx5-vnchkey-ffi
 g++ -O1 -g -fsanitize=address,undefined fcitx5-addon/tests/ffi_asan_test.cpp \
     -L target/debug -lfcitx5_vnchkey_ffi -Wl,-rpath,"$PWD/target/debug" \
@@ -156,7 +159,24 @@ g++ -O1 -g -fsanitize=address,undefined fcitx5-addon/tests/ffi_asan_test.cpp \
 
 ---
 
-## Bảng Tổng Hợp Kết Quả Kiểm Định Hiện Tại (v0.3.0 Readiness)
+## 4. Kiểm Thử Trực Tiếp Thuật Toán Không Phụ Thuộc GUI (Headless Runner)
+
+Khi kiểm thử độ nhạy của bộ gõ trong môi trường lập trình hoặc trên hệ thống Wayland thuần (Sway, Hyprland), các script giả lập bàn phím GUI bên thứ ba (như `pyautogui`, `xdotool`) thường bị chặn hoặc gặp vấn đề đọc clipboard giữa các sandbox.
+
+Dự án cung cấp bộ chạy kiểm thử trực tiếp qua lõi Engine Rust:
+- **Tệp mã nguồn**: [`crates/vnchkey-core/examples/test_headless.rs`](../crates/vnchkey-core/examples/test_headless.rs)
+- **Lệnh thực thi**:
+  ```bash
+  cargo run --example test_headless -p vnchkey-core
+  ```
+- **Phạm vi kiểm thử**:
+  1. Cú pháp lập trình chứa từ khóa tiếng Anh ngắn 2 ký tự: `const as = true;`, `if (x in list) return;`, `for (let i = 0; i < 10; i++)`, `let false = !true;`, `import { useState } from 'react';`.
+  2. Tự động nhận diện từ khóa bypass tiếng Anh không bị biến dạng khi kết thúc từ bằng dấu cách, dấu chấm phẩy, hoặc ngoặc đơn.
+  3. Xử lý câu hỗn hợp tiếng Việt có phím Telex chuẩn kết hợp thuật ngữ công nghệ tiếng Anh (`Docker`, `MySQL`, `console`, `database`, `DOM observer`, `repo vnchKey`).
+
+---
+
+## Bảng Tổng Hợp Kết Quả Kiểm Định Hiện Tại (v0.3.2 Readiness)
 
 | Hạng mục kiểm định | Công cụ / Tệp kiểm thử | Quy mô / Số lượng | Trạng thái |
 | :--- | :--- | :--- | :---: |
