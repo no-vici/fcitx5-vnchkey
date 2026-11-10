@@ -14,9 +14,10 @@ Bản port chính thức của bộ gõ **vnchKey (Tự Do Edition)** dành cho 
 3. **Quản lý Gõ Tắt (Macro) & Từ Điển Cá Nhân trực tiếp trên Menu Bar (như xKey)**:
    - Thêm, sửa, xoá nhanh mục Gõ Tắt (`➕ Thêm Gõ Tắt mới...`, hỗ trợ biến động `$DATE`, `$TIME`, `$YEAR`, `$NOW`, `$DATETIME`) và Từ Điển Cá Nhân (`➕ Thêm từ mới vô Từ Điển...`) ngay bằng hộp thoại trên thanh Menu mà không cần mở file cấu hình thủ công.
    - Khi chọn mở `macros.conf` hoặc `dictionary.conf`, ứng dụng tự động gọi `/usr/bin/open -t` để mở bằng **TextEdit** (tránh lỗi macOS báo không tìm thấy ứng dụng mở đuôi `.conf`).
-4. **Cửa sổ "Bảng điều khiển..." (Dashboard) & Phím tắt chuyển chế độ Việt / Anh tuỳ chỉnh**:
-   - Hỗ trợ chọn nhanh tổ hợp phím tắt toàn cục để Bật/Tắt Tiếng Việt ở bất kỳ đâu: `Control + Shift` (mặc định), `Command + Shift`, `Control + Option`, `Control + Space`, `Option + Z`, `Control + Shift + Z`, `Command + Shift + V`, hoặc tắt phím tắt.
-   - Tích hợp cửa sổ **Bảng điều khiển...** (Cocoa原生 kiểu xKey / OpenKey) cho phép tuỳ chỉnh tập trung tất cả tính năng, quy tắc gõ phím `W → ư` và thanh trượt thời gian ngắt bộ đệm cho Neovim (`0ms` – `2000ms`).
+4. **Cửa sổ "Bảng điều khiển..." (Dashboard) & Tự do đặt phím tắt bất kỳ theo ý muốn**:
+   - **Tự bấm phím tắt trực tiếp (Live Key Recorder)**: Bấm nút `⌨️ Tự bấm phím...` trong Bảng điều khiển (hoặc từ Menu Bar), sau đó nhấn bất kỳ tổ hợp phím nào bạn thích trên bàn phím (ví dụ `Ctrl + Shift`, `Cmd + Option`, `Option + Z`, `Ctrl + Space`, `Cmd + Shift + X`, `F12`...) — `vnchKey` sẽ tự thu nhận và lưu lại ngay lập tức!
+   - Bạn cũng có thể tự tích chọn rời từng phím bổ trợ (`⌃ Ctrl`, `⌥ Opt`, `⇧ Shift`, `⌘ Cmd`) ngay trên Bảng điều khiển như xKey / OpenKey.
+   - Tích hợp cửa sổ **Bảng điều khiển...** (Cocoa原生) cho phép tuỳ chỉnh tập trung tất cả tính năng, quy tắc gõ phím `W → ư` và thanh trượt thời gian ngắt bộ đệm cho Neovim (`0ms` – `2000ms`).
 5. **Kiểm tra Chánh Tả, Tự động khôi phục Tiếng Anh, Hoàn nguyên từ bằng phím `Esc`, Quy tắc dấu mới/cũ & Bảng mã Unicode NFC / NFD**.
 
 ---

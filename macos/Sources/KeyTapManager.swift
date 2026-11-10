@@ -1,40 +1,139 @@
 import Cocoa
 import CoreGraphics
 
-/// Các tổ hợp phím tắt toàn cục để Bật / Tắt nhanh chế độ gõ Tiếng Việt (kiểu xKey / OpenKey)
-public enum ToggleShortcutPreset: Int, CaseIterable {
-    case ctrlShift = 0      // Control + Shift (Nhấn rồi thả)
-    case cmdShift = 1       // Command + Shift (Nhấn rồi thả)
-    case ctrlOption = 2     // Control + Option (Nhấn rồi thả)
-    case ctrlSpace = 3      // Control + Space
-    case optionZ = 4        // Option + Z
-    case ctrlShiftZ = 5     // Control + Shift + Z
-    case cmdShiftV = 6      // Command + Shift + V
-    case disabled = 7       // Tắt phím tắt chuyển nhanh
+/// Cấu hình Phím tắt toàn cục tự do để Bật / Tắt chế độ gõ Tiếng Việt (tinh thần Tự Do)
+/// Người dùng có thể tự chọn bất kỳ tổ hợp Modifier (⌃ Control, ⌥ Option, ⇧ Shift, ⌘ Command)
+/// kết hợp với bất kỳ phím nào trên bàn phím, hoặc chỉ dùng tổ hợp Modifier-only (nhấn rồi thả).
+public struct CustomToggleShortcut: Equatable {
+    public var useControl: Bool
+    public var useOption: Bool
+    public var useShift: Bool
+    public var useCommand: Bool
+    /// Mã phím vật lý macOS (`CGKeyCode`), hoặc `-1` nếu chỉ dùng tổ hợp phím Modifier (nhấn rồi thả như Ctrl+Shift)
+    public var keyCode: Int64
+    /// Nhãn hiển thị của phím chính (ví dụ: `"Space"`, `"Z"`, `"V"`, `""` nếu chỉ dùng Modifier)
+    public var keyDisplay: String
+    /// Đang bật hay tắt phím tắt chuyển nhanh
+    public var isEnabled: Bool
 
-    public var title: String {
-        switch self {
-        case .ctrlShift:  return "⌃⇧  Control + Shift (Mặc định)"
-        case .cmdShift:   return "⌘⇧  Command + Shift"
-        case .ctrlOption: return "⌃⌥  Control + Option"
-        case .ctrlSpace:  return "⌃Space  Control + Space"
-        case .optionZ:    return "⌥Z  Option + Z"
-        case .ctrlShiftZ: return "⌃⇧Z  Control + Shift + Z"
-        case .cmdShiftV:  return "⌘⇧V  Command + Shift + V"
-        case .disabled:   return "Tắt phím tắt chuyển nhanh"
-        }
+    public static let defaultShortcut = CustomToggleShortcut(
+        useControl: true,
+        useOption: false,
+        useShift: true,
+        useCommand: false,
+        keyCode: -1,
+        keyDisplay: "",
+        isEnabled: true
+    )
+
+    public var isModifierOnly: Bool {
+        return keyCode < 0
     }
 
+    public var hasAnyModifier: Bool {
+        return useControl || useOption || useShift || useCommand
+    }
+
+    /// Ký hiệu ngắn gọn trên Menu Bar (ví dụ: `⌃⇧`, `⌘⇧Z`, `⌥Space`)
     public var shortBadge: String {
-        switch self {
-        case .ctrlShift:  return "⌃⇧"
-        case .cmdShift:   return "⌘⇧"
-        case .ctrlOption: return "⌃⌥"
-        case .ctrlSpace:  return "⌃Space"
-        case .optionZ:    return "⌥Z"
-        case .ctrlShiftZ: return "⌃⇧Z"
-        case .cmdShiftV:  return "⌘⇧V"
-        case .disabled:   return ""
+        guard isEnabled, hasAnyModifier else { return "" }
+        var s = ""
+        if useControl { s += "⌃" }
+        if useOption  { s += "⌥" }
+        if useShift   { s += "⇧" }
+        if useCommand { s += "⌘" }
+        if !isModifierOnly && !keyDisplay.isEmpty {
+            s += keyDisplay
+        }
+        return s
+    }
+
+    /// Mô tả đầy đủ dễ đọc trong Bảng Điều Khiển
+    public var fullDescription: String {
+        guard isEnabled, hasAnyModifier else { return "Đã tắt phím tắt chuyển nhanh" }
+        var parts: [String] = []
+        if useControl { parts.append("⌃ Control") }
+        if useOption  { parts.append("⌥ Option") }
+        if useShift   { parts.append("⇧ Shift") }
+        if useCommand { parts.append("⌘ Command") }
+        if !isModifierOnly && !keyDisplay.isEmpty {
+            parts.append(keyDisplay)
+        }
+        return parts.joined(separator: " + ")
+    }
+
+    /// Chuyển mã `keyCode` của macOS sang tên phím dễ đọc
+    public static func keyName(for keyCode: Int64, fallbackChar: String? = nil) -> String {
+        switch keyCode {
+        case 49: return "Space"
+        case 36: return "Return"
+        case 48: return "Tab"
+        case 51: return "Delete"
+        case 53: return "Esc"
+        case 50: return "`"
+        case 27: return "-"
+        case 24: return "="
+        case 33: return "["
+        case 30: return "]"
+        case 42: return "\\"
+        case 41: return ";"
+        case 39: return "'"
+        case 43: return ","
+        case 47: return "."
+        case 44: return "/"
+        case 0:  return "A"
+        case 11: return "B"
+        case 8:  return "C"
+        case 2:  return "D"
+        case 14: return "E"
+        case 3:  return "F"
+        case 5:  return "G"
+        case 4:  return "H"
+        case 34: return "I"
+        case 38: return "J"
+        case 40: return "K"
+        case 37: return "L"
+        case 46: return "M"
+        case 45: return "N"
+        case 31: return "O"
+        case 35: return "P"
+        case 12: return "Q"
+        case 15: return "R"
+        case 1:  return "S"
+        case 17: return "T"
+        case 32: return "U"
+        case 9:  return "V"
+        case 13: return "W"
+        case 7:  return "X"
+        case 16: return "Y"
+        case 6:  return "Z"
+        case 29: return "0"
+        case 18: return "1"
+        case 19: return "2"
+        case 20: return "3"
+        case 21: return "4"
+        case 23: return "5"
+        case 22: return "6"
+        case 26: return "7"
+        case 28: return "8"
+        case 25: return "9"
+        case 122: return "F1"
+        case 120: return "F2"
+        case 99:  return "F3"
+        case 118: return "F4"
+        case 96:  return "F5"
+        case 97:  return "F6"
+        case 98:  return "F7"
+        case 100: return "F8"
+        case 101: return "F9"
+        case 109: return "F10"
+        case 103: return "F11"
+        case 111: return "F12"
+        default:
+            if let fb = fallbackChar?.uppercased(), !fb.isEmpty {
+                return fb
+            }
+            return "Key(\(keyCode))"
         }
     }
 }
@@ -57,10 +156,15 @@ public class KeyTapManager {
     }
 
     public var escRestoreEnabled: Bool = true
-    public var toggleShortcut: ToggleShortcutPreset = .ctrlShift
+    public var customShortcut: CustomToggleShortcut = .defaultShortcut
     public var onToggleEnabledByShortcut: (() -> Void)?
 
-    // Trạng thái theo dõi tổ hợp phím chỉ gồm Modifier (Ctrl+Shift, Cmd+Shift, Ctrl+Option)
+    /// Chế độ thu phím tắt trực tiếp từ bàn phím người dùng (Live Key Recorder)
+    public var isRecordingShortcut: Bool = false
+    public var onShortcutRecorded: ((CustomToggleShortcut) -> Void)?
+    private var recordedModifiersPeak: CGEventFlags = []
+
+    // Trạng thái theo dõi tổ hợp phím chỉ gồm Modifier (ví dụ Ctrl+Shift, Cmd+Shift, Ctrl+Option...)
     private var modifierChordArmed: Bool = false
     private var otherKeyPressedDuringChord: Bool = false
 
@@ -440,6 +544,16 @@ public class KeyTapManager {
         }
     }
 
+    public func startRecordingShortcut() {
+        recordedModifiersPeak = []
+        isRecordingShortcut = true
+    }
+
+    public func stopRecordingShortcut() {
+        isRecordingShortcut = false
+        recordedModifiersPeak = []
+    }
+
     private func handleFlagsChanged(event: CGEvent) {
         let flags = event.flags
         let ctrl = flags.contains(.maskControl)
@@ -447,24 +561,59 @@ public class KeyTapManager {
         let cmd = flags.contains(.maskCommand)
         let opt = flags.contains(.maskAlternate)
 
-        let targetArmed: Bool
-        switch toggleShortcut {
-        case .ctrlShift:
-            targetArmed = ctrl && shift && !cmd && !opt
-        case .cmdShift:
-            targetArmed = cmd && shift && !ctrl && !opt
-        case .ctrlOption:
-            targetArmed = ctrl && opt && !cmd && !shift
-        default:
+        // Nếu đang ở chế độ "Thu phím tắt trực tiếp":
+        // Cho phép người dùng nhấn tổ hợp chỉ gồm >= 2 phím Modifier (ví dụ Ctrl+Shift, Cmd+Option...) rồi thả ra!
+        if isRecordingShortcut {
+            if ctrl  { recordedModifiersPeak.insert(.maskControl) }
+            if shift { recordedModifiersPeak.insert(.maskShift) }
+            if cmd   { recordedModifiersPeak.insert(.maskCommand) }
+            if opt   { recordedModifiersPeak.insert(.maskAlternate) }
+
+            if !ctrl && !shift && !cmd && !opt {
+                let pCtrl  = recordedModifiersPeak.contains(.maskControl)
+                let pShift = recordedModifiersPeak.contains(.maskShift)
+                let pCmd   = recordedModifiersPeak.contains(.maskCommand)
+                let pOpt   = recordedModifiersPeak.contains(.maskAlternate)
+                let modCount = [pCtrl, pShift, pCmd, pOpt].filter { $0 }.count
+
+                if modCount >= 2 {
+                    let newSc = CustomToggleShortcut(
+                        useControl: pCtrl,
+                        useOption: pOpt,
+                        useShift: pShift,
+                        useCommand: pCmd,
+                        keyCode: -1,
+                        keyDisplay: "",
+                        isEnabled: true
+                    )
+                    isRecordingShortcut = false
+                    recordedModifiersPeak = []
+                    customShortcut = newSc
+                    DispatchQueue.main.async { [weak self] in
+                        self?.onShortcutRecorded?(newSc)
+                    }
+                    return
+                }
+                recordedModifiersPeak = []
+            }
+            return
+        }
+
+        guard customShortcut.isEnabled, customShortcut.isModifierOnly, customShortcut.hasAnyModifier else {
             modifierChordArmed = false
             otherKeyPressedDuringChord = false
             return
         }
 
+        let targetArmed = (ctrl == customShortcut.useControl) &&
+                          (shift == customShortcut.useShift) &&
+                          (cmd == customShortcut.useCommand) &&
+                          (opt == customShortcut.useOption)
+
         if targetArmed {
             modifierChordArmed = true
         } else {
-            // Khi tất cả các phím modifier được thả ra hoàn toàn sau khi đã nhấn tổ hợp mục tiêu
+            // Khi tất cả các phím modifier được thả ra hoàn toàn sau khi đã nhấn đúng tổ hợp mục tiêu
             if !ctrl && !shift && !cmd && !opt {
                 if modifierChordArmed && !otherKeyPressedDuringChord {
                     isEnabled.toggle()
@@ -479,27 +628,19 @@ public class KeyTapManager {
     }
 
     private func matchesKeyDownToggleShortcut(keyCode: Int64, flags: CGEventFlags) -> Bool {
+        guard customShortcut.isEnabled, !customShortcut.isModifierOnly else {
+            return false
+        }
         let ctrl = flags.contains(.maskControl)
         let shift = flags.contains(.maskShift)
         let cmd = flags.contains(.maskCommand)
         let opt = flags.contains(.maskAlternate)
 
-        switch toggleShortcut {
-        case .ctrlSpace:
-            // kVK_Space = 49
-            return keyCode == 49 && ctrl && !shift && !cmd && !opt
-        case .optionZ:
-            // kVK_ANSI_Z = 6
-            return keyCode == 6 && opt && !ctrl && !shift && !cmd
-        case .ctrlShiftZ:
-            // kVK_ANSI_Z = 6
-            return keyCode == 6 && ctrl && shift && !cmd && !opt
-        case .cmdShiftV:
-            // kVK_ANSI_V = 9
-            return keyCode == 9 && cmd && shift && !ctrl && !opt
-        default:
-            return false
-        }
+        return keyCode == customShortcut.keyCode &&
+               ctrl == customShortcut.useControl &&
+               shift == customShortcut.useShift &&
+               cmd == customShortcut.useCommand &&
+               opt == customShortcut.useOption
     }
 
     private func handleKeyEvent(proxy: CGEventTapProxy, type: CGEventType, event: CGEvent) -> Unmanaged<CGEvent>? {
@@ -514,15 +655,59 @@ public class KeyTapManager {
             return Unmanaged.passRetained(event)
         }
 
+        let flags = event.flags
+        let keyCode = event.getIntegerValueField(.keyboardEventKeycode)
+
+        // Nếu người dùng đang bấm nút "Thu phím tắt mới..." trên Bảng Điều Khiển
+        if isRecordingShortcut {
+            // Bấm Esc một mình sẽ huỷ thu phím tắt
+            let ctrl = flags.contains(.maskControl)
+            let shift = flags.contains(.maskShift)
+            let cmd = flags.contains(.maskCommand)
+            let opt = flags.contains(.maskAlternate)
+
+            if keyCode == 53 && !ctrl && !shift && !cmd && !opt {
+                stopRecordingShortcut()
+                DispatchQueue.main.async { [weak self] in
+                    guard let self = self else { return }
+                    self.onShortcutRecorded?(self.customShortcut)
+                }
+                return nil
+            }
+
+            // Yêu cầu có ít nhất 1 phím Modifier (hoặc phím F1..F12) để không chặn phím gõ chữ bình thường
+            let isFunctionKey = [122, 120, 99, 118, 96, 97, 98, 100, 101, 109, 103, 111].contains(keyCode)
+            if ctrl || shift || cmd || opt || isFunctionKey {
+                var length: Int = 0
+                var chars = [UniChar](repeating: 0, count: 4)
+                event.keyboardGetUnicodeString(maxStringLength: 4, actualStringLength: &length, unicodeString: &chars)
+                let fallback = (length > 0 && UnicodeScalar(chars[0]) != nil) ? String(UnicodeScalar(chars[0])!) : nil
+                let disp = CustomToggleShortcut.keyName(for: keyCode, fallbackChar: fallback)
+
+                let newSc = CustomToggleShortcut(
+                    useControl: ctrl,
+                    useOption: opt,
+                    useShift: shift,
+                    useCommand: cmd,
+                    keyCode: keyCode,
+                    keyDisplay: disp,
+                    isEnabled: true
+                )
+                stopRecordingShortcut()
+                customShortcut = newSc
+                DispatchQueue.main.async { [weak self] in
+                    self?.onShortcutRecorded?(newSc)
+                }
+                return nil
+            }
+        }
+
         // Nếu có phím thường được bấm trong lúc đang giữ tổ hợp modifier, huỷ kích hoạt chord
         if modifierChordArmed {
             otherKeyPressedDuringChord = true
         }
 
-        let flags = event.flags
-        let keyCode = event.getIntegerValueField(.keyboardEventKeycode)
-
-        // Kiểm tra phím tắt Bật/Tắt nhanh dạng tổ hợp có phím ký tự (Ctrl+Space, Option+Z, Ctrl+Shift+Z, Cmd+Shift+V)
+        // Kiểm tra phím tắt Bật/Tắt nhanh dạng tổ hợp có phím ký tự
         if matchesKeyDownToggleShortcut(keyCode: keyCode, flags: flags) {
             isEnabled.toggle()
             DispatchQueue.main.async { [weak self] in

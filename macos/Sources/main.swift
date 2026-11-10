@@ -14,7 +14,13 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     private var dashMethodPopup: NSPopUpButton?
     private var dashCharsetPopup: NSPopUpButton?
     private var dashTonePopup: NSPopUpButton?
-    private var dashShortcutPopup: NSPopUpButton?
+    private var dashShortcutEnableCheckbox: NSButton?
+    private var dashShortcutCtrlCheck: NSButton?
+    private var dashShortcutOptCheck: NSButton?
+    private var dashShortcutShiftCheck: NSButton?
+    private var dashShortcutCmdCheck: NSButton?
+    private var dashShortcutKeyBadge: NSTextField?
+    private var dashRecordShortcutBtn: NSButton?
     private var dashSpellCheckbox: NSButton?
     private var dashRestoreCheckbox: NSButton?
     private var dashEscCheckbox: NSButton?
@@ -34,6 +40,11 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         keyManager = KeyTapManager(method: UInt32(defaults.integer(forKey: "vnchkey.method")))
         keyManager?.onToggleEnabledByShortcut = { [weak self] in
             self?.updateStatusButton()
+            self?.rebuildMenu()
+            self?.syncDashboardControls()
+        }
+        keyManager?.onShortcutRecorded = { [weak self] recorded in
+            self?.saveCustomShortcut(recorded)
             self?.rebuildMenu()
             self?.syncDashboardControls()
         }
@@ -71,11 +82,14 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             defaults.set(false, forKey: "vnchkey.bracket")    // Gõ [ ] thành ơ ư
             defaults.set(0, forKey: "vnchkey.w2u")            // W -> ư (Không ở đầu từ)
             defaults.set(800, forKey: "vnchkey.idleTimeout")  // Khoảng nghỉ 800ms cho Neovim
-            defaults.set(0, forKey: "vnchkey.toggleShortcut") // Control + Shift
+            saveCustomShortcut(.defaultShortcut)
         }
 
         if defaults.object(forKey: "vnchkey.idleTimeout") == nil {
             defaults.set(800, forKey: "vnchkey.idleTimeout")
+        }
+        if defaults.object(forKey: "vnchkey.sc.initialized") == nil {
+            saveCustomShortcut(.defaultShortcut)
         }
 
         km.setMethod(UInt32(defaults.integer(forKey: "vnchkey.method")))
@@ -89,9 +103,30 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         km.setBracketTransform(defaults.bool(forKey: "vnchkey.bracket"))
         km.setW2U(UInt32(defaults.integer(forKey: "vnchkey.w2u")))
         km.setIdleTimeout(UInt64(defaults.integer(forKey: "vnchkey.idleTimeout")))
-        if let preset = ToggleShortcutPreset(rawValue: defaults.integer(forKey: "vnchkey.toggleShortcut")) {
-            km.toggleShortcut = preset
-        }
+        km.customShortcut = loadCustomShortcut()
+    }
+
+    func saveCustomShortcut(_ sc: CustomToggleShortcut) {
+        defaults.set(true, forKey: "vnchkey.sc.initialized")
+        defaults.set(sc.useControl, forKey: "vnchkey.sc.ctrl")
+        defaults.set(sc.useOption, forKey: "vnchkey.sc.opt")
+        defaults.set(sc.useShift, forKey: "vnchkey.sc.shift")
+        defaults.set(sc.useCommand, forKey: "vnchkey.sc.cmd")
+        defaults.set(Int(sc.keyCode), forKey: "vnchkey.sc.keyCode")
+        defaults.set(sc.keyDisplay, forKey: "vnchkey.sc.keyDisplay")
+        defaults.set(sc.isEnabled, forKey: "vnchkey.sc.enabled")
+    }
+
+    func loadCustomShortcut() -> CustomToggleShortcut {
+        return CustomToggleShortcut(
+            useControl: defaults.bool(forKey: "vnchkey.sc.ctrl"),
+            useOption: defaults.bool(forKey: "vnchkey.sc.opt"),
+            useShift: defaults.bool(forKey: "vnchkey.sc.shift"),
+            useCommand: defaults.bool(forKey: "vnchkey.sc.cmd"),
+            keyCode: Int64(defaults.integer(forKey: "vnchkey.sc.keyCode")),
+            keyDisplay: defaults.string(forKey: "vnchkey.sc.keyDisplay") ?? "",
+            isEnabled: defaults.bool(forKey: "vnchkey.sc.enabled")
+        )
     }
 
     func setupStatusBar() {
@@ -104,8 +139,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         guard let km = keyManager else { return }
         let menu = NSMenu()
 
-        // 1. Bật / Tắt Tiếng Việt (hiển thị kèm tổ hợp phím tắt hiện tại)
-        let badge = km.toggleShortcut.shortBadge
+        // 1. Bật / Tắt Tiếng Việt (hiển thị kèm tổ hợp phím tắt tự do của người dùng)
+        let badge = km.customShortcut.shortBadge
         let toggleTitle = badge.isEmpty ? "Bật gõ Tiếng Việt" : "Bật gõ Tiếng Việt  (\(badge))"
         let toggleItem = NSMenuItem(title: toggleTitle, action: #selector(toggleEnabled(_:)), keyEquivalent: "")
         toggleItem.state = km.isEnabled ? .on : .off
@@ -115,14 +150,23 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         let dashItem = NSMenuItem(title: "Bảng điều khiển...", action: #selector(openDashboardWindow), keyEquivalent: ",")
         menu.addItem(dashItem)
 
-        // Chọn Phím tắt chuyển chế độ Việt / Anh
+        // Phím tắt chuyển chế độ Việt / Anh tự do
         let shortcutMenu = NSMenu()
-        for preset in ToggleShortcutPreset.allCases {
-            let item = NSMenuItem(title: preset.title, action: #selector(selectToggleShortcut(_:)), keyEquivalent: "")
-            item.tag = preset.rawValue
-            item.state = (km.toggleShortcut == preset) ? .on : .off
-            shortcutMenu.addItem(item)
-        }
+        let currentDesc = NSMenuItem(title: "Hiện tại: \(km.customShortcut.fullDescription)", action: nil, keyEquivalent: "")
+        currentDesc.isEnabled = false
+        shortcutMenu.addItem(currentDesc)
+        shortcutMenu.addItem(NSMenuItem.separator())
+
+        let recordItem = NSMenuItem(title: "⌨️ Tự bấm phím tắt theo ý muốn...", action: #selector(openDashboardAndRecordShortcut), keyEquivalent: "")
+        shortcutMenu.addItem(recordItem)
+
+        let toggleScEnableItem = NSMenuItem(
+            title: km.customShortcut.isEnabled ? "Tắt phím tắt chuyển nhanh" : "Bật lại phím tắt chuyển nhanh",
+            action: #selector(toggleShortcutEnabledFromMenu),
+            keyEquivalent: ""
+        )
+        shortcutMenu.addItem(toggleScEnableItem)
+
         let shortcutParent = NSMenuItem(title: "Phím tắt chuyển Việt / Anh", action: nil, keyEquivalent: "")
         shortcutParent.submenu = shortcutMenu
         menu.addItem(shortcutParent)
@@ -312,12 +356,17 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         syncDashboardControls()
     }
 
-    @objc func selectToggleShortcut(_ sender: NSMenuItem) {
-        guard let km = keyManager, let preset = ToggleShortcutPreset(rawValue: sender.tag) else { return }
-        defaults.set(preset.rawValue, forKey: "vnchkey.toggleShortcut")
-        km.toggleShortcut = preset
+    @objc func toggleShortcutEnabledFromMenu() {
+        guard let km = keyManager else { return }
+        km.customShortcut.isEnabled.toggle()
+        saveCustomShortcut(km.customShortcut)
         rebuildMenu()
         syncDashboardControls()
+    }
+
+    @objc func openDashboardAndRecordShortcut() {
+        openDashboardWindow()
+        startRecordingShortcutAction()
     }
 
     @objc func selectMethod(_ sender: NSMenuItem) {
@@ -406,7 +455,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             return
         }
 
-        let winRect = NSRect(x: 0, y: 0, width: 520, height: 560)
+        let winRect = NSRect(x: 0, y: 0, width: 520, height: 610)
         let win = NSWindow(
             contentRect: winRect,
             styleMask: [.titled, .closable, .miniaturizable],
@@ -422,37 +471,37 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         // Header: Logo + Tiêu đề
         if let appIconPath = Bundle.main.path(forResource: "AppIcon", ofType: "png"),
            let iconImg = NSImage(contentsOfFile: appIconPath) {
-            let imageView = NSImageView(frame: NSRect(x: 24, y: 492, width: 48, height: 48))
+            let imageView = NSImageView(frame: NSRect(x: 24, y: 542, width: 48, height: 48))
             imageView.image = iconImg
             content.addSubview(imageView)
         }
 
         let titleLabel = NSTextField(labelWithString: "vnchKey cho macOS — Bảng Điều Khiển")
         titleLabel.font = NSFont.boldSystemFont(ofSize: 16)
-        titleLabel.frame = NSRect(x: 84, y: 516, width: 410, height: 22)
+        titleLabel.frame = NSRect(x: 84, y: 566, width: 410, height: 22)
         content.addSubview(titleLabel)
 
-        let subtitleLabel = NSTextField(labelWithString: "Bộ gõ Tiếng Việt hiệu năng cao • Tối ưu cho Neovim, Terminal & macOS")
+        let subtitleLabel = NSTextField(labelWithString: "Bộ gõ Tiếng Việt hiệu năng cao • Tự do tuỳ biến phím tắt & tính năng")
         subtitleLabel.font = NSFont.systemFont(ofSize: 12)
         subtitleLabel.textColor = .secondaryLabelColor
-        subtitleLabel.frame = NSRect(x: 84, y: 494, width: 410, height: 18)
+        subtitleLabel.frame = NSRect(x: 84, y: 544, width: 410, height: 18)
         content.addSubview(subtitleLabel)
 
-        // Khung 1: Chế độ gõ & Phím tắt
-        let generalBox = NSBox(frame: NSRect(x: 20, y: 318, width: 480, height: 164))
-        generalBox.title = "Thiết lập Kiểu gõ & Phím tắt chuyển nhanh"
+        // Khung 1: Chế độ gõ & Phím tắt tự do (kiểu xKey / OpenKey)
+        let generalBox = NSBox(frame: NSRect(x: 20, y: 318, width: 480, height: 214))
+        generalBox.title = "Thiết lập Kiểu gõ & Phím tắt chuyển Việt / Anh tự do"
         content.addSubview(generalBox)
 
         let enableCheck = NSButton(checkboxWithTitle: "Bật chế độ gõ Tiếng Việt", target: self, action: #selector(dashToggleEnabled(_:)))
-        enableCheck.frame = NSRect(x: 16, y: 112, width: 240, height: 22)
+        enableCheck.frame = NSRect(x: 16, y: 162, width: 240, height: 22)
         generalBox.addSubview(enableCheck)
         self.dashEnableCheckbox = enableCheck
 
         let methodLabel = NSTextField(labelWithString: "Kiểu gõ:")
-        methodLabel.frame = NSRect(x: 16, y: 80, width: 150, height: 20)
+        methodLabel.frame = NSRect(x: 16, y: 130, width: 150, height: 20)
         generalBox.addSubview(methodLabel)
 
-        let methodPopup = NSPopUpButton(frame: NSRect(x: 175, y: 76, width: 280, height: 26), pullsDown: false)
+        let methodPopup = NSPopUpButton(frame: NSRect(x: 175, y: 126, width: 280, height: 26), pullsDown: false)
         methodPopup.addItems(withTitles: [
             "Tự động (Telex + VNI)",
             "Telex",
@@ -465,35 +514,65 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         self.dashMethodPopup = methodPopup
 
         let charsetLabel = NSTextField(labelWithString: "Bảng mã & Quy tắc dấu:")
-        charsetLabel.frame = NSRect(x: 16, y: 46, width: 150, height: 20)
+        charsetLabel.frame = NSRect(x: 16, y: 96, width: 150, height: 20)
         generalBox.addSubview(charsetLabel)
 
-        let charsetPopup = NSPopUpButton(frame: NSRect(x: 175, y: 42, width: 145, height: 26), pullsDown: false)
+        let charsetPopup = NSPopUpButton(frame: NSRect(x: 175, y: 92, width: 145, height: 26), pullsDown: false)
         charsetPopup.addItems(withTitles: ["Unicode (NFC)", "Tổ hợp (NFD)"])
         charsetPopup.target = self
         charsetPopup.action = #selector(dashCharsetChanged(_:))
         generalBox.addSubview(charsetPopup)
         self.dashCharsetPopup = charsetPopup
 
-        let tonePopup = NSPopUpButton(frame: NSRect(x: 325, y: 42, width: 130, height: 26), pullsDown: false)
+        let tonePopup = NSPopUpButton(frame: NSRect(x: 325, y: 92, width: 130, height: 26), pullsDown: false)
         tonePopup.addItems(withTitles: ["Dấu mới (hoà)", "Dấu cũ (hòa)"])
         tonePopup.target = self
         tonePopup.action = #selector(dashToneChanged(_:))
         generalBox.addSubview(tonePopup)
         self.dashTonePopup = tonePopup
 
-        let shortcutLabel = NSTextField(labelWithString: "Phím tắt Bật / Tắt:")
-        shortcutLabel.frame = NSRect(x: 16, y: 12, width: 150, height: 20)
-        generalBox.addSubview(shortcutLabel)
+        // Hàng tự tích chọn Modifier + Phím bất kỳ (như xKey / OpenKey)
+        let scEnableCheck = NSButton(checkboxWithTitle: "Phím tắt chuyển:", target: self, action: #selector(dashShortcutComponentsChanged(_:)))
+        scEnableCheck.frame = NSRect(x: 16, y: 54, width: 135, height: 22)
+        generalBox.addSubview(scEnableCheck)
+        self.dashShortcutEnableCheckbox = scEnableCheck
 
-        let shortcutPopup = NSPopUpButton(frame: NSRect(x: 175, y: 8, width: 280, height: 26), pullsDown: false)
-        for preset in ToggleShortcutPreset.allCases {
-            shortcutPopup.addItem(withTitle: preset.title)
-        }
-        shortcutPopup.target = self
-        shortcutPopup.action = #selector(dashShortcutChanged(_:))
-        generalBox.addSubview(shortcutPopup)
-        self.dashShortcutPopup = shortcutPopup
+        let ctrlCheck = NSButton(checkboxWithTitle: "⌃ Ctrl", target: self, action: #selector(dashShortcutComponentsChanged(_:)))
+        ctrlCheck.frame = NSRect(x: 152, y: 54, width: 68, height: 22)
+        generalBox.addSubview(ctrlCheck)
+        self.dashShortcutCtrlCheck = ctrlCheck
+
+        let optCheck = NSButton(checkboxWithTitle: "⌥ Opt", target: self, action: #selector(dashShortcutComponentsChanged(_:)))
+        optCheck.frame = NSRect(x: 222, y: 54, width: 68, height: 22)
+        generalBox.addSubview(optCheck)
+        self.dashShortcutOptCheck = optCheck
+
+        let shiftCheck = NSButton(checkboxWithTitle: "⇧ Shift", target: self, action: #selector(dashShortcutComponentsChanged(_:)))
+        shiftCheck.frame = NSRect(x: 292, y: 54, width: 72, height: 22)
+        generalBox.addSubview(shiftCheck)
+        self.dashShortcutShiftCheck = shiftCheck
+
+        let cmdCheck = NSButton(checkboxWithTitle: "⌘ Cmd", target: self, action: #selector(dashShortcutComponentsChanged(_:)))
+        cmdCheck.frame = NSRect(x: 368, y: 54, width: 78, height: 22)
+        generalBox.addSubview(cmdCheck)
+        self.dashShortcutCmdCheck = cmdCheck
+
+        let currentKeyTitle = NSTextField(labelWithString: "Tổ hợp đang dùng:")
+        currentKeyTitle.frame = NSRect(x: 16, y: 14, width: 125, height: 20)
+        generalBox.addSubview(currentKeyTitle)
+
+        let keyBadge = NSTextField(labelWithString: "⌃ Control + ⇧ Shift")
+        keyBadge.font = NSFont.boldSystemFont(ofSize: 12)
+        keyBadge.textColor = .systemBlue
+        keyBadge.frame = NSRect(x: 142, y: 14, width: 158, height: 20)
+        generalBox.addSubview(keyBadge)
+        self.dashShortcutKeyBadge = keyBadge
+
+        let recordBtn = NSButton(title: "⌨️ Tự bấm phím...", target: self, action: #selector(startRecordingShortcutAction))
+        recordBtn.bezelStyle = .rounded
+        recordBtn.frame = NSRect(x: 302, y: 10, width: 155, height: 28)
+        generalBox.addSubview(recordBtn)
+        self.dashRecordShortcutBtn = recordBtn
 
         // Khung 2: Tính năng thông minh & Tối ưu Neovim
         let smartBox = NSBox(frame: NSRect(x: 20, y: 144, width: 480, height: 166))
@@ -607,7 +686,16 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         dashMethodPopup?.selectItem(at: Int(km.getMethod()))
         dashCharsetPopup?.selectItem(at: defaults.integer(forKey: "vnchkey.charset"))
         dashTonePopup?.selectItem(at: Int(km.getToneStyle()))
-        dashShortcutPopup?.selectItem(at: km.toggleShortcut.rawValue)
+
+        let sc = km.customShortcut
+        dashShortcutEnableCheckbox?.state = sc.isEnabled ? .on : .off
+        dashShortcutCtrlCheck?.state = sc.useControl ? .on : .off
+        dashShortcutOptCheck?.state = sc.useOption ? .on : .off
+        dashShortcutShiftCheck?.state = sc.useShift ? .on : .off
+        dashShortcutCmdCheck?.state = sc.useCommand ? .on : .off
+        dashShortcutKeyBadge?.stringValue = sc.fullDescription
+        dashRecordShortcutBtn?.title = km.isRecordingShortcut ? "🔴 Đang chờ bấm phím..." : "⌨️ Tự bấm phím..."
+
         dashSpellCheckbox?.state = km.getSpellCheck() ? .on : .off
         dashRestoreCheckbox?.state = km.getAutoRestore() ? .on : .off
         dashEscCheckbox?.state = km.escRestoreEnabled ? .on : .off
@@ -650,11 +738,31 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         rebuildMenu()
     }
 
-    @objc func dashShortcutChanged(_ sender: NSPopUpButton) {
-        guard let km = keyManager, let preset = ToggleShortcutPreset(rawValue: sender.indexOfSelectedItem) else { return }
-        defaults.set(preset.rawValue, forKey: "vnchkey.toggleShortcut")
-        km.toggleShortcut = preset
+    @objc func dashShortcutComponentsChanged(_ sender: NSButton) {
+        guard let km = keyManager else { return }
+        km.stopRecordingShortcut()
+        var sc = km.customShortcut
+        sc.isEnabled = (dashShortcutEnableCheckbox?.state == .on)
+        sc.useControl = (dashShortcutCtrlCheck?.state == .on)
+        sc.useOption = (dashShortcutOptCheck?.state == .on)
+        sc.useShift = (dashShortcutShiftCheck?.state == .on)
+        sc.useCommand = (dashShortcutCmdCheck?.state == .on)
+        km.customShortcut = sc
+        saveCustomShortcut(sc)
         rebuildMenu()
+        syncDashboardControls()
+    }
+
+    @objc func startRecordingShortcutAction() {
+        guard let km = keyManager else { return }
+        if km.isRecordingShortcut {
+            km.stopRecordingShortcut()
+            syncDashboardControls()
+        } else {
+            km.startRecordingShortcut()
+            dashShortcutKeyBadge?.stringValue = "Hãy bấm tổ hợp phím bất kỳ..."
+            dashRecordShortcutBtn?.title = "🔴 Đang chờ bấm phím (Esc để huỷ)"
+        }
     }
 
     @objc func dashSpellChanged(_ sender: NSButton) {
