@@ -11,6 +11,8 @@ __pycache__/
 
 # System & Editor
 *.log
+*.deb
+*.tar.zst
 .DS_Store
 Thumbs.db
 .vscode/
