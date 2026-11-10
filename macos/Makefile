@@ -74,6 +74,7 @@ dmg: app
 	@echo "🎉 Hoàn tất! File cài đặt DMG: $(DMG_NAME)"
 
 run: app
+	-killall $(APP_NAME) 2>/dev/null || true
 	open $(APP_BUNDLE)
 
 clean:

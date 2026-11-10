@@ -46,7 +46,10 @@ mod win_app {
 
     thread_local! {
         static STATE: RefCell<AppState> = RefCell::new(AppState {
-            engine: Engine::new(EngineConfig::default()),
+            engine: Engine::new(EngineConfig {
+                idle_timeout_ms: 0,
+                ..EngineConfig::default()
+            }),
             enabled: true,
             method: InputMethod::Auto,
             hwnd: null_mut(),
