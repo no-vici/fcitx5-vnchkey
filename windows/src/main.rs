@@ -1105,6 +1105,19 @@ mod win_app {
         AppendMenuW(menu, MF_SEPARATOR, 0, null_mut());
 
         // 5. Tính năng thông minh Checkboxes
+        let (quick_telex, quick_start, quick_end) = STATE.with(|s| {
+            s.try_borrow()
+                .ok()
+                .map(|st| {
+                    (
+                        st.engine.quick_telex(),
+                        st.engine.quick_start_consonant(),
+                        st.engine.quick_end_consonant(),
+                    )
+                })
+                .unwrap_or((false, false, false))
+        });
+
         AppendMenuW(
             menu,
             MF_STRING | if spell { MF_CHECKED } else { 0 },
@@ -1134,19 +1147,19 @@ mod win_app {
         let quick_sub = CreatePopupMenu();
         AppendMenuW(
             quick_sub,
-            MF_STRING,
+            MF_STRING | if quick_telex { MF_CHECKED } else { 0 },
             ID_TOGGLE_QUICK_TELEX,
             to_wstring("Quick Telex (cc->ch, kk->kh, tt->th...)").as_ptr(),
         );
         AppendMenuW(
             quick_sub,
-            MF_STRING,
+            MF_STRING | if quick_start { MF_CHECKED } else { 0 },
             ID_TOGGLE_QUICK_START,
             to_wstring("Phụ âm đầu nhanh (f->ph, j->gi, w->qu)").as_ptr(),
         );
         AppendMenuW(
             quick_sub,
-            MF_STRING,
+            MF_STRING | if quick_end { MF_CHECKED } else { 0 },
             ID_TOGGLE_QUICK_END,
             to_wstring("Phụ âm cuối nhanh (g->ng, h->nh, k->ch)").as_ptr(),
         );
@@ -1214,17 +1227,30 @@ mod win_app {
 
         let mut pt = POINT { x: 0, y: 0 };
         GetCursorPos(&mut pt);
-        SetForegroundWindow(hwnd);
-        TrackPopupMenu(
+
+        // Save the user's currently active window so we can keep focus on it instead of
+        // calling SetForegroundWindow(hwnd) on our invisible window (which causes Windows 10/11
+        // to fall back to activating the last top-level window, such as Windows Terminal).
+        let prev_fg = GetForegroundWindow();
+        let cmd = TrackPopupMenu(
             menu,
-            TPM_BOTTOMALIGN | TPM_LEFTALIGN,
+            TPM_BOTTOMALIGN | TPM_LEFTALIGN | TPM_RETURNCMD | TPM_NONOTIFY,
             pt.x,
             pt.y,
             0,
             hwnd,
             null_mut(),
         );
+        PostMessageW(hwnd, WM_NULL, 0, 0);
         DestroyMenu(menu);
+
+        if !prev_fg.is_null() && prev_fg != hwnd && IsWindow(prev_fg) != 0 {
+            SetForegroundWindow(prev_fg);
+        }
+
+        if cmd != 0 {
+            SendMessageW(hwnd, WM_COMMAND, cmd as usize, 0);
+        }
     }
 
     pub unsafe extern "system" fn wnd_proc(
@@ -1474,7 +1500,7 @@ mod win_app {
             0,
             0,
             0,
-            null_mut(),
+            HWND_MESSAGE,
             null_mut(),
             hinstance,
             null_mut(),
