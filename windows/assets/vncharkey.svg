@@ -32,44 +32,44 @@
      inkscape:window-y="30"
      inkscape:window-maximized="1"
      inkscape:current-layer="svg4" />
-  <!-- Transparent Background with Elegant Rounded Border -->
+  <!-- Transparent Background with Elegant Rounded Border (Expanded +1 Level for Taskbar Visibility) -->
   <rect
-     x="16"
-     y="16"
-     width="224"
-     height="224"
-     rx="48"
+     x="10"
+     y="10"
+     width="236"
+     height="236"
+     rx="52"
      fill="none"
      stroke="#F59E0B"
-     stroke-width="10"
+     stroke-width="12"
      id="rect1" />
-  <!-- Conical Hat (Non La) / Circumflex Accent -->
+  <!-- Conical Hat (Non La) / Circumflex Accent (Taller apex & wider brim) -->
   <path
-     d="M 128,36 44,104 H 212 Z"
+     d="M 128,24 36,104 H 220 Z"
      fill="#fde68a"
      stroke="#d97706"
-     stroke-width="8"
+     stroke-width="9"
      stroke-linejoin="round"
      id="path1" />
   <path
-     d="M72 90H184"
+     d="M66 90H190"
      stroke="#B45309"
-     stroke-width="5"
+     stroke-width="6"
      stroke-linecap="round"
-     opacity="0.75"
+     opacity="0.8"
      id="path2" />
   <path
-     d="M98 69H158"
+     d="M93 64H163"
      stroke="#B45309"
-     stroke-width="5"
+     stroke-width="6"
      stroke-linecap="round"
-     opacity="0.75"
+     opacity="0.8"
      id="path3" />
-  <!-- Stylized Letter V -->
+  <!-- Stylized Letter V (Enlarged & Bold) -->
   <path
-     d="M76 132L128 212L180 132"
+     d="M72 130L128 220L184 130"
      stroke="#38BDF8"
-     stroke-width="26"
+     stroke-width="30"
      stroke-linecap="round"
      stroke-linejoin="round"
      id="path4" />
