@@ -14,13 +14,25 @@ DMG_NAME = $(BUILD_DIR)/$(APP_NAME)-0.3.0.dmg
 
 all: dmg
 
-# 1. Build Rust FFI static library (Universal Binary: cả Intel và Apple Silicon)
+# 1. Build Rust FFI static library (Universal Binary: cả Intel x86_64 và Apple Silicon arm64)
 rust:
-	cd .. && cargo build --release -p fcitx5-vnchkey-ffi
+	@echo "🔨 Đang biên dịch Rust FFI Universal Binary (x86_64 + arm64)..."
+	cd .. && rustup target add aarch64-apple-darwin x86_64-apple-darwin 2>/dev/null || true
+	cd .. && cargo build --release -p fcitx5-vnchkey-ffi --target aarch64-apple-darwin || true
+	cd .. && cargo build --release -p fcitx5-vnchkey-ffi --target x86_64-apple-darwin || true
+	@mkdir -p $(TARGET_DIR)
+	@if [ -f "../target/aarch64-apple-darwin/release/libfcitx5_vnchkey_ffi.a" ] && [ -f "../target/x86_64-apple-darwin/release/libfcitx5_vnchkey_ffi.a" ]; then \
+		lipo -create -output $(TARGET_DIR)/libfcitx5_vnchkey_ffi.a \
+			../target/aarch64-apple-darwin/release/libfcitx5_vnchkey_ffi.a \
+			../target/x86_64-apple-darwin/release/libfcitx5_vnchkey_ffi.a; \
+		echo "✅ Đã tạo lipo Universal static library: $(TARGET_DIR)/libfcitx5_vnchkey_ffi.a"; \
+	else \
+		cd .. && cargo build --release -p fcitx5-vnchkey-ffi; \
+	fi
 
-# 2. Đóng gói macOS .app Bundle
+# 2. Đóng gói macOS .app Bundle (Universal Binary)
 app: rust
-	@echo "🔨 Đang đóng gói $(APP_NAME).app..."
+	@echo "🔨 Đang đóng gói $(APP_NAME).app (Universal Binary)..."
 	@mkdir -p $(MACOS_DIR)
 	@mkdir -p $(RESOURCES_DIR)
 	@cp -f Resources/* $(RESOURCES_DIR)/ 2>/dev/null || true
@@ -50,10 +62,34 @@ app: rust
 </dict>\
 </plist>' > $(CONTENTS)/Info.plist
 
-	swiftc $(SWIFT_SOURCES) \
-		-import-objc-header $(BRIDGING_HEADER) \
-		-L $(TARGET_DIR) -lfcitx5_vnchkey_ffi \
-		-o $(MACOS_DIR)/$(APP_NAME)
+	@if swiftc -target arm64-apple-macos11.0 -version >/dev/null 2>&1; then \
+		echo "🍎 Đang biên dịch Swift Universal Binary (x86_64 + arm64)..."; \
+		swiftc $(SWIFT_SOURCES) -target arm64-apple-macos11.0 \
+			-import-objc-header $(BRIDGING_HEADER) \
+			-L $(TARGET_DIR) -lfcitx5_vnchkey_ffi \
+			-o $(MACOS_DIR)/$(APP_NAME)-arm64 || true; \
+		swiftc $(SWIFT_SOURCES) -target x86_64-apple-macos11.0 \
+			-import-objc-header $(BRIDGING_HEADER) \
+			-L $(TARGET_DIR) -lfcitx5_vnchkey_ffi \
+			-o $(MACOS_DIR)/$(APP_NAME)-x86_64 || true; \
+		if [ -f "$(MACOS_DIR)/$(APP_NAME)-arm64" ] && [ -f "$(MACOS_DIR)/$(APP_NAME)-x86_64" ]; then \
+			lipo -create -output $(MACOS_DIR)/$(APP_NAME) \
+				$(MACOS_DIR)/$(APP_NAME)-arm64 \
+				$(MACOS_DIR)/$(APP_NAME)-x86_64; \
+			rm -f $(MACOS_DIR)/$(APP_NAME)-arm64 $(MACOS_DIR)/$(APP_NAME)-x86_64; \
+			echo "✅ Đã tạo lipo Universal executable!"; \
+		else \
+			swiftc $(SWIFT_SOURCES) \
+				-import-objc-header $(BRIDGING_HEADER) \
+				-L $(TARGET_DIR) -lfcitx5_vnchkey_ffi \
+				-o $(MACOS_DIR)/$(APP_NAME); \
+		fi \
+	else \
+		swiftc $(SWIFT_SOURCES) \
+			-import-objc-header $(BRIDGING_HEADER) \
+			-L $(TARGET_DIR) -lfcitx5_vnchkey_ffi \
+			-o $(MACOS_DIR)/$(APP_NAME); \
+	fi
 	
 	# Ad-hoc code signing để macOS không chặn app chưa đăng ký
 	codesign --force --deep --sign - $(APP_BUNDLE)

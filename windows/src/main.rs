@@ -51,6 +51,12 @@ mod win_app {
     const ID_TOGGLE_MACRO: usize = 1034;
     const ID_TOGGLE_DICT: usize = 1035;
 
+    const ID_TOGGLE_QUICK_TELEX: usize = 1037;
+    const ID_TOGGLE_QUICK_START: usize = 1038;
+    const ID_TOGGLE_QUICK_END: usize = 1039;
+
+    const ID_TOGGLE_AUTORUN: usize = 1036;
+
     const ID_SHORTCUT_CTRL_SHIFT: usize = 1040;
     const ID_SHORTCUT_ALT_Z: usize = 1041;
     const ID_SHORTCUT_CTRL_SPACE: usize = 1042;
@@ -203,6 +209,25 @@ mod win_app {
     }
 
     fn config_dir() -> PathBuf {
+        // Ưu tiên Chế độ Portable: Lưu trực tiếp trong thư mục chứa file VnCharKey.exe
+        if let Ok(exe_path) = std::env::current_exe() {
+            if let Some(exe_dir) = exe_path.parent() {
+                let portable_marker = exe_dir.join("portable.txt");
+                let portable_cfg = exe_dir.join("config.conf");
+                // Nếu có file marker hoặc đã có config.conf tại chỗ, hoặc thư mục có quyền ghi
+                if portable_marker.exists() || portable_cfg.exists() {
+                    return exe_dir.to_path_buf();
+                }
+                // Thử tạo một test file để kiểm tra quyền ghi vào thư mục exe
+                let test_file = exe_dir.join(".write_test");
+                if fs::write(&test_file, b"ok").is_ok() {
+                    let _ = fs::remove_file(&test_file);
+                    return exe_dir.to_path_buf();
+                }
+            }
+        }
+
+        // Fallback: Nếu không ghi được vào thư mục exe (ví dụ Program Files), dùng %APPDATA%\VnCharKey
         let base = std::env::var("APPDATA")
             .map(PathBuf::from)
             .unwrap_or_else(|_| PathBuf::from("."));
@@ -325,6 +350,49 @@ mod win_app {
         }
         if let Some(p) = d_path.to_str() {
             engine.load_dictionary_from_file(p);
+        }
+    }
+
+    fn is_autorun_enabled() -> bool {
+        // Kiểm tra qua registry HKCU\Software\Microsoft\Windows\CurrentVersion\Run
+        let output = Command::new("reg")
+            .args(&["query", r"HKCU\Software\Microsoft\Windows\CurrentVersion\Run", "/v", "VnCharKey"])
+            .output();
+        if let Ok(out) = output {
+            out.status.success()
+        } else {
+            false
+        }
+    }
+
+    fn set_autorun_enabled(enable: bool) {
+        if enable {
+            if let Ok(exe_path) = std::env::current_exe() {
+                let exe_str = exe_path.to_string_lossy().to_string();
+                let _ = Command::new("reg")
+                    .args(&[
+                        "add",
+                        r"HKCU\Software\Microsoft\Windows\CurrentVersion\Run",
+                        "/v",
+                        "VnCharKey",
+                        "/t",
+                        "REG_SZ",
+                        "/d",
+                        &format!("\"{}\"", exe_str),
+                        "/f",
+                    ])
+                    .output();
+            }
+        } else {
+            let _ = Command::new("reg")
+                .args(&[
+                    "delete",
+                    r"HKCU\Software\Microsoft\Windows\CurrentVersion\Run",
+                    "/v",
+                    "VnCharKey",
+                    "/f",
+                ])
+                .output();
         }
     }
 
@@ -932,6 +1000,33 @@ mod win_app {
             to_wstring("Gõ [ ] thành ơ ư").as_ptr(),
         );
 
+        // Tùy chọn Tốc ký
+        let quick_sub = CreatePopupMenu();
+        AppendMenuW(
+            quick_sub,
+            MF_STRING,
+            ID_TOGGLE_QUICK_TELEX,
+            to_wstring("Quick Telex (cc->ch, kk->kh, tt->th...)").as_ptr(),
+        );
+        AppendMenuW(
+            quick_sub,
+            MF_STRING,
+            ID_TOGGLE_QUICK_START,
+            to_wstring("Phụ âm đầu nhanh (f->ph, j->gi, w->qu)").as_ptr(),
+        );
+        AppendMenuW(
+            quick_sub,
+            MF_STRING,
+            ID_TOGGLE_QUICK_END,
+            to_wstring("Phụ âm cuối nhanh (g->ng, h->nh, k->ch)").as_ptr(),
+        );
+        AppendMenuW(
+            menu,
+            MF_POPUP,
+            quick_sub as usize,
+            to_wstring("Tùy chọn Tốc ký...").as_ptr(),
+        );
+
         AppendMenuW(menu, MF_SEPARATOR, 0, null_mut());
 
         // 6. Gõ Tắt & Từ Điển
@@ -968,7 +1063,18 @@ mod win_app {
 
         AppendMenuW(menu, MF_SEPARATOR, 0, null_mut());
 
-        // 7. Exit
+        // 7. Khởi động cùng Windows
+        let autorun_on = is_autorun_enabled();
+        AppendMenuW(
+            menu,
+            MF_STRING | if autorun_on { MF_CHECKED } else { 0 },
+            ID_TOGGLE_AUTORUN,
+            to_wstring("Khởi động cùng Windows").as_ptr(),
+        );
+
+        AppendMenuW(menu, MF_SEPARATOR, 0, null_mut());
+
+        // 8. Exit
         AppendMenuW(
             menu,
             MF_STRING,
@@ -1116,6 +1222,18 @@ mod win_app {
                             st.bracket_transform = val;
                             st.engine.set_bracket_transform(val);
                         }
+                        ID_TOGGLE_QUICK_TELEX => {
+                            let val = !st.engine.quick_telex();
+                            st.engine.set_quick_telex(val);
+                        }
+                        ID_TOGGLE_QUICK_START => {
+                            let val = !st.engine.quick_start_consonant();
+                            st.engine.set_quick_start_consonant(val);
+                        }
+                        ID_TOGGLE_QUICK_END => {
+                            let val = !st.engine.quick_end_consonant();
+                            st.engine.set_quick_end_consonant(val);
+                        }
                         ID_TOGGLE_MACRO => {
                             let val = !st.macro_enabled;
                             st.macro_enabled = val;
@@ -1134,6 +1252,10 @@ mod win_app {
                         }
                         ID_RELOAD_FILES => {
                             reload_files(&mut st.engine);
+                        }
+                        ID_TOGGLE_AUTORUN => {
+                            let current = is_autorun_enabled();
+                            set_autorun_enabled(!current);
                         }
                         ID_TRAY_EXIT => {
                             remove_tray_icon(hwnd);

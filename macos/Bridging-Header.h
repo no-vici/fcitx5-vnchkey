@@ -101,6 +101,11 @@ uint32_t fcitx5_vnchkey_get_tone_style(Fcitx5VnchkeyContext* ctx);
 void fcitx5_vnchkey_set_idle_timeout(Fcitx5VnchkeyContext* ctx, uint64_t ms);
 uint64_t fcitx5_vnchkey_get_idle_timeout(Fcitx5VnchkeyContext* ctx);
 
+/// Configures Quick Telex, Quick Initial, and Quick Final consonants.
+void fcitx5_vnchkey_set_quick_telex(Fcitx5VnchkeyContext* ctx, bool enabled);
+void fcitx5_vnchkey_set_quick_start_consonant(Fcitx5VnchkeyContext* ctx, bool enabled);
+void fcitx5_vnchkey_set_quick_end_consonant(Fcitx5VnchkeyContext* ctx, bool enabled);
+
 /// Loads custom macros and dictionary from configuration files.
 void fcitx5_vnchkey_load_macros(Fcitx5VnchkeyContext* ctx, const char* path);
 void fcitx5_vnchkey_load_dictionary(Fcitx5VnchkeyContext* ctx, const char* path);

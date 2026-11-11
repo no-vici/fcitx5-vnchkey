@@ -452,6 +452,30 @@ pub unsafe extern "C" fn fcitx5_vnchkey_set_idle_timeout(ctx: *mut Fcitx5Vnchkey
     }
 }
 
+/// Configures Quick Telex (cc->ch, gg->gi, kk->kh, nn->ng, pp->ph, qq->qu, tt->th).
+#[no_mangle]
+pub unsafe extern "C" fn fcitx5_vnchkey_set_quick_telex(ctx: *mut Fcitx5VnchkeyContext, enabled: bool) {
+    if !ctx.is_null() {
+        (*ctx).engine.set_quick_telex(enabled);
+    }
+}
+
+/// Configures Quick Initial Consonants (f->ph, j->gi, w->qu).
+#[no_mangle]
+pub unsafe extern "C" fn fcitx5_vnchkey_set_quick_start_consonant(ctx: *mut Fcitx5VnchkeyContext, enabled: bool) {
+    if !ctx.is_null() {
+        (*ctx).engine.set_quick_start_consonant(enabled);
+    }
+}
+
+/// Configures Quick Final Consonants (g->ng, h->nh, k->ch).
+#[no_mangle]
+pub unsafe extern "C" fn fcitx5_vnchkey_set_quick_end_consonant(ctx: *mut Fcitx5VnchkeyContext, enabled: bool) {
+    if !ctx.is_null() {
+        (*ctx).engine.set_quick_end_consonant(enabled);
+    }
+}
+
 /// Returns keystroke idle timeout in milliseconds.
 #[no_mangle]
 pub unsafe extern "C" fn fcitx5_vnchkey_get_idle_timeout(ctx: *mut Fcitx5VnchkeyContext) -> u64 {

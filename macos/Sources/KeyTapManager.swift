@@ -467,6 +467,35 @@ public class KeyTapManager {
         return fcitx5_vnchkey_get_idle_timeout(engine)
     }
 
+    public func setQuickTelex(_ enabled: Bool) {
+        if let engine = self.engine {
+            fcitx5_vnchkey_set_quick_telex(engine, enabled)
+        }
+    }
+
+    public func setQuickStartConsonant(_ enabled: Bool) {
+        if let engine = self.engine {
+            fcitx5_vnchkey_set_quick_start_consonant(engine, enabled)
+        }
+    }
+
+    public func setQuickEndConsonant(_ enabled: Bool) {
+        if let engine = self.engine {
+            fcitx5_vnchkey_set_quick_end_consonant(engine, enabled)
+        }
+    }
+
+    public func flipWord() -> Bool {
+        guard let engine = self.engine else { return false }
+        var backspaces: Int = 0
+        var outCommit: UnsafeMutablePointer<CChar>? = nil
+        if fcitx5_vnchkey_flip_word(engine, &backspaces, &outCommit) == 1 {
+            emitOutput(backspaces: backspaces, commitPtr: outCommit)
+            return true
+        }
+        return false
+    }
+
     public func resetEngine() {
         if let engine = self.engine {
             fcitx5_vnchkey_reset(engine)
@@ -721,7 +750,20 @@ public class KeyTapManager {
         }
 
         // Bỏ qua nếu đang bấm các phím tổ hợp Command, Control hoặc Option
-        if flags.contains(.maskCommand) || flags.contains(.maskControl) || flags.contains(.maskAlternate) {
+        // Ngoại lệ: Cho phép tổ hợp Đảo từ (Ctrl+Shift+Z hoặc custom flip shortcut)
+        let isCtrl = flags.contains(.maskControl)
+        let isShift = flags.contains(.maskShift)
+        let isCmd = flags.contains(.maskCommand)
+        let isOpt = flags.contains(.maskAlternate)
+
+        // Hỗ trợ đảo từ bằng Ctrl+Shift+Z (hoặc Cmd+Shift+Z tuỳ chọn)
+        if (isCtrl || isCmd) && isShift && keyCode == 6 { // 6 = 'Z'
+            if flipWord() {
+                return nil
+            }
+        }
+
+        if isCmd || isCtrl || isOpt {
             resetEngine()
             return Unmanaged.passRetained(event)
         }

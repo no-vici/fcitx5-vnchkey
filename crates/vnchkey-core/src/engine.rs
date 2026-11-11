@@ -71,6 +71,12 @@ pub struct EngineConfig {
     pub enable_macro: bool,
     /// Idle keystroke timeout in milliseconds (0 = disabled, default = 800ms)
     pub idle_timeout_ms: u64,
+    /// Quick Telex consonants (cc->ch, gg->gi, kk->kh, nn->ng, pp->ph, qq->qu, tt->th)
+    pub quick_telex: bool,
+    /// Quick initial consonants (f->ph, j->gi, w->qu at start of word)
+    pub quick_start_consonant: bool,
+    /// Quick final consonants (g->ng, h->nh, k->ch at end of word)
+    pub quick_end_consonant: bool,
 }
 
 impl Default for EngineConfig {
@@ -89,6 +95,9 @@ impl Default for EngineConfig {
             bracket_transform: false,
             enable_macro: true,
             idle_timeout_ms: 800,
+            quick_telex: false,
+            quick_start_consonant: false,
+            quick_end_consonant: false,
         }
     }
 }
@@ -458,6 +467,36 @@ impl Engine {
     /// Returns whether macro expansion is enabled.
     pub fn macro_enabled(&self) -> bool {
         self.config.enable_macro
+    }
+
+    /// Sets Quick Telex option.
+    pub fn set_quick_telex(&mut self, enabled: bool) {
+        self.config.quick_telex = enabled;
+    }
+
+    /// Returns whether Quick Telex is enabled.
+    pub fn quick_telex(&self) -> bool {
+        self.config.quick_telex
+    }
+
+    /// Sets Quick Initial Consonants (f->ph, j->gi, w->qu).
+    pub fn set_quick_start_consonant(&mut self, enabled: bool) {
+        self.config.quick_start_consonant = enabled;
+    }
+
+    /// Returns whether Quick Initial Consonant is enabled.
+    pub fn quick_start_consonant(&self) -> bool {
+        self.config.quick_start_consonant
+    }
+
+    /// Sets Quick Final Consonants (g->ng, h->nh, k->ch).
+    pub fn set_quick_end_consonant(&mut self, enabled: bool) {
+        self.config.quick_end_consonant = enabled;
+    }
+
+    /// Returns whether Quick Final Consonant is enabled.
+    pub fn quick_end_consonant(&self) -> bool {
+        self.config.quick_end_consonant
     }
 
     /// Sets keystroke idle timeout in milliseconds (0 = disabled).
@@ -1166,6 +1205,97 @@ impl Engine {
         }
 
         // Non-digit character (letters and brackets)
+        // 0. Quick Consonants pre-transform:
+        // Quick Initial: f -> ph, j -> gi, w -> qu (if at start of word)
+        if self.config.quick_start_consonant && self.current_word.is_empty() {
+            let ch_lower = ch.to_ascii_lowercase();
+            let is_upper = ch.is_ascii_uppercase();
+            let replacement = match ch_lower {
+                'f' => Some(if is_upper { "Ph" } else { "ph" }),
+                'j' => Some(if is_upper { "Gi" } else { "gi" }),
+                'w' => Some(if is_upper { "Qu" } else { "qu" }),
+                _ => None,
+            };
+            if let Some(rep) = replacement {
+                self.raw_strokes.push(ch);
+                self.current_word.push_str(rep);
+                return EngineOutput {
+                    backspaces: 0,
+                    commit_text: self.format_commit(rep),
+                    consumed: true,
+                    auto_restored: false,
+                    macro_expanded: false,
+                    adaptive_delay_ms: 0,
+                };
+            }
+        }
+
+        // Quick Telex Consonants (cc->ch, gg->gi, kk->kh, nn->ng, pp->ph, qq->qu, tt->th)
+        if self.config.quick_telex && matches!(self.config.method, InputMethod::Telex | InputMethod::Auto | InputMethod::SimpleTelex) {
+            if let Some(&last_ch) = self.current_word.chars().collect::<Vec<char>>().last() {
+                if last_ch.to_ascii_lowercase() == ch.to_ascii_lowercase() && ch.is_ascii_alphabetic() {
+                    let is_upper = ch.is_ascii_uppercase();
+                    let pair_rep = match ch.to_ascii_lowercase() {
+                        'c' => Some(if is_upper { "Ch" } else { "ch" }),
+                        'g' => Some(if is_upper { "Gi" } else { "gi" }),
+                        'k' => Some(if is_upper { "Kh" } else { "kh" }),
+                        'n' => Some(if is_upper { "Ng" } else { "ng" }),
+                        'p' => Some(if is_upper { "Ph" } else { "ph" }),
+                        'q' => Some(if is_upper { "Qu" } else { "qu" }),
+                        't' => Some(if is_upper { "Th" } else { "th" }),
+                        _ => None,
+                    };
+                    if let Some(rep) = pair_rep {
+                        let old_word = self.current_word.clone();
+                        self.current_word.pop();
+                        self.current_word.push_str(rep);
+                        self.raw_strokes.push(ch);
+                        let (backspaces, commit_text) = compare_and_split_strings(&old_word, &self.current_word);
+                        return EngineOutput {
+                            backspaces,
+                            commit_text: self.format_commit(&commit_text),
+                            consumed: true,
+                            auto_restored: false,
+                            macro_expanded: false,
+                            adaptive_delay_ms: 0,
+                        };
+                    }
+                }
+            }
+        }
+
+        // Quick Final Consonants: g->ng, h->nh, k->ch (after a vowel)
+        if self.config.quick_end_consonant && matches!(self.config.method, InputMethod::Telex | InputMethod::Auto) {
+            let has_vowel = self.current_word.chars().any(|c| crate::telex::is_vietnamese_vowel(c));
+            if has_vowel {
+                if let Some(&last_ch) = self.current_word.chars().collect::<Vec<char>>().last() {
+                    if crate::telex::is_vietnamese_vowel(last_ch) {
+                        let is_upper = ch.is_ascii_uppercase();
+                        let final_rep = match ch.to_ascii_lowercase() {
+                            'g' => Some(if is_upper { "NG" } else { "ng" }),
+                            'h' => Some(if is_upper { "NH" } else { "nh" }),
+                            'k' => Some(if is_upper { "CH" } else { "ch" }),
+                            _ => None,
+                        };
+                        if let Some(rep) = final_rep {
+                            let old_word = self.current_word.clone();
+                            self.current_word.push_str(rep);
+                            self.raw_strokes.push(ch);
+                            let (backspaces, commit_text) = compare_and_split_strings(&old_word, &self.current_word);
+                            return EngineOutput {
+                                backspaces,
+                                commit_text: self.format_commit(&commit_text),
+                                consumed: true,
+                                auto_restored: false,
+                                macro_expanded: false,
+                                adaptive_delay_ms: 0,
+                            };
+                        }
+                    }
+                }
+            }
+        }
+
         let (mut new_word, was_transformed, was_undo) = match self.config.method {
             InputMethod::Auto => {
                 if self.word_used_vni {

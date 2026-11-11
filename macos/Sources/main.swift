@@ -103,6 +103,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         km.setBracketTransform(defaults.bool(forKey: "vnchkey.bracket"))
         km.setW2U(UInt32(defaults.integer(forKey: "vnchkey.w2u")))
         km.setIdleTimeout(UInt64(defaults.integer(forKey: "vnchkey.idleTimeout")))
+        km.setQuickTelex(defaults.bool(forKey: "vnchkey.quick_telex"))
+        km.setQuickStartConsonant(defaults.bool(forKey: "vnchkey.quick_start"))
+        km.setQuickEndConsonant(defaults.bool(forKey: "vnchkey.quick_end"))
         km.customShortcut = loadCustomShortcut()
     }
 
@@ -252,6 +255,24 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         bracketItem.state = defaults.bool(forKey: "vnchkey.bracket") ? .on : .off
         menu.addItem(bracketItem)
 
+        // Menu con: Tùy chọn Tốc ký (Quick Consonants)
+        let quickMenu = NSMenu()
+        let quickTelexItem = NSMenuItem(title: "Quick Telex (cc->ch, kk->kh, tt->th...)", action: #selector(toggleQuickTelex(_:)), keyEquivalent: "")
+        quickTelexItem.state = defaults.bool(forKey: "vnchkey.quick_telex") ? .on : .off
+        quickMenu.addItem(quickTelexItem)
+
+        let quickStartItem = NSMenuItem(title: "Phụ âm đầu nhanh (f->ph, j->gi, w->qu)", action: #selector(toggleQuickStart(_:)), keyEquivalent: "")
+        quickStartItem.state = defaults.bool(forKey: "vnchkey.quick_start") ? .on : .off
+        quickMenu.addItem(quickStartItem)
+
+        let quickEndItem = NSMenuItem(title: "Phụ âm cuối nhanh (g->ng, h->nh, k->ch)", action: #selector(toggleQuickEnd(_:)), keyEquivalent: "")
+        quickEndItem.state = defaults.bool(forKey: "vnchkey.quick_end") ? .on : .off
+        quickMenu.addItem(quickEndItem)
+
+        let quickParent = NSMenuItem(title: "Tùy chọn Tốc ký...", action: nil, keyEquivalent: "")
+        quickParent.submenu = quickMenu
+        menu.addItem(quickParent)
+
         menu.addItem(NSMenuItem.separator())
 
         // 5. Quản lý Gõ Tắt (Macros) & Từ Điển Cá Nhân (Custom Dictionary) - Kiểu xKey trực tiếp trên Menu
@@ -367,6 +388,30 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     @objc func openDashboardAndRecordShortcut() {
         openDashboardWindow()
         startRecordingShortcutAction()
+    }
+
+    @objc func toggleQuickTelex(_ sender: NSMenuItem) {
+        guard let km = keyManager else { return }
+        let next = !defaults.bool(forKey: "vnchkey.quick_telex")
+        defaults.set(next, forKey: "vnchkey.quick_telex")
+        km.setQuickTelex(next)
+        rebuildMenu()
+    }
+
+    @objc func toggleQuickStart(_ sender: NSMenuItem) {
+        guard let km = keyManager else { return }
+        let next = !defaults.bool(forKey: "vnchkey.quick_start")
+        defaults.set(next, forKey: "vnchkey.quick_start")
+        km.setQuickStartConsonant(next)
+        rebuildMenu()
+    }
+
+    @objc func toggleQuickEnd(_ sender: NSMenuItem) {
+        guard let km = keyManager else { return }
+        let next = !defaults.bool(forKey: "vnchkey.quick_end")
+        defaults.set(next, forKey: "vnchkey.quick_end")
+        km.setQuickEndConsonant(next)
+        rebuildMenu()
     }
 
     @objc func selectMethod(_ sender: NSMenuItem) {
