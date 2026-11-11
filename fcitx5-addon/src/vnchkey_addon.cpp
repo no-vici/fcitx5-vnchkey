@@ -659,7 +659,7 @@ void VnchkeyEngine::loadConfig() {
                 try {
                     config_idle_timeout_ms_ = std::stoull(line.substr(14));
                 } catch (...) {
-                    config_idle_timeout_ms_ = 800;
+                    config_idle_timeout_ms_ = 0;
                 }
             } else if (line.rfind("AutoRestoreEnglish=", 0) == 0) {
                 config_auto_restore_ = (line.find("False") == std::string::npos);

@@ -609,7 +609,7 @@ impl SettingsApp {
                 ui.add(
                     egui::Slider::new(&mut self.config.idle_timeout_ms, 0..=2000)
                         .step_by(50.0)
-                        .suffix(" ms (0 = Tắt, Mặc định 800ms)"),
+                        .suffix(" ms (0 = Tắt / Mặc định, khuyên dùng 0ms)"),
                 );
             });
         });

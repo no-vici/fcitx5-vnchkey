@@ -102,7 +102,7 @@ private:
     bool config_preedit_tooltip_ = true;
     bool config_persistent_guard_ = true;
     int config_direct_delay_ms_ = 0; // 0 = auto (0ms for editors, 4ms for web browsers)
-    uint64_t config_idle_timeout_ms_ = 800; // 0 = disabled, default = 800ms
+    uint64_t config_idle_timeout_ms_ = 0; // 0 = disabled (default), >0 = timeout in ms
     std::unordered_map<std::string, std::string> app_output_modes_;
 
     // Grace Period Focus Tracker for Java IDEs & Wine

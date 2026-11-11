@@ -52,7 +52,7 @@ impl Default for VnchkeyConfig {
             select_and_replace_web: true,
             enable_word_rescue: true,
             direct_delay_ms: 0,
-            idle_timeout_ms: 800,
+            idle_timeout_ms: 0,
             type_w_to_u: "Non-Start".to_string(),
             bracket_transform: "Disabled".to_string(),
             modern_style: false,
@@ -161,7 +161,7 @@ impl ConfigManager {
             if let Some(v) = map.get("SelectAndReplaceWeb") { cfg.select_and_replace_web = v.eq_ignore_ascii_case("true"); }
             if let Some(v) = map.get("EnableWordRescue") { cfg.enable_word_rescue = v.eq_ignore_ascii_case("true"); }
             if let Some(v) = map.get("DirectDelayMs") { cfg.direct_delay_ms = v.parse().unwrap_or(0); }
-            if let Some(v) = map.get("IdleTimeoutMs") { cfg.idle_timeout_ms = v.parse().unwrap_or(800); }
+            if let Some(v) = map.get("IdleTimeoutMs") { cfg.idle_timeout_ms = v.parse().unwrap_or(0); }
             if let Some(v) = map.get("TypeW2U") { cfg.type_w_to_u = v.clone(); }
             if let Some(v) = map.get("BracketTransform") { cfg.bracket_transform = v.clone(); }
             if let Some(v) = map.get("ModernStyle") { cfg.modern_style = v.eq_ignore_ascii_case("true"); }

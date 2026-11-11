@@ -8,7 +8,7 @@ Bản port chính thức của bộ gõ **vnchKey (Tự Do Edition)** dành cho 
 
 1. **Đầy đủ 4 kiểu gõ**: Tự động (`Telex + VNI`), `Telex`, `VNI`, và `Simple Telex`.
 2. **Tối ưu đặc biệt cho Neovim / Vim / Terminal trên macOS**:
-   - **Khoảng lặng ngắt từ tự động (`idle_timeout_ms = 800ms`)**: Tự động dọn sạch bộ đệm khi bạn dừng tay $\ge 0.8\text{s}$ ở chế độ Normal mode (ví dụ bấm `u` undo rồi nghỉ một nhịp trước khi bấm `i` vào Insert mode và gõ số `1` sau `height="50"`), trị dứt điểm hiện tượng nhảy thành chữ `úi` thường gặp trên các bộ gõ macOS khác.
+   - **Khoảng lặng ngắt từ tự động (`idle_timeout_ms = 0ms`)**: Mặc định đặt là 0ms (tắt) để không làm mất dấu hay ngắt từ khi gõ chậm hoặc tìm phím. Người dùng có thể chỉnh thanh trượt trong Dashboard nếu muốn ngắt bộ đệm tự động. Neovim users có thể dùng module `vnchkey.lua` qua socket IPC để tự động toggle On/Off khi ra/vào Insert mode.
    - **Bảo vệ chuỗi số VNI (VNI Numeric Guard)** & tách âm tiết cuối (`extract_last_syllable_index`).
    - **Gắn nhãn sự kiện nội bộ (`VNCHKEY_SYNTHETIC_TAG`)**: Ngăn chặn vòng lặp sự kiện `CGEventTap` (re-entrancy), giúp gõ VNI (`dau61` $\to$ `dấu`, `gio72` $\to$ `giờ`) chính xác tuyệt đối.
 3. **Quản lý Gõ Tắt (Macro) & Từ Điển Cá Nhân trực tiếp trên Menu Bar (như xKey)**:

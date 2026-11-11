@@ -463,7 +463,7 @@ public class KeyTapManager {
     }
 
     public func getIdleTimeout() -> UInt64 {
-        guard let engine = self.engine else { return 800 }
+        guard let engine = self.engine else { return 0 }
         return fcitx5_vnchkey_get_idle_timeout(engine)
     }
 

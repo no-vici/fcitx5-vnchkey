@@ -140,12 +140,8 @@ Một vấn đề cố hữu của các bộ gõ trên terminal emulator là cá
 - **Bảo vệ Chuỗi Số VNI (VNI Numeric Guard)**:
   - Trong kiểu gõ VNI, các chuỗi số liên tiếp (`501`, `12345`, `width="100"`) được engine bảo đảm giữ nguyên định dạng số tự nhiên nguyên bản (literal digits), tuyệt đối không tự động biến âm thành dấu thanh hay phát xung Backspace làm xáo trộn code.
 - **Khoảng Lặng Ngắt Từ Tự Động (Keystroke Idle Timeout)**:
-  - Khi người dùng dừng gõ $\ge \text{timeout}$ (mặc định $800\text{ms}$), engine tự động chốt dứt điểm và dọn sạch bộ đệm âm tiết.
-  - **Đặc trị lỗi "nhảy chữ úi" khi gõ VNI trong Neovim**:
-    - *Vấn đề thực tế*: Người dùng Neovim gõ kiểu VNI rất hay gặp tình huống khó chịu khi làm việc với code (ví dụ có biến `height="50"`). Nếu vừa bấm lệnh undo `u` ở chế độ Normal mode, rồi bấm `i` để vào Insert mode và gõ số `1` sau số `50`, hầu hết các bộ gõ trên Linux/macOS sẽ hiểu nhầm chuỗi lệnh `u` + `i` + `1` thành `úi`, biến dòng code thành `height="50úi"` do hai phím lệnh `u` và `i` vẫn bị kẹt lại trong bộ đệm gõ!
-    - *Giải pháp*: Khoảng dừng tự nhiên giữa lúc bạn bấm `u` (ở Normal mode) và lúc bấm `i` (để vào Insert mode) thường vượt quá $800\text{ms}$. Cơ chế Idle Timeout sẽ tự động dọn sạch phím lệnh cũ, bảo đảm khi bạn vừa bước vào Insert mode, bộ đệm gõ luôn hoàn toàn tinh khôi $100\%$.
-    - Kết hợp cùng **VNI Numeric Guard**, bộ gõ triệt tiêu được đến hơn $80\%$ các lỗi va chạm phím lệnh/chuỗi số kể trên, giúp người dùng gõ bình thường thoải mái code mà không nhất thiết phải cài thêm plugin Lua để bật/tắt IME liên tục khi ra vào Insert mode.
-  - **Tùy chỉnh linh hoạt trong GUI Settings**: Người dùng có thể kéo thanh trượt từ $0\text{ms}$ (tắt) đến $2000\text{ms}$ tùy theo tốc độ gõ cá nhân trong tab **General**.
+  - Mặc định được đặt là `0ms` (tắt) trên cả 3 hệ điều hành, đảm bảo khi người dùng gõ chậm, dừng tay suy nghĩ hay tìm phím số VNI (như gõ `tieng` rồi đợi vài giây mới gõ `16` -> `tiếng`, hoặc flip word) thì bộ đệm không bao giờ bị dọn ngang chừng.
+  - Người dùng Neovim được khuyến nghị sử dụng cơ chế IPC socket / module Lua chính thức (`vnchkey.lua`) để tự động chuyển trạng thái bật/tắt khi ra vào Insert mode vừa nhẹ nhàng vừa chuẩn xác tuyệt đối. Ngoài ra người dùng vẫn có thể tuỳ chỉnh thời gian timeout (từ 0 đến 2000ms) trong bảng Settings nếu muốn.
 - **Module Tích Hợp Sẵn Cho Neovim (`vnchkey.lua`)**:
   - Gói sẵn module chính thức tại `data/neovim/lua/vnchkey.lua` (tự động cài vô `/usr/share/nvim/runtime/lua/vnchkey.lua`).
   - Hỗ trợ cơ chế **One-time Load Guard** (ngăn chặn duplicate load), chuyển đổi IME bất đồng bộ qua `vim.uv.spawn` với độ trễ bằng $0$, và hỗ trợ phím thoát siêu tốc `jk` / `<Esc>`.

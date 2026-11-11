@@ -69,7 +69,7 @@ pub struct EngineConfig {
     pub bracket_transform: bool,
     /// Enable macro expansions
     pub enable_macro: bool,
-    /// Idle keystroke timeout in milliseconds (0 = disabled, default = 800ms)
+    /// Idle keystroke timeout in milliseconds (0 = disabled, default = 0ms)
     pub idle_timeout_ms: u64,
     /// Quick Telex consonants (cc->ch, gg->gi, kk->kh, nn->ng, pp->ph, qq->qu, tt->th)
     pub quick_telex: bool,
@@ -94,7 +94,7 @@ impl Default for EngineConfig {
             type_w_to_u: W2UType::NonStart,
             bracket_transform: false,
             enable_macro: true,
-            idle_timeout_ms: 800,
+            idle_timeout_ms: 0,
             quick_telex: false,
             quick_start_consonant: false,
             quick_end_consonant: false,
@@ -1593,10 +1593,11 @@ mod tests {
         assert_eq!(type_word(&mut engine, "12345 "), "12345 ");
         assert_eq!(type_word(&mut engine, "width100 "), "width100 ");
 
-        // 4. Idle Timeout (>= 800ms): pauses in typing (e.g. Normal mode command 'u', then 1s pause, then 'i' and '1')
+        // 4. Idle Timeout (when configured > 0): pauses in typing (e.g. Normal mode command 'u', then 1s pause, then 'i' and '1')
         // must automatically flush old buffer so 'u' + 'i' + '1' does NOT produce "úi"!
         let mut sim_engine = Engine::new(EngineConfig {
             method: InputMethod::Vni,
+            idle_timeout_ms: 800,
             ..EngineConfig::default()
         });
         // User presses 'u' in Normal mode at t = 0ms

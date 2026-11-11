@@ -108,12 +108,12 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             defaults.set(0, forKey: "vnchkey.charset")        // Unicode dựng sẵn NFC
             defaults.set(false, forKey: "vnchkey.bracket")    // Gõ [ ] thành ơ ư
             defaults.set(0, forKey: "vnchkey.w2u")            // W -> ư (Không ở đầu từ)
-            defaults.set(800, forKey: "vnchkey.idleTimeout")  // Khoảng nghỉ 800ms cho Neovim
+            defaults.set(0, forKey: "vnchkey.idleTimeout")  // Mặc định tắt (0ms) để không ngắt gõ dấu VNI / flip word khi dừng tay
             saveCustomShortcut(.defaultShortcut)
         }
 
         if defaults.object(forKey: "vnchkey.idleTimeout") == nil {
-            defaults.set(800, forKey: "vnchkey.idleTimeout")
+            defaults.set(0, forKey: "vnchkey.idleTimeout")
         }
         if defaults.object(forKey: "vnchkey.sc.initialized") == nil {
             saveCustomShortcut(.defaultShortcut)
@@ -695,12 +695,12 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         timeoutLabel.frame = NSRect(x: 16, y: 14, width: 150, height: 20)
         smartBox.addSubview(timeoutLabel)
 
-        let timeoutSlider = NSSlider(value: 800, minValue: 0, maxValue: 2000, target: self, action: #selector(dashTimeoutChanged(_:)))
+        let timeoutSlider = NSSlider(value: 0, minValue: 0, maxValue: 2000, target: self, action: #selector(dashTimeoutChanged(_:)))
         timeoutSlider.frame = NSRect(x: 185, y: 14, width: 195, height: 20)
         smartBox.addSubview(timeoutSlider)
         self.dashTimeoutSlider = timeoutSlider
 
-        let timeoutValLabel = NSTextField(labelWithString: "800 ms")
+        let timeoutValLabel = NSTextField(labelWithString: "Tắt (0ms)")
         timeoutValLabel.frame = NSRect(x: 388, y: 14, width: 70, height: 20)
         smartBox.addSubview(timeoutValLabel)
         self.dashTimeoutValueLabel = timeoutValLabel
