@@ -1236,7 +1236,7 @@ class VnchKeyIPCServer {
                 let cmd = String(decoding: buffer[0..<bytesRead], as: UTF8.self)
                 self.onCommand(cmd)
                 let reply = "OK\n"
-                _ = reply.withCString {
+                reply.withCString {
                     #if os(macOS)
                     var nosig: Int32 = 1
                     setsockopt(clientFd, SOL_SOCKET, SO_NOSIGPIPE, &nosig, socklen_t(MemoryLayout<Int32>.size))

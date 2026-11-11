@@ -21,6 +21,7 @@ rust:
 	cd .. && cargo build --release -p fcitx5-vnchkey-ffi --target aarch64-apple-darwin || true
 	cd .. && cargo build --release -p fcitx5-vnchkey-ffi --target x86_64-apple-darwin || true
 	@mkdir -p $(TARGET_DIR)
+	@rm -f $(TARGET_DIR)/libfcitx5_vnchkey_ffi.dylib
 	@if [ -f "../target/aarch64-apple-darwin/release/libfcitx5_vnchkey_ffi.a" ] && [ -f "../target/x86_64-apple-darwin/release/libfcitx5_vnchkey_ffi.a" ]; then \
 		lipo -create -output $(TARGET_DIR)/libfcitx5_vnchkey_ffi.a \
 			../target/aarch64-apple-darwin/release/libfcitx5_vnchkey_ffi.a \
@@ -66,11 +67,11 @@ app: rust
 		echo "🍎 Đang biên dịch Swift Universal Binary (x86_64 + arm64)..."; \
 		swiftc $(SWIFT_SOURCES) -target arm64-apple-macos11.0 \
 			-import-objc-header $(BRIDGING_HEADER) \
-			-L $(TARGET_DIR) -lfcitx5_vnchkey_ffi \
+			$(TARGET_DIR)/libfcitx5_vnchkey_ffi.a \
 			-o $(MACOS_DIR)/$(APP_NAME)-arm64 || true; \
 		swiftc $(SWIFT_SOURCES) -target x86_64-apple-macos11.0 \
 			-import-objc-header $(BRIDGING_HEADER) \
-			-L $(TARGET_DIR) -lfcitx5_vnchkey_ffi \
+			$(TARGET_DIR)/libfcitx5_vnchkey_ffi.a \
 			-o $(MACOS_DIR)/$(APP_NAME)-x86_64 || true; \
 		if [ -f "$(MACOS_DIR)/$(APP_NAME)-arm64" ] && [ -f "$(MACOS_DIR)/$(APP_NAME)-x86_64" ]; then \
 			lipo -create -output $(MACOS_DIR)/$(APP_NAME) \
@@ -81,13 +82,13 @@ app: rust
 		else \
 			swiftc $(SWIFT_SOURCES) \
 				-import-objc-header $(BRIDGING_HEADER) \
-				-L $(TARGET_DIR) -lfcitx5_vnchkey_ffi \
+				$(TARGET_DIR)/libfcitx5_vnchkey_ffi.a \
 				-o $(MACOS_DIR)/$(APP_NAME); \
 		fi \
 	else \
 		swiftc $(SWIFT_SOURCES) \
 			-import-objc-header $(BRIDGING_HEADER) \
-			-L $(TARGET_DIR) -lfcitx5_vnchkey_ffi \
+			$(TARGET_DIR)/libfcitx5_vnchkey_ffi.a \
 			-o $(MACOS_DIR)/$(APP_NAME); \
 	fi
 	
