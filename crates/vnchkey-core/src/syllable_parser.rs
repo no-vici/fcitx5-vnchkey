@@ -499,7 +499,7 @@ fn parse_vowels_and_coda(
     if rem_lower.len() >= 2 {
         let pair = (rem_lower[0], rem_lower[1]);
         let is_diphthong = match pair {
-            ('i', 'a') | ('i', 'ê') | ('u', 'a') | ('u', 'ô') | ('ư', 'a') | ('ư', 'ơ') | ('y', 'a') | ('y', 'ê') | ('o', 'o') => {
+            ('i', 'a') | ('i', 'e') | ('i', 'ê') | ('u', 'a') | ('u', 'o') | ('u', 'ô') | ('u', 'ơ') | ('ư', 'a') | ('ư', 'ơ') | ('y', 'a') | ('y', 'ê') | ('o', 'o') => {
                 // 'ua' after 'q' is not a diphthong: in 'quang', 'u' is glide, 'a' is nucleus
                 if after_qu && pair == ('u', 'a') {
                     false
@@ -787,5 +787,15 @@ mod tests {
         // Invalid: 'gh' before 'a'
         let invalid_gh = ParsedSyllable::new("gh", None, "a", "", ToneMark::None);
         assert!(!invalid_gh.is_valid());
+    }
+
+    #[test]
+    fn test_diphthong_ie_coda_placement() {
+        let s = parse_syllable("kiem").unwrap();
+        assert_eq!(s.onset, "k");
+        assert_eq!(s.nucleus, "ie");
+        assert_eq!(s.coda, "m");
+        assert_eq!(s.with_tone(ToneMark::Acute).reconstruct(ToneStyle::Classic), "kiém");
+        assert_eq!(s.with_tone(ToneMark::Acute).reconstruct(ToneStyle::Modern), "kiém");
     }
 }
