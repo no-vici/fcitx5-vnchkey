@@ -756,9 +756,10 @@ public class KeyTapManager {
         let isCmd = flags.contains(.maskCommand)
         let isOpt = flags.contains(.maskAlternate)
 
-        // Hỗ trợ đảo từ bằng Ctrl+Shift+Z (hoặc Cmd+Shift+Z tuỳ chọn)
-        if (isCtrl || isCmd) && isShift && keyCode == 6 { // 6 = 'Z'
-            if flipWord() {
+        // Hỗ trợ đảo từ bằng Ctrl+Shift+Z (không đụng chạm Cmd+Shift+Z Redo của macOS,
+        // và chỉ kích hoạt khi trong bộ đệm thực sự đang có từ gõ dở!)
+        if isCtrl && isShift && !isCmd && !isOpt && keyCode == 6 { // 6 = 'Z'
+            if fcitx5_vnchkey_has_active_word(engine) && flipWord() {
                 return nil
             }
         }

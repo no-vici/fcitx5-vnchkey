@@ -4,6 +4,9 @@ members = [
     "crates/fcitx5-vnchkey-ffi",
     "crates/vnchkey-settings",
 ]
+exclude = [
+    "windows",
+]
 resolver = "2"
 
 [workspace.package]

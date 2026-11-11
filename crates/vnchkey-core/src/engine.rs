@@ -61,8 +61,6 @@ pub struct EngineConfig {
     pub smart_casing: bool,
     /// Quick undo when pressing Backspace or Escape
     pub quick_undo: bool,
-    /// Enable Sentinel Barrier N+1 protocol
-    pub sentinel_enabled: bool,
     /// Type w to produce ư rule
     pub type_w_to_u: W2UType,
     /// Type [ -> ơ, ] -> ư, { -> Ơ, } -> Ư
@@ -90,7 +88,6 @@ impl Default for EngineConfig {
             enable_dictionary: true,
             smart_casing: true,
             quick_undo: true,
-            sentinel_enabled: true,
             type_w_to_u: W2UType::NonStart,
             bracket_transform: false,
             enable_macro: true,

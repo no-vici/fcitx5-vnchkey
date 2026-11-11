@@ -28,8 +28,6 @@ set(RUST_SEARCH_DIRS
     "${CMAKE_CURRENT_SOURCE_DIR}/../target/release"
     "${CMAKE_CURRENT_SOURCE_DIR}/../target/debug"
     "$ENV{CARGO_TARGET_DIR}/release"
-    "/tmp/cargo-vnchkey-target/release"
-    "/tmp/vnchkey-target/release"
     "/usr/lib"
     "/usr/local/lib"
 )

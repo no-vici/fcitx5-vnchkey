@@ -64,6 +64,12 @@ mod win_app {
     const ID_SHORTCUT_DISABLED: usize = 1044;
     const ID_SHORTCUT_RECORD: usize = 1045;
 
+    const ID_FLIP_CTRL_SHIFT_Z: usize = 1060;
+    const ID_FLIP_ALT_X: usize = 1061;
+    const ID_FLIP_CTRL_ALT_Z: usize = 1062;
+    const ID_FLIP_DISABLED: usize = 1063;
+    const ID_FLIP_RECORD: usize = 1064;
+
     const ID_OPEN_MACROS: usize = 1050;
     const ID_OPEN_DICT: usize = 1051;
     const ID_RELOAD_FILES: usize = 1052;
@@ -151,6 +157,13 @@ mod win_app {
         }
     }
 
+    #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+    enum RecordingMode {
+        None,
+        ToggleShortcut,
+        FlipShortcut,
+    }
+
     struct AppState {
         engine: Engine,
         enabled: bool,
@@ -164,12 +177,10 @@ mod win_app {
         macro_enabled: bool,
         dict_enabled: bool,
         shortcut: CustomShortcut,
-        recording_shortcut: bool,
+        flip_shortcut: CustomShortcut,
+        recording_mode: RecordingMode,
         hwnd: HWND,
-        ctrl_pressed: bool,
-        shift_pressed: bool,
-        alt_pressed: bool,
-        win_pressed: bool,
+        chord_armed: bool,
         other_key_during_chord: bool,
     }
 
@@ -187,12 +198,10 @@ mod win_app {
             macro_enabled: true,
             dict_enabled: true,
             shortcut: CustomShortcut::default(),
-            recording_shortcut: false,
+            flip_shortcut: CustomShortcut::from_modifiers_and_key(true, true, false, false, 0x5A),
+            recording_mode: RecordingMode::None,
             hwnd: null_mut(),
-            ctrl_pressed: false,
-            shift_pressed: false,
-            alt_pressed: false,
-            win_pressed: false,
+            chord_armed: false,
             other_key_during_chord: false,
         });
     }
@@ -257,7 +266,12 @@ mod win_app {
                                shift=true\n\
                                alt=false\n\
                                win=false\n\
-                               vk=0\n";
+                               vk=0\n\
+                               flip_ctrl=true\n\
+                               flip_shift=true\n\
+                               flip_alt=false\n\
+                               flip_win=false\n\
+                               flip_vk=90\n";
             let _ = fs::write(&c_path, default_cfg);
         }
 
@@ -291,7 +305,11 @@ mod win_app {
         }
     }
 
-    fn load_shortcut_config() -> CustomShortcut {
+    fn default_flip_shortcut() -> CustomShortcut {
+        CustomShortcut::from_modifiers_and_key(true, true, false, false, 0x5A) // Ctrl + Shift + Z
+    }
+
+    fn load_shortcut_config() -> (CustomShortcut, CustomShortcut) {
         let path = config_path();
         if let Ok(content) = fs::read_to_string(&path) {
             let mut ctrl = false;
@@ -299,6 +317,13 @@ mod win_app {
             let mut alt = false;
             let mut win = false;
             let mut vk: u16 = 0;
+
+            let mut flip_ctrl = true;
+            let mut flip_shift = true;
+            let mut flip_alt = false;
+            let mut flip_win = false;
+            let mut flip_vk: u16 = 0x5A; // default 'Z'
+            let mut has_flip_keys = false;
 
             for line in content.lines() {
                 let trimmed = line.trim();
@@ -314,21 +339,36 @@ mod win_app {
                         "alt" => alt = v == "true" || v == "1",
                         "win" => win = v == "true" || v == "1",
                         "vk" => vk = v.parse::<u16>().unwrap_or(0),
+                        "flip_ctrl" => { flip_ctrl = v == "true" || v == "1"; has_flip_keys = true; }
+                        "flip_shift" => { flip_shift = v == "true" || v == "1"; has_flip_keys = true; }
+                        "flip_alt" => { flip_alt = v == "true" || v == "1"; has_flip_keys = true; }
+                        "flip_win" => { flip_win = v == "true" || v == "1"; has_flip_keys = true; }
+                        "flip_vk" => { flip_vk = v.parse::<u16>().unwrap_or(0); has_flip_keys = true; }
                         _ => {}
                     }
                 }
             }
-            if !ctrl && !shift && !alt && !win && vk == 0 {
+            let sc = if !ctrl && !shift && !alt && !win && vk == 0 {
                 CustomShortcut::disabled()
             } else {
                 CustomShortcut::from_modifiers_and_key(ctrl, shift, alt, win, vk)
-            }
+            };
+
+            let flip_sc = if !has_flip_keys {
+                default_flip_shortcut()
+            } else if !flip_ctrl && !flip_shift && !flip_alt && !flip_win && flip_vk == 0 {
+                CustomShortcut::disabled()
+            } else {
+                CustomShortcut::from_modifiers_and_key(flip_ctrl, flip_shift, flip_alt, flip_win, flip_vk)
+            };
+
+            (sc, flip_sc)
         } else {
-            CustomShortcut::default()
+            (CustomShortcut::default(), default_flip_shortcut())
         }
     }
 
-    fn save_shortcut_config(sc: &CustomShortcut) {
+    fn save_shortcut_config(sc: &CustomShortcut, flip_sc: &CustomShortcut) {
         let path = config_path();
         let content = format!(
             "# VnCharKey Windows Configuration\n\
@@ -336,8 +376,14 @@ mod win_app {
              shift={}\n\
              alt={}\n\
              win={}\n\
-             vk={}\n",
-            sc.ctrl, sc.shift, sc.alt, sc.win, sc.key_code
+             vk={}\n\
+             flip_ctrl={}\n\
+             flip_shift={}\n\
+             flip_alt={}\n\
+             flip_win={}\n\
+             flip_vk={}\n",
+            sc.ctrl, sc.shift, sc.alt, sc.win, sc.key_code,
+            flip_sc.ctrl, flip_sc.shift, flip_sc.alt, flip_sc.win, flip_sc.key_code
         );
         let _ = fs::write(&path, content);
     }
@@ -520,182 +566,186 @@ mod win_app {
         let is_shift = vk == VK_LSHIFT || vk == VK_RSHIFT || vk == VK_SHIFT;
         let is_alt = vk == VK_LMENU || vk == VK_RMENU || vk == VK_MENU;
         let is_win = vk == VK_LWIN || vk == VK_RWIN;
+        let is_mod = is_ctrl || is_shift || is_alt || is_win;
+
+        // Read live modifier state directly from Win32 (plus current key event) to prevent state desync
+        let ctrl_down = ((GetAsyncKeyState(VK_CONTROL as i32) as u16 & 0x8000) != 0 || (is_keydown && is_ctrl)) && !(is_keyup && is_ctrl);
+        let shift_down = ((GetAsyncKeyState(VK_SHIFT as i32) as u16 & 0x8000) != 0 || (is_keydown && is_shift)) && !(is_keyup && is_shift);
+        let alt_down = ((GetAsyncKeyState(VK_MENU as i32) as u16 & 0x8000) != 0 || (is_keydown && is_alt)) && !(is_keyup && is_alt);
+        let win_down = (((GetAsyncKeyState(VK_LWIN as i32) as u16 & 0x8000) != 0
+            || (GetAsyncKeyState(VK_RWIN as i32) as u16 & 0x8000) != 0
+            || (is_keydown && is_win))
+            && !(is_keyup && is_win));
 
         // --- Custom Shortcut Recorder Mode ---
         let mut recorded_new_shortcut = false;
         STATE.with(|s| {
-            let mut st = s.borrow_mut();
-            if st.recording_shortcut {
+            let Ok(mut st) = s.try_borrow_mut() else { return; };
+            if st.recording_mode != RecordingMode::None {
                 if is_keydown {
-                    if is_ctrl { st.ctrl_pressed = true; }
-                    if is_shift { st.shift_pressed = true; }
-                    if is_alt { st.alt_pressed = true; }
-                    if is_win { st.win_pressed = true; }
-
-                    if !is_ctrl && !is_shift && !is_alt && !is_win {
+                    if !is_mod {
                         // User pressed a regular key while holding modifiers!
                         if vk == VK_ESCAPE {
-                            // Cancel recording
-                            st.recording_shortcut = false;
+                            st.recording_mode = RecordingMode::None;
                             recorded_new_shortcut = true;
                         } else {
-                            st.shortcut = CustomShortcut::from_modifiers_and_key(
-                                st.ctrl_pressed,
-                                st.shift_pressed,
-                                st.alt_pressed,
-                                st.win_pressed,
+                            let new_sc = CustomShortcut::from_modifiers_and_key(
+                                ctrl_down,
+                                shift_down,
+                                alt_down,
+                                win_down,
                                 vk,
                             );
-                            save_shortcut_config(&st.shortcut);
-                            st.recording_shortcut = false;
+                            if st.recording_mode == RecordingMode::ToggleShortcut {
+                                st.shortcut = new_sc;
+                            } else if st.recording_mode == RecordingMode::FlipShortcut {
+                                st.flip_shortcut = new_sc;
+                            }
+                            save_shortcut_config(&st.shortcut, &st.flip_shortcut);
+                            st.recording_mode = RecordingMode::None;
                             recorded_new_shortcut = true;
                         }
                     }
-                } else if is_keyup {
-                    // Check if user released modifiers without pressing any other key (modifier chord recording)
-                    if (is_ctrl || is_shift || is_alt || is_win) && !st.other_key_during_chord {
-                        let mod_count = (st.ctrl_pressed as u8)
-                            + (st.shift_pressed as u8)
-                            + (st.alt_pressed as u8)
-                            + (st.win_pressed as u8);
+                } else if is_keyup && st.recording_mode == RecordingMode::ToggleShortcut {
+                    // Modifier-only chord recording for Toggle Shortcut (when user releases one of the modifiers)
+                    if is_mod && !st.other_key_during_chord {
+                        let had_ctrl = ctrl_down || is_ctrl;
+                        let had_shift = shift_down || is_shift;
+                        let had_alt = alt_down || is_alt;
+                        let had_win = win_down || is_win;
+                        let mod_count = (had_ctrl as u8) + (had_shift as u8) + (had_alt as u8) + (had_win as u8);
                         if mod_count >= 1 {
                             st.shortcut = CustomShortcut::from_modifiers_and_key(
-                                st.ctrl_pressed,
-                                st.shift_pressed,
-                                st.alt_pressed,
-                                st.win_pressed,
+                                had_ctrl,
+                                had_shift,
+                                had_alt,
+                                had_win,
                                 0,
                             );
-                            save_shortcut_config(&st.shortcut);
-                            st.recording_shortcut = false;
+                            save_shortcut_config(&st.shortcut, &st.flip_shortcut);
+                            st.recording_mode = RecordingMode::None;
                             recorded_new_shortcut = true;
                         }
                     }
-                    if is_ctrl { st.ctrl_pressed = false; }
-                    if is_shift { st.shift_pressed = false; }
-                    if is_alt { st.alt_pressed = false; }
-                    if is_win { st.win_pressed = false; }
                 }
             }
         });
 
         if recorded_new_shortcut {
             STATE.with(|s| {
-                let st = s.borrow();
-                update_tray_tooltip(st.hwnd, st.enabled, st.method);
+                if let Ok(st) = s.try_borrow() {
+                    update_tray_tooltip(st.hwnd, st.enabled, st.method);
+                }
             });
             return 1;
         }
 
-        // --- Active Shortcut Trigger Evaluation ---
+        // --- Active Toggle Shortcut Trigger Evaluation ---
         let mut shortcut_triggered = false;
         STATE.with(|s| {
-            let mut st = s.borrow_mut();
+            let Ok(mut st) = s.try_borrow_mut() else { return; };
             if is_keydown {
-                if is_ctrl { st.ctrl_pressed = true; }
-                if is_shift { st.shift_pressed = true; }
-                if is_alt { st.alt_pressed = true; }
-                if is_win { st.win_pressed = true; }
+                if !is_mod && (ctrl_down || shift_down || alt_down || win_down) {
+                    st.other_key_during_chord = true;
+                    st.chord_armed = false;
+                }
 
-                if !st.shortcut.is_disabled() && st.shortcut.key_code != 0 {
-                    let req_ctrl = st.shortcut.ctrl;
-                    let req_shift = st.shortcut.shift;
-                    let req_alt = st.shortcut.alt;
-                    let req_win = st.shortcut.win;
-
-                    if st.shortcut.key_code == vk
-                        && (!req_ctrl || st.ctrl_pressed)
-                        && (!req_shift || st.shift_pressed)
-                        && (!req_alt || st.alt_pressed)
-                        && (!req_win || st.win_pressed)
-                    {
-                        shortcut_triggered = true;
+                if !st.shortcut.is_disabled() {
+                    if st.shortcut.key_code != 0 {
+                        if st.shortcut.key_code == vk
+                            && st.shortcut.ctrl == ctrl_down
+                            && st.shortcut.shift == shift_down
+                            && st.shortcut.alt == alt_down
+                            && st.shortcut.win == win_down
+                        {
+                            shortcut_triggered = true;
+                        }
+                    } else if is_mod && !st.other_key_during_chord {
+                        // Arm modifier-only chord when exact required modifiers are down
+                        if st.shortcut.ctrl == ctrl_down
+                            && st.shortcut.shift == shift_down
+                            && st.shortcut.alt == alt_down
+                            && st.shortcut.win == win_down
+                        {
+                            st.chord_armed = true;
+                        } else {
+                            // Extra undesired modifier pressed
+                            let extra_mod = (ctrl_down && !st.shortcut.ctrl)
+                                || (shift_down && !st.shortcut.shift)
+                                || (alt_down && !st.shortcut.alt)
+                                || (win_down && !st.shortcut.win);
+                            if extra_mod {
+                                st.chord_armed = false;
+                            }
+                        }
                     }
                 }
             } else if is_keyup {
                 if !st.shortcut.is_disabled() && st.shortcut.key_code == 0 {
-                    // Modifier chord check on release
-                    let req_ctrl = st.shortcut.ctrl;
-                    let req_shift = st.shortcut.shift;
-                    let req_alt = st.shortcut.alt;
-                    let req_win = st.shortcut.win;
-
-                    let matches_ctrl = !req_ctrl || st.ctrl_pressed;
-                    let matches_shift = !req_shift || st.shift_pressed;
-                    let matches_alt = !req_alt || st.alt_pressed;
-                    let matches_win = !req_win || st.win_pressed;
-
-                    if matches_ctrl && matches_shift && matches_alt && matches_win && !st.other_key_during_chord {
+                    if is_mod && st.chord_armed && !st.other_key_during_chord {
                         shortcut_triggered = true;
+                        st.chord_armed = false;
                     }
                 }
-
-                if is_ctrl { st.ctrl_pressed = false; }
-                if is_shift { st.shift_pressed = false; }
-                if is_alt { st.alt_pressed = false; }
-                if is_win { st.win_pressed = false; }
-                if !st.ctrl_pressed && !st.shift_pressed && !st.alt_pressed && !st.win_pressed {
+                if !ctrl_down && !shift_down && !alt_down && !win_down {
                     st.other_key_during_chord = false;
+                    st.chord_armed = false;
                 }
             }
         });
 
         if shortcut_triggered {
             STATE.with(|s| {
-                let mut st = s.borrow_mut();
-                st.enabled = !st.enabled;
-                st.engine.reset();
-                update_tray_tooltip(st.hwnd, st.enabled, st.method);
+                if let Ok(mut st) = s.try_borrow_mut() {
+                    st.enabled = !st.enabled;
+                    st.engine.reset();
+                    update_tray_tooltip(st.hwnd, st.enabled, st.method);
+                }
             });
             return 1;
         }
 
-        if is_ctrl || is_shift || is_alt || is_win {
+        if is_mod || !is_keydown {
             return CallNextHookEx(null_mut(), code, wparam, lparam);
         }
 
-        if !is_keydown {
-            return CallNextHookEx(null_mut(), code, wparam, lparam);
-        }
-
-        STATE.with(|s| {
-            let mut st = s.borrow_mut();
-            if st.ctrl_pressed || st.shift_pressed || st.alt_pressed || st.win_pressed {
-                st.other_key_during_chord = true;
-            }
-        });
-
-        // Check shortcut combinations (Ctrl/Alt/Win)
-        let ctrl_down = (GetAsyncKeyState(VK_CONTROL as i32) as u16 & 0x8000) != 0;
-        let shift_down = (GetAsyncKeyState(VK_SHIFT as i32) as u16 & 0x8000) != 0;
-        let alt_down = (GetAsyncKeyState(VK_MENU as i32) as u16 & 0x8000) != 0;
-        let win_down = (GetAsyncKeyState(VK_LWIN as i32) as u16 & 0x8000) != 0
-            || (GetAsyncKeyState(VK_RWIN as i32) as u16 & 0x8000) != 0;
-
-        // Đảo từ nhanh bằng Ctrl + Shift + Z (Flip Word giữa Tiếng Việt và chuỗi phím thô)
-        if ctrl_down && shift_down && !alt_down && !win_down && vk == 0x5A { // 0x5A = 'Z'
-            let flipped = STATE.with(|s| {
-                let mut st = s.borrow_mut();
-                if st.enabled {
-                    if let Some(out) = st.engine.flip_current_word() {
-                        emit_output(out.backspaces, &out.commit_text);
-                        return true;
-                    }
+        // --- Flip Word Shortcut (Default: Ctrl + Shift + Z, customizable) ---
+        // Only intercept if engine currently has an active word in buffer (`has_active_word()`),
+        // so normal Redo (`Ctrl+Shift+Z`) in editors works 100% undisturbed when not mid-word!
+        let flipped = STATE.with(|s| {
+            let Ok(mut st) = s.try_borrow_mut() else { return false; };
+            if st.enabled
+                && !st.flip_shortcut.is_disabled()
+                && st.flip_shortcut.key_code != 0
+                && st.flip_shortcut.key_code == vk
+                && st.flip_shortcut.ctrl == ctrl_down
+                && st.flip_shortcut.shift == shift_down
+                && st.flip_shortcut.alt == alt_down
+                && st.flip_shortcut.win == win_down
+                && st.engine.has_active_word()
+            {
+                if let Some(out) = st.engine.flip_current_word() {
+                    emit_output(out.backspaces, &out.commit_text);
+                    return true;
                 }
-                false
-            });
-            if flipped {
-                return 1;
             }
+            false
+        });
+        if flipped {
+            return 1;
         }
 
         if ctrl_down || alt_down || win_down {
-            STATE.with(|s| s.borrow_mut().engine.reset());
+            STATE.with(|s| {
+                if let Ok(mut st) = s.try_borrow_mut() {
+                    st.engine.reset();
+                }
+            });
             return CallNextHookEx(null_mut(), code, wparam, lparam);
         }
 
         let consumed = STATE.with(|s| {
-            let mut st = s.borrow_mut();
+            let Ok(mut st) = s.try_borrow_mut() else { return false; };
             if !st.enabled {
                 return false;
             }
@@ -758,7 +808,11 @@ mod win_app {
         if code >= 0 {
             let msg = wparam as u32;
             if msg == WM_LBUTTONDOWN || msg == WM_RBUTTONDOWN || msg == WM_MBUTTONDOWN {
-                STATE.with(|s| s.borrow_mut().engine.reset());
+                STATE.with(|s| {
+                    if let Ok(mut st) = s.try_borrow_mut() {
+                        st.engine.reset();
+                    }
+                });
             }
         }
         CallNextHookEx(null_mut(), code, wparam, lparam)
@@ -823,7 +877,7 @@ mod win_app {
 
     unsafe fn show_context_menu(hwnd: HWND) {
         let menu = CreatePopupMenu();
-        let (
+        let Some((
             enabled,
             method,
             charset,
@@ -835,9 +889,9 @@ mod win_app {
             macro_en,
             dict_en,
             shortcut,
-        ) = STATE.with(|s| {
-            let st = s.borrow();
-            (
+            flip_shortcut,
+        )) = STATE.with(|s| {
+            s.try_borrow().ok().map(|st| (
                 st.enabled,
                 st.method,
                 st.charset,
@@ -849,8 +903,12 @@ mod win_app {
                 st.macro_enabled,
                 st.dict_enabled,
                 st.shortcut.clone(),
-            )
-        });
+                st.flip_shortcut.clone(),
+            ))
+        }) else {
+            DestroyMenu(menu);
+            return;
+        };
 
         // 1. Toggle Vietnamese
         let toggle_label = to_wstring("Bật gõ Tiếng Việt");
@@ -988,6 +1046,60 @@ mod win_app {
             MF_POPUP,
             sc_sub as usize,
             to_wstring("Phím tắt chuyển Việt / Anh").as_ptr(),
+        );
+
+        // 4b. Phím tắt Đảo Từ (Flip Word) Submenu
+        let flip_sub = CreatePopupMenu();
+        let cur_flip_label = format!("Hiện tại: [{}]", flip_shortcut.display_name);
+        AppendMenuW(
+            flip_sub,
+            MF_STRING | MF_GRAYED,
+            0,
+            to_wstring(&cur_flip_label).as_ptr(),
+        );
+        AppendMenuW(flip_sub, MF_SEPARATOR, 0, null_mut());
+
+        AppendMenuW(
+            flip_sub,
+            MF_STRING,
+            ID_FLIP_RECORD,
+            to_wstring("⌨️ Bấm để đặt phím tắt Đảo Từ mới...").as_ptr(),
+        );
+        AppendMenuW(flip_sub, MF_SEPARATOR, 0, null_mut());
+
+        let is_flip_csz = flip_shortcut.ctrl && flip_shortcut.shift && !flip_shortcut.alt && !flip_shortcut.win && flip_shortcut.key_code == 'Z' as u16;
+        let is_flip_alt_x = !flip_shortcut.ctrl && !flip_shortcut.shift && flip_shortcut.alt && !flip_shortcut.win && flip_shortcut.key_code == 'X' as u16;
+        let is_flip_caz = flip_shortcut.ctrl && !flip_shortcut.shift && flip_shortcut.alt && !flip_shortcut.win && flip_shortcut.key_code == 'Z' as u16;
+
+        AppendMenuW(
+            flip_sub,
+            MF_STRING | if is_flip_csz { MF_CHECKED } else { 0 },
+            ID_FLIP_CTRL_SHIFT_Z,
+            to_wstring("Ctrl + Shift + Z (Chỉ khi đang gõ từ)").as_ptr(),
+        );
+        AppendMenuW(
+            flip_sub,
+            MF_STRING | if is_flip_alt_x { MF_CHECKED } else { 0 },
+            ID_FLIP_ALT_X,
+            to_wstring("Alt + X").as_ptr(),
+        );
+        AppendMenuW(
+            flip_sub,
+            MF_STRING | if is_flip_caz { MF_CHECKED } else { 0 },
+            ID_FLIP_CTRL_ALT_Z,
+            to_wstring("Ctrl + Alt + Z").as_ptr(),
+        );
+        AppendMenuW(
+            flip_sub,
+            MF_STRING | if flip_shortcut.is_disabled() { MF_CHECKED } else { 0 },
+            ID_FLIP_DISABLED,
+            to_wstring("Tắt phím tắt Đảo Từ").as_ptr(),
+        );
+        AppendMenuW(
+            menu,
+            MF_POPUP,
+            flip_sub as usize,
+            to_wstring("Phím tắt Đảo Từ (Flip Word)").as_ptr(),
         );
 
         AppendMenuW(menu, MF_SEPARATOR, 0, null_mut());
@@ -1129,18 +1241,20 @@ mod win_app {
                 } else if event == WM_LBUTTONUP {
                     // Left click on tray icon toggles Vietnamese / English immediately
                     STATE.with(|s| {
-                        let mut st = s.borrow_mut();
-                        st.enabled = !st.enabled;
-                        st.engine.reset();
-                        update_tray_tooltip(hwnd, st.enabled, st.method);
+                        if let Ok(mut st) = s.try_borrow_mut() {
+                            st.enabled = !st.enabled;
+                            st.engine.reset();
+                            update_tray_tooltip(hwnd, st.enabled, st.method);
+                        }
                     });
                 }
                 0
             }
             WM_COMMAND => {
                 let id = (wparam & 0xFFFF) as usize;
+                let mut record_dialog: Option<(&str, &str)> = None;
                 STATE.with(|s| {
-                    let mut st = s.borrow_mut();
+                    let Ok(mut st) = s.try_borrow_mut() else { return; };
                     match id {
                         ID_TRAY_TOGGLE => {
                             st.enabled = !st.enabled;
@@ -1185,42 +1299,63 @@ mod win_app {
                         }
                         ID_SHORTCUT_CTRL_SHIFT => {
                             st.shortcut = CustomShortcut::from_modifiers_and_key(true, true, false, false, 0);
-                            save_shortcut_config(&st.shortcut);
+                            save_shortcut_config(&st.shortcut, &st.flip_shortcut);
                         }
                         ID_SHORTCUT_ALT_Z => {
                             st.shortcut = CustomShortcut::from_modifiers_and_key(false, false, true, false, 'Z' as u16);
-                            save_shortcut_config(&st.shortcut);
+                            save_shortcut_config(&st.shortcut, &st.flip_shortcut);
                         }
                         ID_SHORTCUT_CTRL_SPACE => {
                             st.shortcut = CustomShortcut::from_modifiers_and_key(true, false, false, false, VK_SPACE);
-                            save_shortcut_config(&st.shortcut);
+                            save_shortcut_config(&st.shortcut, &st.flip_shortcut);
                         }
                         ID_SHORTCUT_WIN_SPACE => {
                             st.shortcut = CustomShortcut::from_modifiers_and_key(false, false, false, true, VK_SPACE);
-                            save_shortcut_config(&st.shortcut);
+                            save_shortcut_config(&st.shortcut, &st.flip_shortcut);
                         }
                         ID_SHORTCUT_DISABLED => {
                             st.shortcut = CustomShortcut::disabled();
-                            save_shortcut_config(&st.shortcut);
+                            save_shortcut_config(&st.shortcut, &st.flip_shortcut);
                         }
                         ID_SHORTCUT_RECORD => {
-                            st.recording_shortcut = true;
-                            st.ctrl_pressed = false;
-                            st.shift_pressed = false;
-                            st.alt_pressed = false;
-                            st.win_pressed = false;
+                            st.recording_mode = RecordingMode::ToggleShortcut;
+                            st.chord_armed = false;
                             st.other_key_during_chord = false;
-                            MessageBoxW(
-                                hwnd,
-                                to_wstring(
-                                    "Đang ở chế độ Đặt Phím Tắt Tự Do!\n\n\
-                                     1. Bấm tổ hợp phím bạn muốn đặt (ví dụ: Ctrl+Alt+V, Win+Shift+Space, Alt+Shift,...).\n\
-                                     2. Hoặc bấm phím Esc để Hủy bỏ.\n\n\
-                                     Bấm OK rồi bấm tổ hợp phím ngay trên bàn phím của bạn."
-                                ).as_ptr(),
-                                to_wstring("Cài đặt Phím tắt Tự do - VnCharKey").as_ptr(),
-                                MB_OK | MB_ICONINFORMATION,
-                            );
+                            record_dialog = Some((
+                                "Đang ở chế độ Đặt Phím Tắt Chuyển Việt/Anh!\n\n\
+                                 1. Bấm tổ hợp phím bạn muốn đặt (ví dụ: Ctrl+Alt+V, Win+Shift+Space, Alt+Shift,...).\n\
+                                 2. Hoặc bấm phím Esc để Hủy bỏ.\n\n\
+                                 Bấm OK rồi bấm tổ hợp phím ngay trên bàn phím của bạn.",
+                                "Cài đặt Phím tắt Tự do - VnCharKey",
+                            ));
+                        }
+                        ID_FLIP_CTRL_SHIFT_Z => {
+                            st.flip_shortcut = CustomShortcut::from_modifiers_and_key(true, true, false, false, 'Z' as u16);
+                            save_shortcut_config(&st.shortcut, &st.flip_shortcut);
+                        }
+                        ID_FLIP_ALT_X => {
+                            st.flip_shortcut = CustomShortcut::from_modifiers_and_key(false, false, true, false, 'X' as u16);
+                            save_shortcut_config(&st.shortcut, &st.flip_shortcut);
+                        }
+                        ID_FLIP_CTRL_ALT_Z => {
+                            st.flip_shortcut = CustomShortcut::from_modifiers_and_key(true, false, true, false, 'Z' as u16);
+                            save_shortcut_config(&st.shortcut, &st.flip_shortcut);
+                        }
+                        ID_FLIP_DISABLED => {
+                            st.flip_shortcut = CustomShortcut::disabled();
+                            save_shortcut_config(&st.shortcut, &st.flip_shortcut);
+                        }
+                        ID_FLIP_RECORD => {
+                            st.recording_mode = RecordingMode::FlipShortcut;
+                            st.chord_armed = false;
+                            st.other_key_during_chord = false;
+                            record_dialog = Some((
+                                "Đang ở chế độ Đặt Phím Tắt Đảo Từ (Flip Word)!\n\n\
+                                 1. Bấm tổ hợp phím kèm chữ/số bạn muốn đặt (ví dụ: Alt+X, Ctrl+Alt+Z, Ctrl+Shift+F,...).\n\
+                                 2. Hoặc bấm phím Esc để Hủy bỏ.\n\n\
+                                 Bấm OK rồi bấm tổ hợp phím ngay trên bàn phím của bạn.",
+                                "Cài đặt Phím tắt Đảo Từ - VnCharKey",
+                            ));
                         }
                         ID_TOGGLE_SPELLCHECK => {
                             let val = !st.spell_check;
@@ -1282,6 +1417,14 @@ mod win_app {
                         _ => {}
                     }
                 });
+                if let Some((body, title)) = record_dialog {
+                    MessageBoxW(
+                        hwnd,
+                        to_wstring(body).as_ptr(),
+                        to_wstring(title).as_ptr(),
+                        MB_OK | MB_ICONINFORMATION,
+                    );
+                }
                 0
             }
             WM_DESTROY => {
@@ -1295,11 +1438,13 @@ mod win_app {
 
     pub unsafe fn run() {
         ensure_config_files();
-        let initial_shortcut = load_shortcut_config();
+        let (initial_shortcut, initial_flip_shortcut) = load_shortcut_config();
         STATE.with(|s| {
-            let mut st = s.borrow_mut();
-            st.shortcut = initial_shortcut;
-            reload_files(&mut st.engine);
+            if let Ok(mut st) = s.try_borrow_mut() {
+                st.shortcut = initial_shortcut;
+                st.flip_shortcut = initial_flip_shortcut;
+                reload_files(&mut st.engine);
+            }
         });
 
         let hinstance = GetModuleHandleW(null_mut());
@@ -1335,7 +1480,11 @@ mod win_app {
             null_mut(),
         );
 
-        STATE.with(|s| s.borrow_mut().hwnd = hwnd);
+        STATE.with(|s| {
+            if let Ok(mut st) = s.try_borrow_mut() {
+                st.hwnd = hwnd;
+            }
+        });
         add_tray_icon(hwnd);
 
         let kbd_hook = SetWindowsHookExW(WH_KEYBOARD_LL, Some(keyboard_hook_proc), hinstance, 0);
