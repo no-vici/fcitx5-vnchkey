@@ -90,4 +90,15 @@ fn main() {
     println!("  tieng161 -> {}", simulate_typing(&mut vni_engine, "tieng161"));
     vni_engine.reset();
     println!("  tieng16 tieng16 -> {}", simulate_typing(&mut vni_engine, "tieng16 tieng16"));
+
+    let mut auto_engine = Engine::new(EngineConfig {
+        method: InputMethod::Auto,
+        ..EngineConfig::default()
+    });
+    println!("\n>>> TEST AUTO 'tieng16':");
+    println!("  Auto tieng1  -> {}", simulate_typing(&mut auto_engine, "tieng1"));
+    auto_engine.reset();
+    println!("  Auto tieng16 -> {}", simulate_typing(&mut auto_engine, "tieng16"));
+    auto_engine.reset();
+    println!("  Auto tieng61 -> {}", simulate_typing(&mut auto_engine, "tieng61"));
 }
