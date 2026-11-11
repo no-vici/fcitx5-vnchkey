@@ -57,9 +57,11 @@ local function send_mac_ipc(cmd_str)
   if client then
     client:connect(mac_sock, function(err)
       if not err then
-        client:write(cmd_str .. "\n", function()
+        client:read_start(function(read_err, chunk)
+          -- Đọc phản hồi OK từ server xong mới đóng pipe để tránh SIGPIPE
           client:close()
         end)
+        client:write(cmd_str .. "\n")
       else
         client:close()
         -- Fallback to CLI binary if socket failed

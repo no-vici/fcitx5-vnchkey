@@ -149,7 +149,10 @@ Dự án cung cấp sẵn module tích hợp chính thức tại [`data/neovim/l
      if client then
        client:connect(sock, function(err)
          if not err then
-           client:write(cmd .. "\n", function() client:close() end)
+           client:read_start(function(read_err, chunk)
+             client:close()
+           end)
+           client:write(cmd .. "\n")
          else
            client:close()
          end

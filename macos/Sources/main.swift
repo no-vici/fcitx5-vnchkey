@@ -1179,6 +1179,9 @@ class VnchKeyIPCServer {
     }
 
     func start() {
+        // Ignore SIGPIPE globally so client disconnecting doesn't terminate vnchKey
+        signal(SIGPIPE, SIG_IGN)
+
         unlink(socketPath)
 
         let fd = socket(AF_UNIX, SOCK_STREAM, 0)
@@ -1233,7 +1236,13 @@ class VnchKeyIPCServer {
                 let cmd = String(decoding: buffer[0..<bytesRead], as: UTF8.self)
                 self.onCommand(cmd)
                 let reply = "OK\n"
-                _ = reply.withCString { write(clientFd, $0, reply.utf8.count) }
+                _ = reply.withCString {
+                    #if os(macOS)
+                    var nosig: Int32 = 1
+                    setsockopt(clientFd, SOL_SOCKET, SO_NOSIGPIPE, &nosig, socklen_t(MemoryLayout<Int32>.size))
+                    #endif
+                    _ = write(clientFd, $0, reply.utf8.count)
+                }
             }
             close(clientFd)
         }
