@@ -72,4 +72,22 @@ fn main() {
     println!("\n------------------------------------------------------------");
     println!("TỔNG KẾT: {}/{} test cases ĐẠT (100% chuẩn xác).", passed, test_suite.len());
     println!("============================================================");
+
+    // Test VNI tieng16
+    let mut vni_engine = Engine::new(EngineConfig {
+        method: InputMethod::Vni,
+        ..EngineConfig::default()
+    });
+    println!("\n>>> TEST VNI 'tieng16':");
+    println!("  tieng1  -> {}", simulate_typing(&mut vni_engine, "tieng1"));
+    vni_engine.reset();
+    println!("  tieng16 -> {}", simulate_typing(&mut vni_engine, "tieng16"));
+    vni_engine.reset();
+    println!("  tieng61 -> {}", simulate_typing(&mut vni_engine, "tieng61"));
+    vni_engine.reset();
+    println!("  tieng166 -> {}", simulate_typing(&mut vni_engine, "tieng166"));
+    vni_engine.reset();
+    println!("  tieng161 -> {}", simulate_typing(&mut vni_engine, "tieng161"));
+    vni_engine.reset();
+    println!("  tieng16 tieng16 -> {}", simulate_typing(&mut vni_engine, "tieng16 tieng16"));
 }
