@@ -16,6 +16,7 @@ pub enum TabPage {
     Shortcuts,
     Appearance,
     Backup,
+    Doctor,
     About,
 }
 
@@ -43,6 +44,9 @@ pub struct SettingsApp {
     add_app_manual_name: String,
     cached_system_apps: Vec<crate::system_apps::SystemAppEntry>,
     selected_sys_app_idx: Option<usize>,
+
+    // Doctor page state
+    doctor_report: Option<crate::doctor::DoctorReport>,
 
     // Logo texture
     logo_texture: Option<egui::TextureHandle>,
@@ -120,6 +124,7 @@ impl SettingsApp {
             add_app_manual_name: String::new(),
             cached_system_apps: Vec::new(),
             selected_sys_app_idx: None,
+            doctor_report: None,
             logo_texture,
         }
     }
@@ -268,6 +273,7 @@ impl eframe::App for SettingsApp {
                     (TabPage::Shortcuts, "Shortcuts"),
                     (TabPage::Appearance, "Appearance"),
                     (TabPage::Backup, "Backup"),
+                    (TabPage::Doctor, "Doctor"),
                 ];
 
                 for (page, title) in nav_items {
@@ -308,6 +314,7 @@ impl eframe::App for SettingsApp {
                                 TabPage::Shortcuts => self.show_shortcuts_page(ui),
                                 TabPage::Appearance => self.show_appearance_page(ui),
                                 TabPage::Backup => self.show_backup_page(ui),
+                                TabPage::Doctor => self.show_doctor_page(ui),
                                 TabPage::About => self.show_about_page(ui),
                             }
                         });
@@ -361,6 +368,9 @@ impl SettingsApp {
         if res.clicked() {
             self.current_page = page;
             self.status_message = None;
+            if page == TabPage::Doctor && self.doctor_report.is_none() {
+                self.doctor_report = Some(crate::doctor::DoctorReport::run());
+            }
         }
     }
 
@@ -466,6 +476,18 @@ impl SettingsApp {
                     egui::Stroke::new(1.5_f32, light_grey),
                 );
             }
+            TabPage::Doctor => {
+                // Medical cross badge (teal-green circle with white cross)
+                painter.circle_filled(c, 7.5, egui::Color32::from_rgb(0x17, 0x92, 0x99));
+                painter.line_segment(
+                    [egui::pos2(c.x - 4.0, c.y), egui::pos2(c.x + 4.0, c.y)],
+                    egui::Stroke::new(2.2_f32, white),
+                );
+                painter.line_segment(
+                    [egui::pos2(c.x, c.y - 4.0), egui::pos2(c.x, c.y + 4.0)],
+                    egui::Stroke::new(2.2_f32, white),
+                );
+            }
             TabPage::About => {
                 // Solid white circle with dark 'i' inside (matching Lilypad About icon)
                 painter.circle_filled(c, 7.5, white);
@@ -501,6 +523,19 @@ impl SettingsApp {
                 .color(egui::Color32::from_rgb(0x89, 0xb4, 0xfa)),
         );
         ui.add_space(8.0);
+    }
+
+    fn render_card(&self, ui: &mut egui::Ui, title: &str, add_contents: impl FnOnce(&mut egui::Ui)) {
+        self.render_group_header(ui, title);
+        egui::Frame::new()
+            .fill(egui::Color32::from_rgb(0x18, 0x18, 0x25))
+            .corner_radius(egui::CornerRadius::same(8))
+            .inner_margin(egui::Margin::same(14))
+            .stroke(egui::Stroke::new(1.0_f32, egui::Color32::from_rgb(0x31, 0x32, 0x44)))
+            .show(ui, |ui| {
+                ui.set_width(ui.available_width());
+                add_contents(ui);
+            });
     }
 
     // 1. General Page
@@ -1841,6 +1876,110 @@ impl SettingsApp {
                     .color(egui::Color32::from_rgb(0x6c, 0x70, 0x86)),
             );
         });
+    }
+
+    fn show_doctor_page(&mut self, ui: &mut egui::Ui) {
+        self.render_header(
+            ui,
+            "Chẩn Đoán Hệ Thống (System Doctor)",
+            "Tự động kiểm tra môi trường Fcitx5, thư viện hệ thống và cố vấn cờ Wayland cho ứng dụng Electron (/proc/PID)",
+        );
+
+        ui.horizontal(|ui| {
+            if ui
+                .add(egui::Button::new("🔄 Quét lại Hệ thống & Tiến trình (/proc/PID)").min_size(egui::vec2(260.0, 30.0)))
+                .clicked()
+            {
+                self.doctor_report = Some(crate::doctor::DoctorReport::run());
+                self.status_message = Some(("Đã cập nhật kết quả chẩn đoán mới nhất!".to_string(), true));
+            }
+            ui.add_space(10.0);
+            ui.label(
+                egui::RichText::new("Lệnh CLI tương đương: fcitx5-vnchkey-settings --doctor")
+                    .size(12.0)
+                    .color(egui::Color32::from_rgb(0x93, 0x99, 0xb2)),
+            );
+        });
+
+        ui.add_space(14.0);
+
+        let report = self
+            .doctor_report
+            .get_or_insert_with(crate::doctor::DoctorReport::run)
+            .clone();
+
+        // Section 1: System & Fcitx5 Environment Checks
+        self.render_card(ui, "1. Kiểm tra Môi trường Fcitx5 & Thư viện", |ui| {
+            for item in &report.items {
+                let (badge_text, badge_color) = match item.status {
+                    crate::doctor::CheckStatus::Pass => ("ĐẠT (OK)", egui::Color32::from_rgb(0xa6, 0xe3, 0xa1)),
+                    crate::doctor::CheckStatus::Warn => ("CHÚ Ý", egui::Color32::from_rgb(0xf9, 0xe2, 0xaf)),
+                    crate::doctor::CheckStatus::Fail => ("LỖI", egui::Color32::from_rgb(0xf3, 0x8b, 0xa8)),
+                };
+
+                ui.horizontal(|ui| {
+                    ui.colored_label(badge_color, egui::RichText::new(format!("[{}]", badge_text)).strong());
+                    ui.label(egui::RichText::new(&item.title).strong());
+                    ui.label("—");
+                    ui.label(egui::RichText::new(&item.detail).color(egui::Color32::from_rgb(0xba, 0xc2, 0xde)));
+                });
+
+                if let Some(hint) = &item.hint {
+                    ui.horizontal(|ui| {
+                        ui.add_space(24.0);
+                        ui.label(
+                            egui::RichText::new(format!("💡 Gợi ý: {}", hint))
+                                .size(12.0)
+                                .color(egui::Color32::from_rgb(0xf9, 0xe2, 0xaf)),
+                        );
+                    });
+                }
+                ui.add_space(6.0);
+            }
+        });
+
+        ui.add_space(14.0);
+
+        // Section 2: /proc/<PID>/cmdline Electron Wayland Advisor
+        self.render_card(
+            ui,
+            "2. Cố vấn Ứng dụng Electron / Chromium đang chạy (/proc/<PID>/cmdline)",
+            |ui| {
+                if report.electron_procs.is_empty() {
+                    ui.label(
+                        egui::RichText::new("Hiện không có ứng dụng Electron/Chromium nào đang mở.")
+                            .color(egui::Color32::from_rgb(0x93, 0x99, 0xb2)),
+                    );
+                } else {
+                    for ep in &report.electron_procs {
+                        let (badge, color) = if ep.has_wayland_ime_flag {
+                            ("✔ Đã bật Wayland IME", egui::Color32::from_rgb(0xa6, 0xe3, 0xa1))
+                        } else {
+                            ("⚠ Thiếu cờ Wayland IME", egui::Color32::from_rgb(0xf9, 0xe2, 0xaf))
+                        };
+
+                        ui.horizontal(|ui| {
+                            ui.colored_label(color, egui::RichText::new(badge).strong());
+                            ui.label(
+                                egui::RichText::new(format!("{} (PID: {})", ep.exe_name, ep.pid)).strong(),
+                            );
+                        });
+
+                        if !ep.has_wayland_ime_flag {
+                            ui.horizontal(|ui| {
+                                ui.add_space(18.0);
+                                ui.label(
+                                    egui::RichText::new(format!("💡 Khắc phục: {}", ep.fix_hint))
+                                        .size(12.0)
+                                        .color(egui::Color32::from_rgb(0x89, 0xb4, 0xfa)),
+                                );
+                            });
+                        }
+                        ui.add_space(6.0);
+                    }
+                }
+            },
+        );
     }
 
     fn export_debug_logs(&mut self) {

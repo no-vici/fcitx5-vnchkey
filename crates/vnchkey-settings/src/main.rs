@@ -1,5 +1,6 @@
 mod app;
 mod config;
+pub mod doctor;
 pub mod system_apps;
 
 use app::SettingsApp;
@@ -21,6 +22,19 @@ fn load_icon() -> Option<egui::IconData> {
 }
 
 fn main() -> Result<(), eframe::Error> {
+    let args: Vec<String> = std::env::args().collect();
+    if args.iter().any(|a| a == "--doctor" || a == "-d" || a == "doctor") {
+        let report = doctor::DoctorReport::run();
+        report.print_cli();
+        return Ok(());
+    }
+    if args.iter().any(|a| a == "--help" || a == "-h") {
+        println!("Fcitx5 vnchKey Settings & Diagnostic Tool");
+        println!("Cách dùng:");
+        println!("  fcitx5-vnchkey-settings           Mở giao diện cài đặt đồ họa (GUI)");
+        println!("  fcitx5-vnchkey-settings --doctor  Chẩn đoán môi trường Fcitx5 & tiến trình Electron (/proc/PID)");
+        return Ok(());
+    }
     let mut viewport = egui::ViewportBuilder::default()
         .with_title("Fcitx5 vnchKey Settings")
         .with_inner_size([840.0, 580.0])

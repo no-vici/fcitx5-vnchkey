@@ -525,6 +525,50 @@ static bool isWpsOffice(const std::string& prog) {
     return (lower == "wps" || lower == "wpp" || lower == "et" || lower == "wpspdf");
 }
 
+static bool isSensitiveContext(fcitx::InputContext* ic) {
+    if (!ic) return false;
+    auto flags = ic->capabilityFlags();
+    return flags.test(fcitx::CapabilityFlag::Password) ||
+           flags.test(fcitx::CapabilityFlag::Sensitive) ||
+           flags.test(fcitx::CapabilityFlag::Number) ||
+           flags.test(fcitx::CapabilityFlag::Digit) ||
+           flags.test(fcitx::CapabilityFlag::Dialable) ||
+           flags.test(fcitx::CapabilityFlag::Alpha);
+}
+
+static bool isGamingProgram(const std::string& lower_prog) {
+    if (lower_prog.empty()) return false;
+    static const char* const kGamingPatterns[] = {
+        "steam", "gamescope", "lutris", "heroic", "bottles", "prismlauncher",
+        "minecraft", "java-minecraft", "retroarch", "rpcs3", "yuzu", "ryujinx",
+        "pcsx2", "dolphin-emu", "ppsspp", "duckstation", "cemu", "citra",
+        "cs2", "csgo", "dota2", "hl2", "tf_linux64", "valorant", "league",
+        "genshin", "starrail", "zenless", "eldenring", "cyberpunk", "witcher",
+        "baldursgate", "bg3", "factorio", "terraria", "stardew", "valheim",
+        "overwatch", "apex", "r5apex", "roblox", "sober", "osu!", "osu",
+        "unreal", "unity", "godot"
+    };
+    for (const char* pat : kGamingPatterns) {
+        if (lower_prog == pat || lower_prog.find(pat) != std::string::npos) {
+            return true;
+        }
+    }
+    // Check common Wine/Proton game executable patterns (excluding productivity apps like Zalo/Notepad)
+    if ((lower_prog.find("wine64-preloader") != std::string::npos ||
+         lower_prog.find("wine-preloader") != std::string::npos ||
+         lower_prog.find("proton") != std::string::npos ||
+         (lower_prog.size() > 4 && lower_prog.substr(lower_prog.size() - 4) == ".exe")) &&
+        lower_prog.find("zalo") == std::string::npos &&
+        lower_prog.find("notepad") == std::string::npos &&
+        lower_prog.find("unikey") == std::string::npos &&
+        lower_prog.find("office") == std::string::npos &&
+        lower_prog.find("word") == std::string::npos &&
+        lower_prog.find("excel") == std::string::npos) {
+        return true;
+    }
+    return false;
+}
+
 std::string VnchkeyEngine::getOutputModeForContext(fcitx::InputContext* ic) {
     if (ic) {
         std::string prog = ic->program();
@@ -562,6 +606,9 @@ std::string VnchkeyEngine::getOutputModeForContext(fcitx::InputContext* ic) {
             }
 
             // 3. Built-in defaults only apply if the application is NOT configured by user
+            if (isGamingProgram(lower_prog)) {
+                return "Bypass";
+            }
             if (lower_prog.find("chrome") != std::string::npos ||
                 lower_prog.find("firefox") != std::string::npos ||
                 lower_prog.find("chromium") != std::string::npos ||
@@ -818,8 +865,16 @@ void VnchkeyEngine::keyEvent(const fcitx::InputMethodEntry &entry, fcitx::KeyEve
         }
     }
 
+    // Zero-Config Password / PIN / Sensitive Field Protection:
+    // Immediately flush any composing buffer and bypass IME completely in password/PIN fields.
+    if (isSensitiveContext(ic)) {
+        fcitx5_vnchkey_reset(ctx);
+        return;
+    }
+
     std::string mode = getOutputModeForContext(ic);
     if (mode.rfind("Bypass", 0) == 0 || mode == "OFF") {
+        fcitx5_vnchkey_reset(ctx);
         return;
     }
     const bool isPreeditMode = (mode == "Preedit" || mode == "preedit");
