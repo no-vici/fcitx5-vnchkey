@@ -146,6 +146,14 @@ impl EnglishAutoRestore {
         }
     }
 
+    /// Dynamically inserts a learned word into the in-memory bypass dictionary.
+    pub fn add_keyword(&mut self, word: &str) {
+        let clean = word.trim().to_lowercase();
+        if clean.len() >= 2 && !clean.chars().any(|c| c.is_ascii_digit()) {
+            self.keywords.insert(clean);
+        }
+    }
+
     /// Checks if the raw keystroke sequence forms an English or user-bypassed keyword.
     #[inline]
     pub fn is_english_keyword(&self, raw: &str) -> bool {

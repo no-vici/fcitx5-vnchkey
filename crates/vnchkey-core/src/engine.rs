@@ -2,6 +2,7 @@
 
 use crate::auto_restore::EnglishAutoRestore;
 use crate::casing::CaseTracker;
+use crate::habit_learner::{CorrectionKind, HabitLearner};
 use crate::macros::MacroTable;
 pub use crate::telex::W2UType;
 use crate::telex::{
@@ -123,6 +124,7 @@ pub struct Engine {
     telex: TelexEngine,
     vni: VniEngine,
     auto_restore: EnglishAutoRestore,
+    habit_learner: HabitLearner,
     casing: CaseTracker,
     macro_table: MacroTable,
     current_word: String,
@@ -135,6 +137,7 @@ pub struct Engine {
     last_macro: Option<LastMacroExpansion>,
     suppressed_macro: Option<String>,
     reopen_state: Option<ReopenWordState>,
+    deleted_accented_candidate: Option<(String, String)>,
     last_delimiter: Option<char>,
     last_delimiter_spaced: bool,
     last_keystroke_time_ms: f64,
@@ -372,6 +375,7 @@ impl Engine {
             ),
             vni: VniEngine::with_bracket_transform(config.tone_style, config.bracket_transform),
             auto_restore: EnglishAutoRestore::new(),
+            habit_learner: HabitLearner::new(),
             casing: CaseTracker::new(),
             macro_table: MacroTable::new(),
             config,
@@ -385,6 +389,7 @@ impl Engine {
             last_macro: None,
             suppressed_macro: None,
             reopen_state: None,
+            deleted_accented_candidate: None,
             last_delimiter: None,
             last_delimiter_spaced: false,
             last_keystroke_time_ms: 0.0,
@@ -399,6 +404,33 @@ impl Engine {
     /// Loads custom user dictionary words from configuration file.
     pub fn load_dictionary_from_file(&mut self, path: &str) {
         self.auto_restore.load_from_file(path);
+        self.habit_learner.set_dictionary_path(path);
+    }
+
+    /// Configures the high-capacity habit log path (default max size: 100 MB with FIFO rotation)
+    /// and warms up in-memory adaptive whitelist from previous sessions.
+    pub fn set_habit_log_path(&mut self, path: &str) {
+        self.habit_learner.set_log_path(path);
+    }
+
+    /// Sets the maximum habit log size in bytes (default: 100 MB = 104,857,600 bytes).
+    pub fn set_habit_max_log_bytes(&mut self, max_bytes: u64) {
+        self.habit_learner.set_max_log_bytes(max_bytes);
+    }
+
+    /// Enables or disables on-device adaptive habit learning.
+    pub fn set_habit_learning_enabled(&mut self, enabled: bool) {
+        self.habit_learner.set_enabled(enabled);
+    }
+
+    /// Returns whether on-device adaptive habit learning is enabled.
+    pub fn habit_learning_enabled(&self) -> bool {
+        self.habit_learner.is_enabled()
+    }
+
+    /// Returns a reference to the internal `HabitLearner`.
+    pub fn habit_learner(&self) -> &HabitLearner {
+        &self.habit_learner
     }
 
     /// Returns the current engine configuration.
@@ -569,10 +601,20 @@ impl Engine {
             false
         } else {
             self.reopen_state = None;
+            // Track accented word candidate before user deletes it via Backspace:
+            // If the user finishes deleting and retypes the raw strokes, we learn it!
+            if has_vietnamese_diacritic(&self.current_word)
+                && self.raw_strokes != self.current_word
+                && self.raw_strokes.len() >= 2
+                && self.deleted_accented_candidate.is_none()
+            {
+                self.deleted_accented_candidate =
+                    Some((self.raw_strokes.clone(), self.current_word.clone()));
+            }
             self.current_word.pop();
             self.raw_strokes.pop();
             if self.current_word.is_empty() {
-                self.reset();
+                self.reset_word_buffers();
             } else {
                 self.manual_undo = true;
             }
@@ -594,6 +636,16 @@ impl Engine {
         let old_word = self.current_word.clone();
         self.current_word = self.raw_strokes.clone();
         self.english_locked = true;
+
+        // Record Escape-to-Raw correction in Adaptive Habit Learner
+        if self.habit_learner.record_correction(
+            &self.raw_strokes,
+            &old_word,
+            CorrectionKind::EscapeToRaw,
+            self.last_keystroke_time_ms,
+        ) {
+            self.auto_restore.add_keyword(&self.raw_strokes);
+        }
 
         let (backspaces, commit_text) = compare_and_split_strings(&old_word, &self.current_word);
         Some(EngineOutput {
@@ -648,6 +700,14 @@ impl Engine {
             // Revert to raw strokes and lock English mode for this word
             self.current_word = self.raw_strokes.clone();
             self.english_locked = true;
+            if self.habit_learner.record_correction(
+                &self.raw_strokes,
+                &old_word,
+                CorrectionKind::FlipToRaw,
+                self.last_keystroke_time_ms,
+            ) {
+                self.auto_restore.add_keyword(&self.raw_strokes);
+            }
             self.current_word.clone()
         };
 
@@ -944,6 +1004,7 @@ impl Engine {
                 // Never auto-restore VNI digit sequences (e.g. gio72, duoc975) because English words never contain digits.
                 let has_digits = self.raw_strokes.chars().any(|c| c.is_ascii_digit());
                 if !self.manual_undo && !has_digits && has_vietnamese_diacritic(&self.current_word) {
+                    let learned_restore = self.habit_learner.is_learned_word(&self.raw_strokes);
                     let dict_restore = self.config.enable_dictionary
                         && self.auto_restore.should_restore(
                             &self.raw_strokes,
@@ -957,7 +1018,7 @@ impl Engine {
                             || (self.config.spell_check
                                 && !is_in_vietnamese_dictionary(&self.current_word)));
 
-                    if dict_restore || english_or_spell_restore {
+                    if learned_restore || dict_restore || english_or_spell_restore {
                         let target = format!("{}{}", self.raw_strokes, ch);
                         let (backspaces, commit_text) =
                             compare_and_split_strings(&self.current_word, &target);
@@ -974,6 +1035,43 @@ impl Engine {
                     }
                 }
             }
+
+            // Adaptive Habit Learner:
+            // 1. If the user finished a word where they manually undid a Telex/VNI mark via double-tap
+            //    (e.g. "ww", "ss", "rr", "ff") resulting in an unaccented ASCII word, record the correction!
+            // 2. Or if the user previously deleted an accented word via Backspace and just finished
+            //    retyping the exact raw/unaccented word, record `BackspaceRetype`!
+            if !self.current_word.is_empty() && !has_vietnamese_diacritic(&self.current_word) {
+                if self.manual_undo {
+                    if self.habit_learner.record_correction(
+                        &self.current_word,
+                        &self.raw_strokes,
+                        CorrectionKind::DoubleKeyUndo,
+                        self.last_keystroke_time_ms,
+                    ) {
+                        self.auto_restore.add_keyword(&self.current_word);
+                    }
+                } else if let Some((ref cand_raw, ref cand_acc)) = self.deleted_accented_candidate {
+                    if self.current_word.eq_ignore_ascii_case(cand_raw)
+                        || self
+                            .current_word
+                            .to_lowercase()
+                            .starts_with(&cand_raw.to_lowercase())
+                    {
+                        let learned_token = self.current_word.clone();
+                        let acc_copy = cand_acc.clone();
+                        if self.habit_learner.record_correction(
+                            &learned_token,
+                            &acc_copy,
+                            CorrectionKind::BackspaceRetype,
+                            self.last_keystroke_time_ms,
+                        ) {
+                            self.auto_restore.add_keyword(&learned_token);
+                        }
+                    }
+                }
+            }
+            self.deleted_accented_candidate = None;
 
             // No macro or auto-restore needed: reset word buffer and let delimiter pass through natively
             let has_word = !self.current_word.is_empty();
@@ -1345,6 +1443,9 @@ impl Engine {
         let new_chars: Vec<char> = new_word.chars().collect();
         let invalid_structure = has_diacritic
             && (!is_valid_in_progress_syllable(&new_chars) || has_phonology_violation(&new_word));
+        let learned_match = !is_vni_word
+            && has_diacritic
+            && self.habit_learner.is_learned_word(&self.raw_strokes);
         let dict_match = !is_vni_word
             && has_diacritic
             && self.config.enable_dictionary
@@ -1354,7 +1455,9 @@ impl Engine {
 
         if !self.manual_undo
             && !is_vni_word
-            && ((self.config.auto_restore_english && invalid_structure) || dict_match)
+            && ((self.config.auto_restore_english && invalid_structure)
+                || dict_match
+                || learned_match)
         {
             new_word = self.raw_strokes.clone();
             self.english_locked = true;
@@ -2025,5 +2128,65 @@ mod tests {
         }
         assert_eq!(screen, "dấu");
         assert_eq!(engine.current_word(), "dấu");
+    }
+
+    #[test]
+    fn test_adaptive_habit_learner_flip_and_backspace_retype() {
+        let mut engine = Engine::new(EngineConfig {
+            method: InputMethod::Telex,
+            spell_check: false, // disable built-in dictionary spell check to test pure habit learning
+            auto_restore_english: false,
+            ..EngineConfig::default()
+        });
+
+        // Suppose user types a custom foreign name/term "kars" which Telex turns into "kảs" / "kás"
+        // First time: user flips it to raw via Ctrl+Shift+Z (flip_current_word)
+        for ch in "kas".chars() {
+            engine.process_key(ch, 100.0);
+        }
+        assert_eq!(engine.current_word(), "ká");
+        let flip1 = engine.flip_current_word().unwrap();
+        assert_eq!(flip1.commit_text, "as");
+        engine.process_key(' ', 150.0);
+        assert_eq!(engine.habit_learner().correction_count("kas"), 1);
+        assert!(!engine.habit_learner().is_learned_word("kas"));
+
+        // Second time: user types "kas", gets "ká", and flips or presses Esc (undo_to_raw)
+        for ch in "kas".chars() {
+            engine.process_key(ch, 200.0);
+        }
+        assert_eq!(engine.current_word(), "ká");
+        let _esc = engine.undo_to_raw().unwrap();
+        engine.process_key(' ', 250.0);
+
+        // Now "kas" has been corrected 2 times -> automatically promoted to Whitelist!
+        assert_eq!(engine.habit_learner().correction_count("kas"), 2);
+        assert!(engine.habit_learner().is_learned_word("kas"));
+
+        // Third time: user types "kas " -> passes through as "kas " automatically without needing undo!
+        let result = type_word(&mut engine, "kas ");
+        assert_eq!(result, "kas ");
+
+        // Now test Backspace-delete-and-retype learning on "tas" ("tá"):
+        // Attempt 1: type "tas" -> "tá", Backspace twice to clear, retype with double-s "tass " -> "tas "
+        for ch in "tas".chars() {
+            engine.process_key(ch, 300.0);
+        }
+        assert_eq!(engine.current_word(), "tá");
+        engine.handle_backspace();
+        engine.handle_backspace();
+        assert_eq!(engine.current_word(), "");
+        let retyped1 = type_word(&mut engine, "tass ");
+        assert_eq!(retyped1, "tas ");
+        assert!(engine.habit_learner().correction_count("tas") >= 1);
+
+        // Attempt 2: repeat correction -> promoted to whitelist
+        let retyped2 = type_word(&mut engine, "tass ");
+        assert_eq!(retyped2, "tas ");
+        assert!(engine.habit_learner().is_learned_word("tas"));
+
+        // Attempt 3: now typing "tas " directly passes through as "tas " without needing double-s!
+        let auto_pass = type_word(&mut engine, "tas ");
+        assert_eq!(auto_pass, "tas ");
     }
 }

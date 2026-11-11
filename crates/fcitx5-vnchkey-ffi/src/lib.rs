@@ -297,6 +297,7 @@ pub unsafe extern "C" fn fcitx5_vnchkey_load_macros(
 }
 
 /// Loads custom user dictionary words from a configuration file.
+/// Also configures the adaptive habit log (`<dict_path>.habit.log` with 100 MB cap) in the same directory.
 #[no_mangle]
 pub unsafe extern "C" fn fcitx5_vnchkey_load_dictionary(
     ctx: *mut Fcitx5VnchkeyContext,
@@ -306,6 +307,29 @@ pub unsafe extern "C" fn fcitx5_vnchkey_load_dictionary(
         if let Ok(c_str) = std::ffi::CStr::from_ptr(path).to_str() {
             let ctx = &mut *ctx;
             ctx.engine.load_dictionary_from_file(c_str);
+            let log_path = if let Some(parent) = std::path::Path::new(c_str).parent() {
+                parent
+                    .join("vnchkey-habit.log")
+                    .to_string_lossy()
+                    .to_string()
+            } else {
+                format!("{}.habit.log", c_str)
+            };
+            ctx.engine.set_habit_log_path(&log_path);
+        }
+    }
+}
+
+/// Configures the adaptive habit log file path explicitly (100 MB max size with FIFO rotation).
+#[no_mangle]
+pub unsafe extern "C" fn fcitx5_vnchkey_set_habit_log_path(
+    ctx: *mut Fcitx5VnchkeyContext,
+    path: *const c_char,
+) {
+    if !ctx.is_null() && !path.is_null() {
+        if let Ok(c_str) = std::ffi::CStr::from_ptr(path).to_str() {
+            let ctx = &mut *ctx;
+            ctx.engine.set_habit_log_path(c_str);
         }
     }
 }

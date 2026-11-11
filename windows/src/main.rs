@@ -251,6 +251,10 @@ mod win_app {
         config_dir().join("dictionary.conf")
     }
 
+    fn habit_log_path() -> PathBuf {
+        config_dir().join("habit.log")
+    }
+
     fn config_path() -> PathBuf {
         config_dir().join("config.conf")
     }
@@ -391,11 +395,15 @@ mod win_app {
     fn reload_files(engine: &mut Engine) {
         let m_path = macros_path();
         let d_path = dict_path();
+        let h_path = habit_log_path();
         if let Some(p) = m_path.to_str() {
             engine.load_macros_from_file(p);
         }
         if let Some(p) = d_path.to_str() {
             engine.load_dictionary_from_file(p);
+        }
+        if let Some(p) = h_path.to_str() {
+            engine.set_habit_log_path(p);
         }
     }
 

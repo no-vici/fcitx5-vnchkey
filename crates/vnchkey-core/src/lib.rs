@@ -11,6 +11,7 @@
 pub mod auto_restore;
 pub mod casing;
 pub mod engine;
+pub mod habit_learner;
 pub mod macros;
 pub mod syllable_parser;
 pub mod telex;
@@ -22,6 +23,9 @@ pub use casing::{CaseTracker, CasingStyle};
 pub use engine::{
     to_composite_unicode, Charset, Engine, EngineConfig, EngineOutput, InputMethod, ToneStyle,
     W2UType,
+};
+pub use habit_learner::{
+    CorrectionKind, HabitLearner, DEFAULT_MAX_LOG_BYTES, DEFAULT_PROMOTE_THRESHOLD,
 };
 pub use macros::MacroTable;
 pub use syllable_parser::{parse_syllable, ParsedSyllable, ToneMark};

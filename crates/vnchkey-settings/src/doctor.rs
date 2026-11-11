@@ -402,3 +402,4 @@ pub fn scan_electron_processes(is_wayland: bool) -> Vec<ElectronProcReport> {
 
     reports
 }
+
