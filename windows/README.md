@@ -34,9 +34,10 @@ Tính năng Gõ Tắt giúp bạn tiết kiệm hàng ngàn lượt bấm phím 
      ng=người
      hn=hôm nay
      cv=công việc
-     em=nguyenvana@gmail.com
-     sdt=0901234567
-     diachi=Số 123 Đường Tự Do, Quận 1, TP. Hồ Chí Minh
+     ema=bodatvang@gmail.com
+     sdt=số điện thoại
+     stk=số tài khoản
+     diachi=Số 123 Đường Tự Do, Quận 1, Sài Gòn
      ```
   3. Bấm `Ctrl + S` lưu lại trong Notepad.
   4. Chuột phải icon $\to$ bấm **"Nạp lại Gõ Tắt & Từ Điển"** để áp dụng ngay.
