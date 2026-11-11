@@ -8,7 +8,7 @@ RESOURCES_DIR = $(CONTENTS)/Resources
 
 SWIFT_SOURCES = Sources/main.swift Sources/KeyTapManager.swift
 BRIDGING_HEADER = Bridging-Header.h
-DMG_NAME = $(BUILD_DIR)/$(APP_NAME)-0.3.0.dmg
+DMG_NAME = $(BUILD_DIR)/$(APP_NAME)-0.3.2.dmg
 
 .PHONY: all rust app dmg run clean
 
@@ -52,7 +52,7 @@ app: rust
     <key>CFBundlePackageType</key>\
     <string>APPL</string>\
     <key>CFBundleShortVersionString</key>\
-    <string>0.3.0</string>\
+    <string>0.3.2</string>\
     <key>LSMinimumSystemVersion</key>\
     <string>11.0</string>\
     <key>LSUIElement</key>\

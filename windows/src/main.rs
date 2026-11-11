@@ -179,7 +179,7 @@ mod win_app {
             enabled: true,
             method: InputMethod::Auto,
             charset: Charset::Unicode,
-            tone_style: ToneStyle::Modern,
+            tone_style: ToneStyle::Classic,
             spell_check: true,
             auto_restore: true,
             esc_restore: true,

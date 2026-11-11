@@ -225,7 +225,7 @@ public class KeyTapManager {
         if !fm.fileExists(atPath: dictFile) {
             let defaultDict = """
             # Từ Điển Cá Nhân (Custom English / Bypass Words)
-            # Mỗi từ trên 1 dòng. Khi gõ các từ này, vnchKey sẽ giữ nguyên tiếng Anh.
+            # Mỗi từ trên 1 dòng. Khi gõ các từ này, vnchKey sẽ giữ nguyên Tiếng Anh.
             macbook
             xcode
             swift
@@ -323,7 +323,7 @@ public class KeyTapManager {
     public func saveDictionaryWords(_ words: [String]) {
         var lines: [String] = [
             "# Từ Điển Cá Nhân (Custom English / Bypass Words)",
-            "# Mỗi từ trên 1 dòng. Khi gõ các từ này, vnchKey sẽ giữ nguyên tiếng Anh."
+            "# Mỗi từ trên 1 dòng. Khi gõ các từ này, vnchKey sẽ giữ nguyên Tiếng Anh."
         ]
         var seen = Set<String>()
         for w in words {

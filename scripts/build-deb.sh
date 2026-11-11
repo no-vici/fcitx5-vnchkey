@@ -5,7 +5,7 @@
 # ==============================================================================
 set -euo pipefail
 
-VERSION="0.3.0"
+VERSION="0.3.2"
 PKGNAME="fcitx5-vnchkey"
 ARCH="amd64"
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -66,9 +66,9 @@ cp -r "$ROOT_DIR/data/icons/breeze-dark" "$PKG_DIR/usr/share/icons/"
 cp "$ROOT_DIR/data/neovim/lua/vnchkey.lua" "$PKG_DIR/usr/share/nvim/runtime/lua/"
 
 # Tạo tệp DEBIAN/control
-cat << 'CONTROL_EOF' > "$PKG_DIR/DEBIAN/control"
+cat << CONTROL_EOF > "$PKG_DIR/DEBIAN/control"
 Package: fcitx5-vnchkey
-Version: 0.3.0
+Version: ${VERSION}
 Section: utils
 Priority: optional
 Architecture: amd64

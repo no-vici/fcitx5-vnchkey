@@ -55,7 +55,7 @@ impl Default for VnchkeyConfig {
             idle_timeout_ms: 800,
             type_w_to_u: "Non-Start".to_string(),
             bracket_transform: "Disabled".to_string(),
-            modern_style: true,
+            modern_style: false,
             smart_horn: true,
             spell_check: true,
             auto_restore_english: true,

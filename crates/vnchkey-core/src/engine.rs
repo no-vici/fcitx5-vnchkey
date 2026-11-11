@@ -83,7 +83,7 @@ impl Default for EngineConfig {
     fn default() -> Self {
         Self {
             method: InputMethod::Auto,
-            tone_style: ToneStyle::Modern,
+            tone_style: ToneStyle::Classic,
             charset: Charset::Unicode,
             auto_restore_english: true,
             spell_check: true,

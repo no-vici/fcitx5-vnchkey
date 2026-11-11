@@ -30,6 +30,10 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     private var dashTimeoutValueLabel: NSTextField?
     private var dashMacroCheckbox: NSButton?
     private var dashDictCheckbox: NSButton?
+    private var dashOpenAtLoginCheckbox: NSButton?
+
+    // Biến instance giữ reference tới CLI IPC server
+    private var ipcServer: VnchKeyIPCServer?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         loadIcons()
@@ -50,6 +54,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         }
         applySavedPreferences()
         setupStatusBar()
+
+        // Khởi chạy IPC server lắng nghe lệnh toggle/on/off từ Neovim / CLI
+        startIPCServer()
 
         if !(keyManager?.start() ?? false) {
             showAccessibilityAlert()
@@ -77,7 +84,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             defaults.set(true, forKey: "vnchkey.macro")       // Bật Gõ Tắt
             defaults.set(true, forKey: "vnchkey.dictionary")  // Bật Từ Điển Cá Nhân
             defaults.set(true, forKey: "vnchkey.escRestore")  // Bấm Esc hoàn nguyên từ
-            defaults.set(0, forKey: "vnchkey.toneStyle")      // Dấu mới (oà, uý)
+            defaults.set(1, forKey: "vnchkey.toneStyle")      // Dấu cũ (hòa, ủy)
             defaults.set(0, forKey: "vnchkey.charset")        // Unicode dựng sẵn NFC
             defaults.set(false, forKey: "vnchkey.bracket")    // Gõ [ ] thành ơ ư
             defaults.set(0, forKey: "vnchkey.w2u")            // W -> ư (Không ở đầu từ)
@@ -98,7 +105,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         km.setMacroEnabled(defaults.bool(forKey: "vnchkey.macro"))
         km.setDictionaryEnabled(defaults.bool(forKey: "vnchkey.dictionary"))
         km.escRestoreEnabled = defaults.bool(forKey: "vnchkey.escRestore")
-        km.setToneStyle(UInt32(defaults.integer(forKey: "vnchkey.toneStyle")))
+        let toneStyleVal = defaults.object(forKey: "vnchkey.toneStyle") != nil ? UInt32(defaults.integer(forKey: "vnchkey.toneStyle")) : 1
+        km.setToneStyle(toneStyleVal)
         km.setCharset(UInt32(defaults.integer(forKey: "vnchkey.charset")))
         km.setBracketTransform(defaults.bool(forKey: "vnchkey.bracket"))
         km.setW2U(UInt32(defaults.integer(forKey: "vnchkey.w2u")))
@@ -344,6 +352,10 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         menu.addItem(reloadFilesItem)
 
         menu.addItem(NSMenuItem.separator())
+        let loginItem = NSMenuItem(title: "Khởi động cùng máy (Open at login)", action: #selector(toggleOpenAtLoginFromMenu(_:)), keyEquivalent: "")
+        loginItem.state = isOpenAtLoginEnabled() ? .on : .off
+        menu.addItem(loginItem)
+
         menu.addItem(NSMenuItem(title: "Kiểm tra quyền Trợ năng (Accessibility)", action: #selector(checkPermissionAction), keyEquivalent: ""))
         menu.addItem(NSMenuItem.separator())
         menu.addItem(NSMenuItem(title: "Thoát vnchKey", action: #selector(quitApp), keyEquivalent: "q"))
@@ -714,6 +726,11 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         resetBtn.frame = NSRect(x: 20, y: 12, width: 155, height: 30)
         content.addSubview(resetBtn)
 
+        let openAtLoginCheck = NSButton(checkboxWithTitle: "Khởi động cùng máy (Open at login)", target: self, action: #selector(dashOpenAtLoginChanged(_:)))
+        openAtLoginCheck.frame = NSRect(x: 180, y: 16, width: 215, height: 22)
+        content.addSubview(openAtLoginCheck)
+        self.dashOpenAtLoginCheckbox = openAtLoginCheck
+
         let closeBtn = NSButton(title: "Đóng", target: self, action: #selector(dashCloseWindow))
         closeBtn.bezelStyle = .rounded
         closeBtn.keyEquivalent = "\r"
@@ -753,6 +770,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
         dashMacroCheckbox?.state = km.getMacroEnabled() ? .on : .off
         dashDictCheckbox?.state = km.getDictionaryEnabled() ? .on : .off
+        dashOpenAtLoginCheckbox?.state = isOpenAtLoginEnabled() ? .on : .off
     }
 
     @objc func dashToggleEnabled(_ sender: NSButton) {
@@ -981,7 +999,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
         let alert = NSAlert()
         alert.messageText = "Thêm từ mới vô Từ Điển Cá Nhân"
-        alert.informativeText = "Nhập từ tiếng Anh hoặc thuật ngữ riêng mà bạn muốn vnchKey luôn giữ nguyên (không bỏ dấu Tiếng Việt):"
+        alert.informativeText = "Nhập từ Tiếng Anh hoặc thuật ngữ riêng mà bạn muốn vnchKey luôn giữ nguyên (không bỏ dấu Tiếng Việt):"
         alert.alertStyle = .informational
         if let appIconPath = Bundle.main.path(forResource: "AppIcon", ofType: "png"),
            let iconImg = NSImage(contentsOfFile: appIconPath) {
@@ -1054,10 +1072,257 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
+    @objc func toggleOpenAtLoginFromMenu(_ sender: NSMenuItem) {
+        let current = isOpenAtLoginEnabled()
+        setOpenAtLoginEnabled(!current)
+        rebuildMenu()
+        syncDashboardControls()
+    }
+
+    @objc func dashOpenAtLoginChanged(_ sender: NSButton) {
+        setOpenAtLoginEnabled(sender.state == .on)
+        rebuildMenu()
+        syncDashboardControls()
+    }
+
+    // MARK: - Open at Login (LaunchAgent)
+    private var launchAgentPlistPath: URL {
+        let home = FileManager.default.homeDirectoryForCurrentUser
+        return home.appendingPathComponent("Library/LaunchAgents/com.vnchkey.macos.plist")
+    }
+
+    func isOpenAtLoginEnabled() -> Bool {
+        return FileManager.default.fileExists(atPath: launchAgentPlistPath.path)
+    }
+
+    func setOpenAtLoginEnabled(_ enabled: Bool) {
+        let fileManager = FileManager.default
+        let plistURL = launchAgentPlistPath
+        if enabled {
+            let appBundlePath = Bundle.main.bundlePath
+            let executablePath = Bundle.main.executablePath ?? (appBundlePath + "/Contents/MacOS/vnchKey")
+            let plistContent = """
+            <?xml version="1.0" encoding="UTF-8"?>
+            <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+            <plist version="1.0">
+            <dict>
+                <key>Label</key>
+                <string>com.vnchkey.macos</string>
+                <key>ProgramArguments</key>
+                <array>
+                    <string>\(executablePath)</string>
+                </array>
+                <key>RunAtLoad</key>
+                <true/>
+                <key>KeepAlive</key>
+                <false/>
+                <key>ProcessType</key>
+                <string>Interactive</string>
+            </dict>
+            </plist>
+            """
+            do {
+                let launchAgentsDir = plistURL.deletingLastPathComponent()
+                if !fileManager.fileExists(atPath: launchAgentsDir.path) {
+                    try fileManager.createDirectory(at: launchAgentsDir, withIntermediateDirectories: true)
+                }
+                try plistContent.write(to: plistURL, atomically: true, encoding: .utf8)
+            } catch {
+                NSLog("[vnchKey] Lỗi khi tạo LaunchAgent plist: \(error)")
+            }
+        } else {
+            if fileManager.fileExists(atPath: plistURL.path) {
+                try? fileManager.removeItem(at: plistURL)
+            }
+        }
+    }
+
+    // MARK: - CLI & IPC Server for Neovim Modal Toggle
+    func startIPCServer() {
+        self.ipcServer = VnchKeyIPCServer { [weak self] command in
+            DispatchQueue.main.async {
+                guard let self = self, let km = self.keyManager else { return }
+                switch command.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() {
+                case "on", "enable", "vi":
+                    km.isEnabled = true
+                case "off", "disable", "en":
+                    km.isEnabled = false
+                case "toggle":
+                    km.isEnabled.toggle()
+                case "status":
+                    break
+                default:
+                    break
+                }
+                self.updateStatusButton()
+                self.rebuildMenu()
+                self.syncDashboardControls()
+            }
+        }
+        self.ipcServer?.start()
+    }
+
     @objc func quitApp() {
         NSApplication.shared.terminate(self)
     }
 }
+
+// MARK: - IPC Server & CLI Client (Unix Domain Socket)
+class VnchKeyIPCServer {
+    private let socketPath = "/tmp/vnchkey.sock"
+    private let onCommand: (String) -> Void
+    private var serverSource: DispatchSourceRead?
+    private var serverFd: Int32 = -1
+
+    init(onCommand: @escaping (String) -> Void) {
+        self.onCommand = onCommand
+    }
+
+    func start() {
+        unlink(socketPath)
+
+        let fd = socket(AF_UNIX, SOCK_STREAM, 0)
+        guard fd >= 0 else { return }
+        self.serverFd = fd
+
+        var addr = sockaddr_un()
+        addr.sun_family = sa_family_t(AF_UNIX)
+        let pathBytes = socketPath.utf8CString
+        withUnsafeMutablePointer(to: &addr.sun_path) { ptr in
+            ptr.withMemoryRebound(to: CChar.self, capacity: MemoryLayout.size(ofValue: ptr.pointee)) { dest in
+                _ = pathBytes.withUnsafeBufferPointer { src in
+                    strncpy(dest, src.baseAddress!, MemoryLayout.size(ofValue: ptr.pointee) - 1)
+                }
+            }
+        }
+
+        let addrLen = socklen_t(MemoryLayout<sockaddr_un>.size)
+        let bindResult = withUnsafePointer(to: &addr) { ptr in
+            ptr.withMemoryRebound(to: sockaddr.self, capacity: 1) { sa in
+                bind(fd, sa, addrLen)
+            }
+        }
+        guard bindResult == 0 else {
+            close(fd)
+            return
+        }
+
+        guard listen(fd, 5) == 0 else {
+            close(fd)
+            return
+        }
+
+        // Set socket file permissions to 0666 so any user/app can connect
+        chmod(socketPath, 0o666)
+
+        let source = DispatchSource.makeReadSource(fileDescriptor: fd, queue: DispatchQueue.global(qos: .utility))
+        source.setEventHandler { [weak self] in
+            guard let self = self else { return }
+            var clientAddr = sockaddr_un()
+            var clientLen = socklen_t(MemoryLayout<sockaddr_un>.size)
+            let clientFd = withUnsafeMutablePointer(to: &clientAddr) { ptr in
+                ptr.withMemoryRebound(to: sockaddr.self, capacity: 1) { sa in
+                    accept(self.serverFd, sa, &clientLen)
+                }
+            }
+            guard clientFd >= 0 else { return }
+
+            var buffer = [UInt8](repeating: 0, count: 256)
+            let bytesRead = read(clientFd, &buffer, 255)
+            if bytesRead > 0 {
+                let cmd = String(decoding: buffer[0..<bytesRead], as: UTF8.self)
+                self.onCommand(cmd)
+                let reply = "OK\n"
+                _ = reply.withCString { write(clientFd, $0, reply.utf8.count) }
+            }
+            close(clientFd)
+        }
+        source.resume()
+        self.serverSource = source
+    }
+
+    deinit {
+        serverSource?.cancel()
+        if serverFd >= 0 {
+            close(serverFd)
+        }
+        unlink(socketPath)
+    }
+}
+
+func handleCommandLineArguments() -> Bool {
+    let args = CommandLine.arguments
+    guard args.count > 1 else { return false }
+
+    let flag = args[1].lowercased()
+    var commandToSend: String?
+
+    switch flag {
+    case "--on", "-on", "on", "--enable", "enable":
+        commandToSend = "on"
+    case "--off", "-off", "off", "--disable", "disable":
+        commandToSend = "off"
+    case "--toggle", "-toggle", "toggle", "-t":
+        commandToSend = "toggle"
+    case "--status", "-status", "status":
+        commandToSend = "status"
+    case "--help", "-h", "help":
+        print("""
+        vnchKey CLI Controller (macOS)
+        Sử dụng cho Neovim autocommands, Scripts hoặc Terminal:
+          vnchKey --on       Bật gõ Tiếng Việt
+          vnchKey --off      Tắt gõ Tiếng Việt (chuyển sang Tiếng Anh)
+          vnchKey --toggle   Đảo trạng thái Tiếng Việt / Tiếng Anh
+          vnchKey --status   Kiểm tra trạng thái bộ gõ
+        """)
+        exit(0)
+    default:
+        return false
+    }
+
+    if let cmd = commandToSend {
+        let socketPath = "/tmp/vnchkey.sock"
+        let fd = socket(AF_UNIX, SOCK_STREAM, 0)
+        if fd >= 0 {
+            var addr = sockaddr_un()
+            addr.sun_family = sa_family_t(AF_UNIX)
+            let pathBytes = socketPath.utf8CString
+            withUnsafeMutablePointer(to: &addr.sun_path) { ptr in
+                ptr.withMemoryRebound(to: CChar.self, capacity: MemoryLayout.size(ofValue: ptr.pointee)) { dest in
+                    _ = pathBytes.withUnsafeBufferPointer { src in
+                        strncpy(dest, src.baseAddress!, MemoryLayout.size(ofValue: ptr.pointee) - 1)
+                    }
+                }
+            }
+            let addrLen = socklen_t(MemoryLayout<sockaddr_un>.size)
+            let connectResult = withUnsafePointer(to: &addr) { ptr in
+                ptr.withMemoryRebound(to: sockaddr.self, capacity: 1) { sa in
+                    connect(fd, sa, addrLen)
+                }
+            }
+            if connectResult == 0 {
+                let msg = cmd + "\n"
+                _ = msg.withCString { write(fd, $0, msg.utf8.count) }
+                var replyBuf = [UInt8](repeating: 0, count: 64)
+                let n = read(fd, &replyBuf, 63)
+                if n > 0 {
+                    let rep = String(decoding: replyBuf[0..<n], as: UTF8.self)
+                    print(rep.trimmingCharacters(in: .whitespacesAndNewlines))
+                }
+                close(fd)
+                exit(0)
+            } else {
+                close(fd)
+                fputs("❌ vnchKey daemon không chạy hoặc không thể kết nối tới /tmp/vnchkey.sock\n", stderr)
+                exit(1)
+            }
+        }
+    }
+    return false
+}
+
+// Kiểm tra tham số dòng lệnh trước khi khởi tạo UI application
+_ = handleCommandLineArguments()
 
 let app = NSApplication.shared
 let delegate = AppDelegate()

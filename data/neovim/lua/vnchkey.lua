@@ -24,19 +24,62 @@ if _G._vnchkey_loaded then
   return M
 end
 
--- Resolve fcitx-remote binary once
+-- Detect OS and IME backend
+local is_mac = vim.fn.has("mac") == 1 or vim.fn.has("macunix") == 1
 local fcitx_cmd = nil
-if vim.fn.executable("fcitx5-remote") == 1 then
-  fcitx_cmd = "fcitx5-remote"
-elseif vim.fn.executable("fcitx-remote") == 1 then
-  fcitx_cmd = "fcitx-remote"
+local mac_sock = "/tmp/vnchkey.sock"
+local mac_cmd = nil
+
+if is_mac then
+  -- Look for vnchKey binary or check socket
+  if vim.fn.executable("vnchKey") == 1 then
+    mac_cmd = "vnchKey"
+  elseif vim.fn.executable("/Applications/vnchKey.app/Contents/MacOS/vnchKey") == 1 then
+    mac_cmd = "/Applications/vnchKey.app/Contents/MacOS/vnchKey"
+  end
+else
+  -- Linux / BSD: Resolve fcitx-remote binary
+  if vim.fn.executable("fcitx5-remote") == 1 then
+    fcitx_cmd = "fcitx5-remote"
+  elseif vim.fn.executable("fcitx-remote") == 1 then
+    fcitx_cmd = "fcitx-remote"
+  end
 end
 
 -- Fallback for spawn across Neovim versions
-local spawn = (vim.uv or vim.loop).spawn
+local uv = vim.uv or vim.loop
+local spawn = uv.spawn
+
+-- Function: send_mac_ipc (Instant IPC via /tmp/vnchkey.sock or CLI fallback)
+local function send_mac_ipc(cmd_str)
+  -- 1. Try zero-latency Unix Domain Socket if uv.new_pipe available
+  local client = uv.new_pipe(false)
+  if client then
+    client:connect(mac_sock, function(err)
+      if not err then
+        client:write(cmd_str .. "\n", function()
+          client:close()
+        end)
+      else
+        client:close()
+        -- Fallback to CLI binary if socket failed
+        if mac_cmd then
+          spawn(mac_cmd, { args = { "--" .. cmd_str } }, nil)
+        end
+      end
+    end)
+  elseif mac_cmd then
+    spawn(mac_cmd, { args = { "--" .. cmd_str } }, nil)
+  end
+end
 
 -- Function: fcitx2en (Switch to English / Latin input when in Normal mode)
 function M.fcitx2en()
+  if is_mac then
+    send_mac_ipc("off")
+    vim.b.input_toggle_flag = true
+    return
+  end
   if not fcitx_cmd then return end
   spawn(fcitx_cmd, { args = { "-c" } }, nil)
   vim.b.input_toggle_flag = true
@@ -44,6 +87,13 @@ end
 
 -- Function: fcitx2vi (Restore Vietnamese input when entering Insert mode)
 function M.fcitx2vi()
+  if is_mac then
+    if vim.b.input_toggle_flag == true then
+      send_mac_ipc("on")
+      vim.b.input_toggle_flag = false
+    end
+    return
+  end
   if not fcitx_cmd then return end
   if vim.b.input_toggle_flag == true then
     spawn(fcitx_cmd, { args = { "-o" } }, nil)
@@ -66,7 +116,7 @@ function M.setup()
     return
   end
 
-  if not fcitx_cmd then
+  if not is_mac and not fcitx_cmd then
     vim.notify("❌ [vnchKey] Không tìm thấy fcitx5-remote hoặc fcitx-remote trên hệ thống!", vim.log.levels.ERROR)
     return
   end

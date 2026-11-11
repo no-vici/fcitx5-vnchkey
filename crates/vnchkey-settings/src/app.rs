@@ -588,7 +588,7 @@ impl SettingsApp {
 
         ui.checkbox(
             &mut self.config.enable_word_rescue,
-            "Cứu chữ & Cứu dấu (Ngó Sen style): Tự động sửa tiếng Việt khi bật bộ gõ, bôi đen bấm phím để sửa dấu",
+            "Cứu chữ & Cứu dấu (Ngó Sen style): Tự động sửa Tiếng Việt khi bật bộ gõ, bôi đen bấm phím để sửa dấu",
         );
         ui.add_space(8.0);
 
@@ -679,13 +679,13 @@ impl SettingsApp {
 
         ui.checkbox(
             &mut self.config.spell_check,
-            "Chánh Tả: Kiểm tra chánh tả âm tiết tiếng Việt",
+            "Chánh Tả: Kiểm tra chánh tả âm tiết Tiếng Việt",
         );
         ui.add_space(6.0);
 
         ui.checkbox(
             &mut self.config.auto_restore_english,
-            "Restore English: Tự động khôi phục từ tiếng Anh (post, text, class...)",
+            "Restore English: Tự động khôi phục từ Tiếng Anh (post, text, class...)",
         );
         ui.add_space(6.0);
 
@@ -1011,7 +1011,7 @@ impl SettingsApp {
                                     (
                                         "Bypass (Raw English)",
                                         "Bypass (OFF)",
-                                        "Tắt bộ gõ hoàn toàn, chỉ gửi phím tiếng Anh thô cho Game hoặc Terminal",
+                                        "Tắt bộ gõ hoàn toàn, chỉ gửi phím Tiếng Anh thô cho Game hoặc Terminal",
                                     ),
                                     (
                                         "Default",
@@ -1646,7 +1646,7 @@ impl SettingsApp {
         ui.add_space(8.0);
 
         ui.horizontal(|ui| {
-            ui.label(egui::RichText::new("Tạm thời gõ tiếng Anh khi giữ phím").size(13.0));
+            ui.label(egui::RichText::new("Tạm thời gõ Tiếng Anh khi giữ phím").size(13.0));
             ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                 egui::ComboBox::from_id_salt("temp_eng_mode")
                     .selected_text(&self.config.temp_english_mode)
@@ -1758,7 +1758,7 @@ impl SettingsApp {
                 .inner_margin(egui::Margin::symmetric(14, 4))
                 .show(ui, |ui| {
                     ui.label(
-                        egui::RichText::new("Version 0.3.0 (Stable)")
+                        egui::RichText::new("Version 0.3.2 (Stable)")
                             .size(11.0)
                             .color(egui::Color32::from_rgb(0xb4, 0xbe, 0xfe)),
                     );
@@ -1851,7 +1851,7 @@ impl SettingsApp {
         {
             let mut log_content = String::new();
             log_content.push_str("=== Fcitx5 vnchKey Debug Log Export ===\n");
-            log_content.push_str("Version: 0.3.0 (Stable)\n");
+            log_content.push_str("Version: 0.3.2 (Stable)\n");
             let user = std::env::var("USER").unwrap_or_else(|_| "unknown".to_string());
             log_content.push_str(&format!("User: {}\n", user));
             log_content.push_str("--------------------------------------\n\n");

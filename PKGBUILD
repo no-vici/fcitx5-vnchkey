@@ -1,6 +1,6 @@
 # Maintainer: no-vici <no-vici@users.noreply.github.com>
 pkgname=fcitx5-vnchkey-git
-pkgver=0.3.0.r1
+pkgver=0.3.2.r1
 pkgrel=1
 pkgdesc="High-performance memory-safe Vietnamese input engine in 100% Rust for Fcitx5 (vnchKey Tự Do Edition)"
 arch=('x86_64')
@@ -16,9 +16,9 @@ md5sums=('SKIP')
 pkgver() {
   if [ -d "$srcdir/fcitx5-vnchkey" ]; then
     cd "$srcdir/fcitx5-vnchkey"
-    printf "0.3.0.r%s.%s" "$(git rev-list --count HEAD 2>/dev/null || echo 1)" "$(git rev-parse --short HEAD 2>/dev/null || echo g0)"
+    printf "0.3.2.r%s.%s" "$(git rev-list --count HEAD 2>/dev/null || echo 1)" "$(git rev-parse --short HEAD 2>/dev/null || echo g0)"
   else
-    printf "0.3.0.r1"
+    printf "0.3.2.r1"
   fi
 }
 
