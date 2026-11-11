@@ -95,7 +95,93 @@ open /Applications/vnchKey.app
 | macOS báo *"vnchKey is damaged and can't be opened"* khi tải file `.dmg` từ GitHub Releases | File tải qua trình duyệt bị macOS gắn cờ cách ly `com.apple.quarantine` vì chưa có chứng chỉ Apple Developer trả phí (\$99/năm). | Chạy lệnh gỡ cờ cách ly:<br>`xattr -cr /Applications/vnchKey.app`<br>Hoặc clone repo về máy và chạy `make app` local. |
 | Đã chọn Telex / VNI trên Menu Bar nhưng gõ chỉ ra chữ tiếng Anh không dấu | 1. Tiến trình `vnchKey` cũ trước khi build vẫn đang chạy ngầm.<br>2. Chưa làm mới quyền Accessibility sau khi build lại binary mới.<br>3. Mở `vnchKey` lúc chưa bật quyền nên `CGEventTap` chưa được gắn. | 1. Xoá `vnchKey` cũ trong **Settings > Accessibility** bằng nút `(-)`.<br>2. Chạy `killall vnchKey; cp -R build/vnchKey.app /Applications/; open /Applications/vnchKey.app` và cấp quyền lại. |
 | Icon của `vnchKey.app` trong `/Applications` bị trống / trong suốt sau khi chép đè | Finder của macOS lưu cache icon cũ. | Chạy lệnh làm mới cache icon của Finder:<br>`touch /Applications/vnchKey.app && killall Finder` |
-| Muốn `vnchKey` tự động chạy mỗi khi bật máy Mac | Chưa thêm vào Login Items. | Vào **System Settings > General > Login Items** $\to$ bấm dấu `(+)` dưới mục *Open at Login* và chọn `/Applications/vnchKey.app`. |
+| Muốn `vnchKey` tự động chạy mỗi khi bật máy Mac | Chưa bật khởi động cùng máy. | Chuột phải icon trên Menu Bar (hoặc mở Bảng điều khiển) $\to$ tích chọn **"Khởi động cùng máy (Open at login)"**. |
+
+---
+
+## ⚡ Điều Khiển Bằng Dòng Lệnh (CLI) & Tích Hợp Neovim Trên macOS
+
+Đối với lập trình viên dùng **Neovim / Vim** hoặc muốn điều khiển bộ gõ qua script / terminal, `vnchKey` tích hợp sẵn một **IPC Server siêu nhẹ qua Unix Domain Socket** tại `/tmp/vnchkey.sock`.
+
+### 1. Các lệnh CLI có sẵn
+
+Bạn có thể chạy trực tiếp từ Terminal (hoặc tạo alias `alias vnchkey="/Applications/vnchKey.app/Contents/MacOS/vnchKey"`):
+
+```bash
+# Tắt gõ Tiếng Việt (chuyển sang Tiếng Anh)
+/Applications/vnchKey.app/Contents/MacOS/vnchKey --off
+
+# Bật gõ Tiếng Việt
+/Applications/vnchKey.app/Contents/MacOS/vnchKey --on
+
+# Đảo qua lại giữa Tiếng Việt và Tiếng Anh
+/Applications/vnchKey.app/Contents/MacOS/vnchKey --toggle
+
+# Kiểm tra trạng thái kết nối
+/Applications/vnchKey.app/Contents/MacOS/vnchKey --status
+```
+*Lưu ý: Lệnh CLI giao tiếp trực tiếp qua socket `/tmp/vnchkey.sock` nên phản hồi tức thì trong vòng `< 2ms`, không gây độ trễ.*
+
+### 2. Tích hợp tự động vào Neovim bằng Lua Module
+
+Dự án cung cấp sẵn module tích hợp chính thức tại [`data/neovim/lua/vnchkey.lua`](../data/neovim/lua/vnchkey.lua). Module này tự động chuyển sang Tiếng Anh khi bạn rời `INSERT` mode (`InsertLeave`) để bảo vệ các lệnh Normal mode (`u`, `h,j,k,l`, `ciw`...), và bật lại Tiếng Việt khi bạn vào `INSERT` mode (`InsertEnter`).
+
+#### Cách thiết lập trong Neovim (init.lua):
+
+1. **Cách 1: Chép file `vnchkey.lua` vào config Neovim của bạn**:
+   ```bash
+   mkdir -p ~/.config/nvim/lua
+   cp data/neovim/lua/vnchkey.lua ~/.config/nvim/lua/
+   ```
+   Sau đó trong `~/.config/nvim/init.lua`, chỉ cần thêm 1 dòng:
+   ```lua
+   require("vnchkey").setup()
+   ```
+
+2. **Cách 2: Gọi trực tiếp autocommands trong `init.lua` (không cần copy file)**:
+   Nếu bạn thích viết trực tiếp trong file cấu hình Neovim của mình:
+   ```lua
+   local uv = vim.uv or vim.loop
+   local sock = "/tmp/vnchkey.sock"
+
+   local function send_vnchkey(cmd)
+     local client = uv.new_pipe(false)
+     if client then
+       client:connect(sock, function(err)
+         if not err then
+           client:write(cmd .. "\n", function() client:close() end)
+         else
+           client:close()
+         end
+       end)
+     end
+   end
+
+   local group = vim.api.nvim_create_augroup("vnchkey_toggle", { clear = true })
+   -- Rời Insert mode: Tắt bộ gõ ngay lập tức
+   vim.api.nvim_create_autocmd("InsertLeave", {
+     group = group,
+     callback = function() send_vnchkey("off") end,
+   })
+   -- Vào Insert mode: Bật lại bộ gõ
+   vim.api.nvim_create_autocmd("InsertEnter", {
+     group = group,
+     callback = function() send_vnchkey("on") end,
+   })
+   ```
+
+---
+
+## 🔀 Đảo Từ Nhanh (Flip Word) & Sửa Dấu Nhanh
+
+- **Đảo từ (Flip Word)**:
+  - Bấm **`Cmd + Shift + Z`** (hoặc `Ctrl + Shift + Z`) bất kỳ lúc nào để lật qua lại giữa từ Tiếng Việt vừa gõ và chuỗi phím thô:
+    - `tiếng` $\longleftrightarrow$ `tieengs`
+    - `việt` $\longleftrightarrow$ `vieetj`
+    - `được` $\longleftrightarrow$ `dduowjc`
+- **Sửa dấu nhanh không cần xóa chữ**:
+  - Khi đang gõ một từ (hoặc vừa bấm dấu cách nhưng bấm Backspace 1 lần để mở lại từ), bạn chỉ cần bấm đè phím dấu mới (ví dụ gõ nhầm dấu sắc `s`, chỉ cần bấm dấu huyền `f` $\to$ bộ gõ tự chuyển dấu sắc thành dấu huyền mà không cần xóa đi gõ lại từ đầu).
+  - Bấm phím **`z`** để xóa dấu thanh hoàn toàn về chữ không dấu.
 
 ---
 
