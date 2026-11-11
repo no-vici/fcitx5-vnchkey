@@ -504,14 +504,14 @@ public class KeyTapManager {
 
     // MARK: - Quản lý Quyền Accessibility & CGEventTap
 
-    public func checkAccessibilityPermission(prompt: Bool = true) -> Bool {
+    public func checkAccessibilityPermission(prompt: Bool = false) -> Bool {
         let options: NSDictionary = [kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String: prompt]
         return AXIsProcessTrustedWithOptions(options)
     }
 
     public func start() -> Bool {
-        guard checkAccessibilityPermission(prompt: true) else {
-            print("⚠️ [vnchKey] Chưa có quyền Accessibility. Vui lòng cấp quyền trong System Settings.")
+        // Chỉ khởi tạo event tap nếu hệ thống đã xác nhận có quyền (không tự động popup ở đây)
+        guard checkAccessibilityPermission(prompt: false) else {
             return false
         }
 

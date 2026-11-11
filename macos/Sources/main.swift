@@ -35,6 +35,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     // Biến instance giữ reference tới CLI IPC server
     private var ipcServer: VnchKeyIPCServer?
 
+    private var permissionPollTimer: Timer?
+
     func applicationDidFinishLaunching(_ notification: Notification) {
         loadIcons()
         if let appIconPath = Bundle.main.path(forResource: "AppIcon", ofType: "png"),
@@ -59,7 +61,25 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         startIPCServer()
 
         if !(keyManager?.start() ?? false) {
-            showAccessibilityAlert()
+            // Chỉ hiển thị hộp thoại hệ thống một lần duy nhất (như xKey)
+            _ = keyManager?.checkAccessibilityPermission(prompt: true)
+            // Lắng nghe người dùng bật công tắc trong System Settings để tự gắn hook
+            startPermissionWatcher()
+        }
+    }
+
+    private func startPermissionWatcher() {
+        permissionPollTimer?.invalidate()
+        permissionPollTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] timer in
+            guard let self = self, let km = self.keyManager else { return }
+            if km.checkAccessibilityPermission(prompt: false) {
+                if km.start() {
+                    timer.invalidate()
+                    self.permissionPollTimer = nil
+                    self.updateStatusButton()
+                    self.rebuildMenu()
+                }
+            }
         }
     }
 
@@ -1045,8 +1065,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     @objc func checkPermissionAction() {
-        if !(keyManager?.checkAccessibilityPermission(prompt: true) ?? false) {
-            showAccessibilityAlert()
+        if !(keyManager?.checkAccessibilityPermission(prompt: false) ?? false) {
+            _ = keyManager?.checkAccessibilityPermission(prompt: true)
+            startPermissionWatcher()
         } else {
             let alert = NSAlert()
             alert.messageText = "Quyền Trợ năng (Accessibility) đã được cấp!"
