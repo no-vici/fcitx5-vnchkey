@@ -92,8 +92,8 @@ app: rust
 			-o $(MACOS_DIR)/$(APP_NAME); \
 	fi
 	
-	# Ad-hoc code signing để macOS không chặn app chưa đăng ký
-	codesign --force --deep --sign - $(APP_BUNDLE)
+	# Ad-hoc code signing với identifier cố định và timestamp bảo toàn TCC Identity
+	codesign --force --deep --sign - --identifier com.vnchkey.macos $(APP_BUNDLE)
 	
 	@echo "✅ Đã tạo xong $(APP_BUNDLE)"
 	@echo "👉 Bạn có thể chạy thử: open $(APP_BUNDLE)"
@@ -112,7 +112,13 @@ dmg: app
 
 run: app
 	-killall $(APP_NAME) 2>/dev/null || true
-	open $(APP_BUNDLE)
+	@if [ -d "/Applications/$(APP_NAME).app" ]; then \
+		echo "🔄 Đồng bộ bản build mới vào /Applications..."; \
+		cp -R $(APP_BUNDLE) /Applications/; \
+		open /Applications/$(APP_NAME).app; \
+	else \
+		open $(APP_BUNDLE); \
+	fi
 
 clean:
 	rm -rf $(BUILD_DIR)
