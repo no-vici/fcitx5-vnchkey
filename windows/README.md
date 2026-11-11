@@ -41,11 +41,25 @@ Tính năng Gõ Tắt giúp bạn tiết kiệm hàng ngàn lượt bấm phím 
      ```
   3. Bấm `Ctrl + S` lưu lại trong Notepad.
   4. Chuột phải icon $\to$ bấm **"Nạp lại Gõ Tắt & Từ Điển"** để áp dụng ngay.
-- **Mẹo hủy gõ tắt thông minh (Smart Undo)**: Nếu bạn vô tình gõ từ viết tắt và nó nở thành câu dài, chỉ cần **bấm `Backspace` một lần**, từ mở rộng sẽ tự thu gọn lại nguyên bản ban đầu!
+- **Cơ chế Hủy Gõ Tắt thông minh 2 bước**:
+  - Khi bung cụm từ gõ tắt, bộ gõ tự động thêm dấu cách (`Space`) phía sau.
+  - **Bấm `Backspace` lần 1**: Xóa dấu cách vừa bung để bạn có thể gõ thêm dấu thanh hoặc dấu câu; bộ gõ sẽ tự động nuốt khoảng trắng để dấu dính liền sát vào cụm từ vừa bung.
+  - **Bấm `Backspace` lần 2**: Hoàn nguyên (undo) toàn bộ cụm từ mở rộng trở về đúng chuỗi phím tắt ban đầu mà bạn đã gõ!
 
 ---
 
-### 3. Từ Điển Cá Nhân (User Dictionary) — Gõ Tiếng Anh / Mã Code Không Bị Dính Dấu
+### 3. Đảo Từ Nhanh (Flip Word) — `Ctrl + Shift + Z`
+Khi đang gõ hoặc vừa gõ xong một từ Tiếng Việt (hoặc chuỗi phím thô), bạn muốn lật qua lại giữa chữ Tiếng Việt có dấu và chuỗi ký tự gõ phím gốc mà không cần xóa đi gõ lại:
+- **Tổ hợp phím**: **`Ctrl + Shift + Z`**
+- **Ví dụ**:
+  - Gõ `tiếng` $\xrightarrow{\text{Ctrl+Shift+Z}}$ đảo thành **`tieengs`**
+  - Bấm tiếp `Ctrl+Shift+Z` $\to$ lật ngược lại thành **`tiếng`**
+  - Gõ `việt` $\longleftrightarrow$ `vieetj`, `được` $\longleftrightarrow$ `dduowjc`
+- Cực kỳ hữu dụng cho lập trình viên khi cần kiểm tra chuỗi phím thô hoặc chuyển nhanh giữa biến code và văn bản mô tả.
+
+---
+
+### 4. Từ Điển Cá Nhân (User Dictionary) — Gõ Tiếng Anh / Mã Code Không Bị Dính Dấu
 Khi gõ code hoặc văn bản có lẫn từ tiếng Anh/thuật ngữ kỹ thuật (như `server`, `false`, `const`, `input`, `reset`, `docker`), bộ gõ có thể nhận nhầm các phím `s, f, r, x, j` thành dấu tiếng Việt.
 
 - **Kích hoạt**: Chuột phải vào icon $\to$ tích chọn **"Tự động khôi phục Tiếng Anh"** và **"Bật Từ Điển Cá Nhân"**.
@@ -71,7 +85,7 @@ Khi gõ code hoặc văn bản có lẫn từ tiếng Anh/thuật ngữ kỹ thu
 
 ---
 
-### 4. Tùy Chọn Tốc Ký (Quick Consonants)
+### 5. Tùy Chọn Tốc Ký (Quick Consonants)
 Nếu bạn thường xuyên gõ văn bản nhanh, hãy bật các tùy chọn trong menu **"Tùy chọn Tốc ký..."**:
 - **Quick Telex**: Gõ lặp phụ âm để ra phụ âm ghép (`cc` $\to$ `ch`, `gg` $\to$ `gi`, `kk` $\to$ `kh`, `nn` $\to$ `ng`, `pp` $\to$ `ph`, `qq` $\to$ `qu`, `tt` $\to$ `th`).
 - **Phụ âm đầu nhanh**: Gõ `f` $\to$ `ph`, `j` $\to$ `gi`, `w` $\to$ `qu` khi ở đầu từ.
@@ -79,12 +93,12 @@ Nếu bạn thường xuyên gõ văn bản nhanh, hãy bật các tùy chọn t
 
 ---
 
-### 5. Khôi Phục Từ Bằng Phím `Esc` (Dokey-Style Escape)
+### 6. Khôi Phục Từ Bằng Phím `Esc` (Dokey-Style Escape)
 Khi đang gõ một từ tiếng Việt nhưng muốn hủy toàn bộ dấu vừa bỏ để quay lại ký tự phím thô ban đầu, bạn chỉ cần **bấm phím `Esc`**. Từ đó sẽ hoàn nguyên ngay lập tức về dạng chưa bỏ dấu mà không cần phải xóa đi gõ lại từ đầu.
 
 ---
 
-### 6. Khởi Động Cùng Windows & Chế Độ Portable Tiện Dụng
+### 7. Khởi Động Cùng Windows & Chế Độ Portable Tiện Dụng
 - **Khởi động cùng máy**: Chuột phải icon $\to$ tích chọn **"Khởi động cùng Windows"**. Ứng dụng sẽ tự khởi động ngầm êm ái mỗi khi mở máy.
 - **Chế độ Portable (Chép USB mang đi)**:
   - `VnCharKey.exe` ưu tiên lưu toàn bộ cấu hình (`config.conf`, `macros.conf`, `dictionary.conf`) **ngay trong cùng thư mục với file `.exe`**.

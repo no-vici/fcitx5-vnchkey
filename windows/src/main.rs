@@ -665,11 +665,29 @@ mod win_app {
             }
         });
 
-        // Pass through shortcut combinations (Ctrl/Alt/Win)
+        // Check shortcut combinations (Ctrl/Alt/Win)
         let ctrl_down = (GetAsyncKeyState(VK_CONTROL as i32) as u16 & 0x8000) != 0;
+        let shift_down = (GetAsyncKeyState(VK_SHIFT as i32) as u16 & 0x8000) != 0;
         let alt_down = (GetAsyncKeyState(VK_MENU as i32) as u16 & 0x8000) != 0;
         let win_down = (GetAsyncKeyState(VK_LWIN as i32) as u16 & 0x8000) != 0
             || (GetAsyncKeyState(VK_RWIN as i32) as u16 & 0x8000) != 0;
+
+        // Đảo từ nhanh bằng Ctrl + Shift + Z (Flip Word giữa Tiếng Việt và chuỗi phím thô)
+        if ctrl_down && shift_down && !alt_down && !win_down && vk == 0x5A { // 0x5A = 'Z'
+            let flipped = STATE.with(|s| {
+                let mut st = s.borrow_mut();
+                if st.enabled {
+                    if let Some(out) = st.engine.flip_current_word() {
+                        emit_output(out.backspaces, &out.commit_text);
+                        return true;
+                    }
+                }
+                false
+            });
+            if flipped {
+                return 1;
+            }
+        }
 
         if ctrl_down || alt_down || win_down {
             STATE.with(|s| s.borrow_mut().engine.reset());
