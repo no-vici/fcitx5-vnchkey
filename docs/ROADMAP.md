@@ -90,10 +90,16 @@
 - [x] **Hoàn tác Macro một chạm & Chống lặp vô hạn (Macro Revert on Backspace & Loop Suppression)**:
   - Cho phép người dùng thu hồi ngay lập tức từ viết tắt gốc khi bấm phím Backspace sau khi vừa bung Macro (ví dụ: `vn` + ` ` $\to$ `Việt Nam ` $\xrightarrow{\text{Backspace}}$ `vn`).
   - Tự động áp dụng cơ chế tạm khóa (suppression) để khi người dùng nhấn tiếp phím Space sau khi hoàn tác, từ viết tắt gốc sẽ giữ nguyên thành `vn ` mà không bị nổ bung lặp lại vô tận.
-- [x] **Phím Tắt Lật Từ Tức Thì (Flip Word — `Ctrl + Shift + Z`)**:
-  - Cho phép người dùng hoặc lập trình viên hoán đổi tức thì giữa từ tiếng Việt và chuỗi ký tự thô ban đầu (`mas` $\leftrightarrow$ `má`), tiện lợi tuyệt đối khi gõ mã nguồn mà không cần Backspace gõ lại.
-- [ ] **Khôi Phục Âm Tiết Sau Backspace (`adoptWordBeforeBackspace`)**:
-  - Khi xóa dấu cách sau một từ đã hoàn tất, tự động đọc lại âm tiết trước con trỏ vào bộ nhớ đệm để người dùng có thể gõ tiếp phím dấu sửa đổi (ví dụ: `phủ` ␣ ⌫ `s` $\to$ `phú`).
+- [x] **Phím Tắt Lật Từ Tức Thì (Flip Word — `Ctrl + Shift + Z` / Tùy chỉnh tự do)**:
+  - Cho phép người dùng hoặc lập trình viên hoán đổi tức thì giữa từ tiếng Việt và chuỗi ký tự thô ban đầu (`mas` $\leftrightarrow$ `má`), chỉ kích hoạt khi có từ đang gõ (`has_active_word()`) để không nuốt phím tắt Redo của ứng dụng.
+- [x] **Khôi Phục Âm Tiết Sau Backspace (`reopen_state` / Reopen Word)**:
+  - Khi xóa dấu cách sau một từ đã hoàn tất, tự động mở lại âm tiết trước con trỏ vào bộ nhớ đệm để người dùng có thể gõ tiếp phím dấu sửa đổi (ví dụ: `phủ` ␣ ⌫ `s` $\to$ `phú`).
+- [x] **Tự Động Học Thói Quen Sửa Từ (Adaptive Habit Learner — Log 100 MB FIFO)**:
+  - Phát hiện khi người dùng xóa từ có dấu bằng `Backspace` rồi gõ lại không dấu, gõ đúp phím khử dấu, bấm `Flip Word` hoặc `Esc` từ 2 lần trở lên để tự động đẩy vào Whitelist (`vnchkey-dictionary.conf` / `dictionary.conf`) và cho pass-through ở những lần gặp sau.
+- [x] **Chẩn Đoán Hệ Thống `--doctor` CLI & `/proc/<PID>/cmdline` Electron Wayland Advisor**:
+  - Kiểm tra biến môi trường Fcitx5, thư viện `.so` và tự động cảnh báo các ứng dụng Electron/Chromium đang mở trên Wayland bị thiếu cờ `--enable-wayland-ime`.
+- [x] **Tự Động Bypass Khi Chơi Game & Nhập Mật Khẩu (`isGamingProgram` & `isSensitiveContext`)**:
+  - Tự động tắt biến âm trên các ô nhập mật khẩu/PIN và hàng chục tựa game / trình giả lập phổ biến (Steam, Gamescope, Lutris, Heroic, Wine/Proton `.exe`, CS2, Dota 2, Minecraft...).
 
 #### 3. Nâng Cấp Ngữ Âm Thế Hệ Mới: Bộ Bóc Tách Âm Tiết Chuyên Sâu (Kế thừa tinh hoa từ Bamboo-Core & VietC)
 - [x] **Kiến Trúc Bóc Tách Âm Tiết 5 Thành Phần (`syllable_parser.rs`)**:
@@ -116,9 +122,9 @@
 ### Giai đoạn hoàn thiện hệ sinh thái & Phân phối
 
 #### 1. Context Guard Nâng Cao (Smart Auto-Bypass)
-- [ ] **Nhận diện thanh địa chỉ URL & Đường dẫn thư mục**: Tự động phát hiện khi con trỏ đang nhập URL (`http://...`, `https://...`, `www....`), địa chỉ IP, hoặc đường dẫn tệp (`/usr/bin/...`, `~/.config/...`) để tự động chuyển sang chế độ gõ ký tự thô (Raw English Bypass), không can thiệp dấu tiếng Việt.
-- [ ] **Nhận diện cú pháp mã nguồn (Code Identifier Guard)**: Tự động bỏ qua biến âm khi phát hiện quy tắc đặt tên biến lập trình (`camelCase`, `snake_case`, `SCREAMING_SNAKE_CASE`, `kebab-case`).
-- [ ] **Bảo vệ mật khẩu & trường nhạy cảm**: Tuân thủ cờ `CapabilityFlag::Password` và `CapabilityFlag::Sensitive` của Wayland để tắt hoàn toàn bộ đệm từ.
+- [x] **Nhận diện thanh địa chỉ URL & Đường dẫn thư mục**: Tự động phát hiện khi con trỏ đang nhập URL (`http://...`, `https://...`, `www....`), địa chỉ IP, hoặc đường dẫn tệp (`/usr/bin/...`, `~/.config/...`) để tự động chuyển sang chế độ gõ ký tự thô (Raw English Bypass), không can thiệp dấu tiếng Việt.
+- [x] **Nhận diện cú pháp mã nguồn (Code Identifier Guard)**: Tự động bỏ qua biến âm khi phát hiện quy tắc đặt tên biến lập trình (`camelCase`, `snake_case`, `_leading_underscore`, `.chainedAccessor`).
+- [x] **Bảo vệ mật khẩu & trường nhạy cảm**: Tuân thủ cờ `CapabilityFlag::Password`, `Sensitive`, `Number`, `Digit`, `Dialable`, `Alpha` của Fcitx5/Wayland để tự động xả và tắt bộ đệm từ.
 
 #### 2. Tối Ưu Hóa Giao Thức Wayland Hiện Đại (Deep Wayland Compositor Integration)
 - [ ] Nghiên cứu hỗ trợ trực tiếp các giao thức nhập liệu thế hệ mới `zwp_input_method_v2` và `zwp_virtual_keyboard_v1`.

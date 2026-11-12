@@ -192,4 +192,5 @@ Dự án cung cấp sẵn module tích hợp chính thức tại [`data/neovim/l
 
 - **Các tuỳ chọn kiểu gõ, bảng mã, kiểm tra chánh tả**: Lưu tự động trong `UserDefaults` của macOS (`com.vnchkey.macos`).
 - **Bảng Gõ Tắt (Macros)**: `~/.config/vnchkey/macros.conf`
-- **Từ Điển Cá Nhân (Custom Dictionary)**: `~/.config/vnchkey/dictionary.conf`
+- **Từ Điển Cá Nhân & Từ Tự Động Học (Custom Dictionary & Whitelist)**: `~/.config/vnchkey/dictionary.conf`
+- **Nhật Ký Học Thói Quen Sửa Từ (Adaptive Habit Log — Tối đa 100 MB FIFO)**: `~/.config/vnchkey/vnchkey-habit.log`

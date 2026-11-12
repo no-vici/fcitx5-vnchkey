@@ -37,8 +37,10 @@
    - [3.9. Bộ Bóc Tách Âm Tiết 5 Thành Phần & Dời Dấu Thanh Động (Next-Gen Syllable Parser)](#39-bộ-bóc-tách-âm-tiết-5-thành-phần--dời-dấu-thanh-động-next-gen-syllable-parser)
    - [3.10. Hoán Đổi Dấu Phụ Bảo Toàn Thanh Điệu (Shape Modifier Swapping — Tinh Hoa VietC)](#310-hoán-đổi-dấu-phụ-bảo-toàn-thanh-điệu-shape-modifier-swapping--tinh-hoa-vietc)
    - [3.11. Bảo Vệ Ngữ Âm Học & Chống Gõ Sai Dấu (Phonetic Tone Protection)](#311-bảo-vệ-ngữ-âm-học--chống-gõ-sai-dấu-phonetic-tone-protection)
-   - [3.12. Phím Tắt Lật Từ Tức Thì (Flip Word — Ctrl + Shift + Z)](#312-phím-tắt-lật-từ-tức-thì-flip-word--ctrl--shift--z)
-   - [3.13. Bộ Lọc & Đặc Trị Thực Chiến Linux / Wayland (Hardened Runtime Fixes)](#313-bộ-lọc--đặc-trị-thực-chiến-linux--wayland-hardened-runtime-fixes)
+   - [3.12. Tổ Hợp Phím Tắt Thông Minh & Hệ Thống "Cứu Chữ / Cứu Dấu"](#312-tổ-hợp-phím-tắt-thông-minh--hệ-thống-cứu-chữ--cứu-dấu)
+   - [3.13. Tự Động Học Thói Quen Gõ & Đưa Vào Whitelist (Adaptive Habit Learner — Log 100 MB)](#313-tự-động-học-thói-quen-gõ--đưa-vào-whitelist-adaptive-habit-learner--log-100-mb)
+   - [3.14. Chẩn Đoán Hệ Thống `--doctor`, Cố Vấn Electron Wayland & Tự Động Bypass Game/Password](#314-chẩn-đoán-hệ-thống---doctor-cố-vấn-electron-wayland--tự-động-bypass-gamepassword)
+   - [3.15. Bộ Lọc & Đặc Trị Thực Chiến Linux / Wayland (Hardened Runtime Fixes)](#315-bộ-lọc--đặc-trị-thực-chiến-linux--wayland-hardened-runtime-fixes)
 4. [Giao Diện Cài Đặt Trực Quan (Rust + egui GUI)](#4-giao-diện-cài-đặt-trực-quan-rust--egui-gui)
 5. [Hướng Dẫn Cài Đặt Cho Linux, macOS & Windows](#5-hướng-dẫn-cài-đặt-cho-linux-macos--windows)
 6. [Lộ Trình Phát Triển & Tài Liệu Kỹ Thuật (Roadmap & Docs)](#6-lộ-trình-phát-triển--tài-liệu-kỹ-thuật-roadmap--docs)
@@ -66,31 +68,33 @@ Thay vì phải chạy tiến trình daemon ngoài với quyền root để can 
 fcitx5-vnchkey/
 ├── Cargo.toml                       # Workspace Root Manifest (LTO, strip, panic=abort)
 ├── crates/
-│   ├── vnchkey-core/                # [Lõi Rust] Xử lý âm vị học & biến đổi dấu Tiếng Việt
+│   ├── vnchkey-core/                # [Lõi Rust - #![forbid(unsafe_code)]] Xử lý âm vị học & biến đổi dấu Tiếng Việt
 │   │   ├── Cargo.toml
 │   │   ├── src/
 │   │   │   ├── lib.rs               # Module exports
 │   │   │   ├── engine.rs            # Bộ điều phối trung tâm (Syllable State Machine)
 │   │   │   ├── telex.rs             # Biến đổi Telex, quy tắc âm tiết & tách âm tiết cuối
 │   │   │   ├── vni.rs               # Biến đổi VNI đa thứ tự phím (1-9, 0 xóa dấu)
-│   │   │   ├── syllable_parser.rs   # [Mới] Bộ bóc tách âm tiết 5 thành phần (Onset-Glide-Nucleus-Coda-Tone)
-│   │   │   ├── auto_restore.rs      # Trie từ điển tiếng Anh kỹ thuật (GoNhanh)
+│   │   │   ├── syllable_parser.rs   # Bộ bóc tách âm tiết 5 thành phần (Onset-Glide-Nucleus-Coda-Tone)
+│   │   │   ├── habit_learner.rs     # [Mới] Tự động học thói quen sửa lỗi & Whitelist (Log 100 MB FIFO)
+│   │   │   ├── auto_restore.rs      # Từ điển tiếng Anh kỹ thuật & từ điển ngoại lệ người dùng
 │   │   │   ├── casing.rs            # Theo dõi và bảo toàn kiểu chữ hoa/thường
-│   │   │   ├── macros.rs            # Bảng từ viết tắt (Gõ tắt) & hoàn tác
+│   │   │   ├── macros.rs            # Bảng từ viết tắt (Gõ tắt) & hoàn tác 2 bước
 │   │   │   └── vietnamese_dict.rs   # Bộ từ điển Chánh Tả ~6.750 từ gốc tiếng Việt
 │   │   └── tests/
-│   │       └── vietc_regression_tests.rs # [Mới] Bộ kiểm thử hồi quy đối sánh từ VietC
+│   │       └── vietc_regression_tests.rs # Bộ kiểm thử hồi quy đối sánh từ VietC
 │   │
-│   ├── fcitx5-vnchkey-ffi/          # [Tầng C-ABI] Giao tiếp giữa Rust core và C++
+│   ├── fcitx5-vnchkey-ffi/          # [Tầng C-ABI] Giao tiếp giữa Rust core và C++ / Swift
 │   │   ├── Cargo.toml
 │   │   └── src/
 │   │       └── lib.rs               # C-compatible FFI exported functions
 │   │
-│   └── vnchkey-settings/            # [Giao diện Cài Đặt] Viết bằng Rust + egui/eframe
+│   └── vnchkey-settings/            # [Giao diện Cài Đặt & Chẩn Đoán] Viết bằng Rust + egui/eframe
 │       ├── Cargo.toml
 │       └── src/
-│           ├── main.rs              # Điểm khởi chạy ứng dụng fcitx5-vnchkey-settings
-│           ├── app.rs               # Giao diện UI với 10 tab quản lý trực quan
+│           ├── main.rs              # Điểm khởi chạy GUI và lệnh CLI chẩn đoán (--doctor / -d)
+│           ├── app.rs               # Giao diện UI với 10 tab quản lý trực quan (kèm Tab Doctor)
+│           ├── doctor.rs            # [Mới] Trình kiểm tra môi trường Fcitx5 & /proc/PID Electron Advisor
 │           └── config.rs            # Trình đọc/ghi cấu hình ~/.config/fcitx5/conf/
 │
 ├── fcitx5-addon/                    # [Fcitx5 Native Addon] Module C++ cho Fcitx5
@@ -248,8 +252,9 @@ Chắt lọc và nâng cấp từ thuật toán hoán đổi dấu phụ của *
 ---
 
 ### 3.12. Tổ Hợp Phím Tắt Thông Minh & Hệ Thống "Cứu Chữ / Cứu Dấu"
-- **Lật Từ Tức Thì (`Ctrl + Shift + Z` — Flip Word)**:
-  - Đảo ngược qua lại trạng thái của từ hiện tại giữa Tiếng Việt và chuỗi phím thô (`thể` $\longleftrightarrow$ `theer`, `việt` $\longleftrightarrow$ `vieetj`).
+- **Lật Từ Tức Thì (`Ctrl + Shift + Z` / Tùy chỉnh tự do — Flip Word)**:
+  - Đảo ngược qua lại trạng thái của từ đang gõ giữa Tiếng Việt và chuỗi phím thô (`thể` $\longleftrightarrow$ `theer`, `việt` $\longleftrightarrow$ `vieetj`).
+  - **Không xung đột với phím tắt Redo của Editor**: Tổ hợp phím chỉ bắt sự kiện khi trong bộ đệm đang thực sự có từ vừa gõ (`has_active_word()`). Khi bộ đệm đang rỗng, phím tắt được trả thẳng về cho ứng dụng (VS Code, trình duyệt...) thực hiện lệnh Redo bình thường. Trên Windows, người dùng có thể tự do đổi sang `Alt + X`, `Ctrl + Alt + Z` hoặc thu phím bất kỳ.
 - **Hoàn Nguyên Từ Thô Bằng `Shift + Esc` & Bảo Toàn `Esc` Cho Neovim**:
   - **Nhấn `Esc` đơn thuần**: Giữ nguyên từ tiếng Việt vừa gõ, chốt bộ đệm và truyền thẳng `Esc` cho ứng dụng — giúp lập trình viên **thoát `INSERT` mode của Neovim ngay lập tức ở lần bấm đầu tiên** mà không bị mất dấu hay biến dạng chữ!
   - **Nhấn `Shift + Esc`**: Hoàn nguyên ngay lập tức từ đang gõ về chuỗi phím thô (`tiếng` $\to$ `tieengs`) và tạm khóa tiếng Anh cho từ đó.
@@ -265,7 +270,36 @@ Chắt lọc và nâng cấp từ thuật toán hoán đổi dấu phụ của *
 
 ---
 
-### 3.13. Bộ Lọc & Đặc Trị Thực Chiến Linux / Wayland (Hardened Runtime Fixes)
+### 3.13. Tự Động Học Thói Quen Gõ & Đưa Vào Whitelist (Adaptive Habit Learner — Log 100 MB)
+Tích hợp bộ máy học thích nghi cục bộ (`habit_learner.rs`) ngay trong lõi `vnchkey-core` cho cả 3 hệ điều hành (Linux, Windows, macOS):
+- **Tự động phát hiện 4 hành vi sửa lỗi của người dùng**:
+  1. **Xóa bằng `Backspace` rồi gõ lại chữ không dấu (`BackspaceRetype`)**: Khi một từ bị bỏ dấu nhầm, người dùng bấm `Backspace` xóa đi rồi gõ lại từ nguyên bản.
+  2. **Nhấn đúp phím dấu để khử dấu (`DoubleKeyUndo`)**: Gõ `ss`, `ff`, `rr`, `ww`... để hoàn tác dấu thanh/dấu mũ về chữ ASCII.
+  3. **Bấm phím Lật Từ (`FlipToRaw`)**: Dùng `Ctrl + Shift + Z` / `Alt + X` để trả từ tiếng Việt về chuỗi phím gốc.
+  4. **Bấm phím Hoàn Nguyên (`EscapeToRaw`)**: Dùng `Esc` / `Shift + Esc` để hủy bỏ dấu vừa gõ.
+- **Tự động thăng cấp vào Whitelist (Auto-Promote)**:
+  - Khi người dùng sửa cùng một từ **từ 2 lần trở lên**, `vnchkey-core` lập tức nạp từ đó vào bộ nhớ `EnglishAutoRestore` và ghi nối vĩnh viễn vào tệp **Từ Điển Cá Nhân** (`vnchkey-dictionary.conf` / `dictionary.conf`).
+  - Từ lần tiếp theo trở đi, mỗi khi gặp lại từ đó, bộ gõ sẽ **cho pass-through nguyên bản 100%** mà bạn không bao giờ phải xóa đi sửa lại nữa.
+- **Nhật ký thói quen dung lượng cao (100 MB FIFO Rotation) & Bảo mật tuyệt đối**:
+  - Hỗ trợ lưu lịch sử học tập lên tới **100 MB** (`vnchkey-habit.log` / `habit.log`), tự động xoay vòng FIFO giữ lại 70% dữ liệu mới nhất khi đầy.
+  - Chỉ ghi nhận các từ chữ cái đơn thuần (2–32 ký tự), tuyệt đối không ghi nhận chuỗi số, mã PIN hay mật khẩu.
+
+---
+
+### 3.14. Chẩn Đoán Hệ Thống `--doctor`, Cố Vấn Electron Wayland & Tự Động Bypass Game/Password
+Học hỏi và phát triển từ các công cụ thực chiến trên Wayland:
+- **Lệnh CLI Chẩn Đoán Nhanh (`fcitx5-vnchkey-settings --doctor` / `-d`) & Tab "Doctor" trên GUI**:
+  - Kiểm tra toàn diện môi trường hiển thị (`XDG_SESSION_TYPE`, `XDG_CURRENT_DESKTOP`, `SWAYSOCK`), các biến môi trường `XMODIFIERS`, `GTK_IM_MODULE`, `QT_IM_MODULE`, trạng thái tiến trình daemon `fcitx5`, và sự hiện diện của các thư viện hệ thống (`fcitx5-vnchkey-addon.so`, `libfcitx5_vnchkey_ffi.so`).
+- **Cố Vấn Ứng Dụng Electron / Chromium Trên Wayland (`/proc/<PID>/cmdline` Advisor)**:
+  - Tự động quét các ứng dụng Electron/Chromium đang chạy (`VS Code`, `VSCodium`, `Cursor`, `Windsurf`, `Discord`, `Vesktop`, `Slack`, `Obsidian`, `Notion`, `Spotify`, `Chrome`, `Brave`...) và kiểm tra `/proc/<PID>/cmdline`.
+  - Cảnh báo ngay nếu ứng dụng đang chạy qua XWayland hoặc thiếu cờ `--enable-wayland-ime` / `--ozone-platform-hint=auto`, đồng thời cung cấp câu lệnh khắc phục chính xác cho từng ứng dụng.
+- **Tự Động Bypass Khi Chơi Game & Nhập Mật Khẩu / PIN (Zero-Config Bypass)**:
+  - **Bảo vệ Ô Mật Khẩu & Trường Nhạy Cảm (`isSensitiveContext`)**: Tự động xả bộ đệm và ngắt biến đổi tiếng Việt khi con trỏ nằm trong các trường có cờ `CapabilityFlag::Password`, `Sensitive`, `Number`, `Digit`, `Dialable`, hoặc `Alpha`.
+  - **Nhận diện Game Tự Động (`isGamingProgram`)**: Tự động chuyển sang chế độ `Bypass` (trả phím `WASD` thô tức thì không độ trễ) khi focus vào Steam (`steam_app_*`), `gamescope`, Lutris, Heroic, Bottles, PrismLauncher, Minecraft, RetroArch, RPCS3, Yuzu, Ryujinx, PCSX2, Dolphin, CS2, Dota 2, Valorant, Genshin Impact, Elden Ring, Cyberpunk 2077, Baldur's Gate 3, Overwatch, Apex Legends, Roblox/Sober, osu!, các tiến trình Unreal/Unity/Godot và các game `.exe` chạy qua Wine/Proton.
+
+---
+
+### 3.15. Bộ Lọc & Đặc Trị Thực Chiến Linux / Wayland (Hardened Runtime Fixes)
 Được tôi luyện qua hàng loạt tình huống thực tế trên môi trường Linux Wayland và X11:
 - **WPS Office (`hidesClientPreedit`)**: Bộ ứng dụng WPS Office (`wps`, `wpp`, `et`) tự vẽ giao diện nhập liệu riêng. vnchKey tự động phát hiện và áp dụng `hidesClientPreedit = true`, loại bỏ hoàn toàn hiện tượng hiển thị 2 dòng chữ chồng chéo lên nhau.
 - **Google Sheets (`deleteAfterChars`)**: Xử lý đặc thù cho bảng tính Google Docs/Sheets, tối ưu hoá chuỗi sự kiện xoá/chèn ký tự (`deleteAfterChars`) để tránh làm xáo trộn ô tính hoặc mất nội dung khi đang chỉnh sửa cell.
@@ -287,14 +321,14 @@ Cung cấp công cụ cấu hình đồ họa native độc lập **`fcitx5-vnch
     - **`Preedit (Gạch Chân)`**: Gom từ nguyên tử, đặc trị triệt để 100% lỗi nhảy chữ, lặp chữ trên Google Docs, Chrome, Firefox, Slack, Discord.
     - **`Bypass (OFF)`**: Tắt bộ gõ hoàn toàn, chỉ gửi phím tiếng Anh thô cho Game hoặc Terminal đặc thù.
     - **`Default Typing`**: Kế thừa chế độ mặc định toàn cục của hệ thống (Global Default).
-- **Hỗ trợ toàn diện 9 Tab chuyên sâu**: **General**, **Typing**, **Applications**, **Macros**, **Dictionary**, **Keymap**, **Appearance**, **Backup**, **About**.
+- **Hỗ trợ toàn diện 10 Tab chuyên sâu**: **General**, **Typing**, **Applications**, **Macros**, **Dictionary**, **Keymap**, **Appearance**, **Backup**, **Doctor**, **About**.
 - **Tự động đồng bộ**: Nạp lại cấu hình tức thì vào Fcitx5 ngay khi bấm Áp Dụng.
 
 ```bash
-# Mở bảng cài đặt từ terminal:
+# Mở bảng cài đặt đồ họa từ terminal:
 fcitx5-vnchkey-settings
-# Hoặc lệnh tắt:
-vnchkey-settings
+# Hoặc chạy kiểm tra chẩn đoán hệ thống & Electron Wayland qua CLI:
+fcitx5-vnchkey-settings --doctor
 ```
 
 ---

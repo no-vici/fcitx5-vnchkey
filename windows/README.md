@@ -48,40 +48,25 @@ Tính năng Gõ Tắt giúp bạn tiết kiệm hàng ngàn lượt bấm phím 
 
 ---
 
-### 3. Đảo Từ Nhanh (Flip Word) — `Ctrl + Shift + Z`
-Khi đang gõ hoặc vừa gõ xong một từ Tiếng Việt (hoặc chuỗi phím thô), bạn muốn lật qua lại giữa chữ Tiếng Việt có dấu và chuỗi ký tự gõ phím gốc mà không cần xóa đi gõ lại:
-- **Tổ hợp phím**: **`Ctrl + Shift + Z`**
+### 3. Đảo Từ Nhanh (Flip Word) — Tùy Chỉnh Phím Tắt Tự Do & Bảo Vệ Lệnh Redo
+Khi đang gõ một từ Tiếng Việt (hoặc chuỗi phím thô), bạn muốn lật qua lại giữa chữ Tiếng Việt có dấu và chuỗi ký tự gõ phím gốc mà không cần xóa đi gõ lại:
+- **Tổ hợp phím mặc định**: **`Ctrl + Shift + Z`** (hoặc tự chọn `Alt + X`, `Ctrl + Alt + Z`, hay thu bất kỳ tổ hợp phím nào qua menu **"Phím tắt Đảo Từ (Flip Word)"**).
+- **Thông minh, không nuốt lệnh Redo của Editor**: Phím tắt Đảo Từ **chỉ kích hoạt khi bạn đang thực sự gõ dở một từ trong bộ đệm** (`has_active_word()`). Khi bộ đệm đang rỗng (sau khi bạn đã bấm Space hoặc đang chỉnh sửa tài liệu), `Ctrl + Shift + Z` sẽ được trả thẳng về cho ứng dụng (VS Code, Word, trình duyệt...) thực hiện lệnh Redo bình thường!
 - **Ví dụ**:
   - Gõ `tiếng` $\xrightarrow{\text{Ctrl+Shift+Z}}$ đảo thành **`tieengs`**
   - Bấm tiếp `Ctrl+Shift+Z` $\to$ lật ngược lại thành **`tiếng`**
   - Gõ `việt` $\longleftrightarrow$ `vieetj`, `được` $\longleftrightarrow$ `dduowjc`
-- Cực kỳ hữu dụng cho lập trình viên khi cần kiểm tra chuỗi phím thô hoặc chuyển nhanh giữa biến code và văn bản mô tả.
 
 ---
 
-### 4. Từ Điển Cá Nhân (User Dictionary) — Gõ Tiếng Anh / Mã Code Không Bị Dính Dấu
-Khi gõ code hoặc văn bản có lẫn từ tiếng Anh/thuật ngữ kỹ thuật (như `server`, `false`, `const`, `input`, `reset`, `docker`), bộ gõ có thể nhận nhầm các phím `s, f, r, x, j` thành dấu tiếng Việt.
-
-- **Kích hoạt**: Chuột phải vào icon $\to$ tích chọn **"Tự động khôi phục Tiếng Anh"** và **"Bật Từ Điển Cá Nhân"**.
-- **Thêm từ vào từ điển ngoại lệ**:
-  1. Chọn **"Chỉnh sửa Từ Điển Cá Nhân (dictionary.conf)..."** $\to$ Notepad sẽ mở ra.
-  2. Gõ mỗi từ tiếng Anh hoặc tên riêng trên một dòng:
-     ```text
-     # Mỗi từ một dòng (chữ thường)
-     github
-     vscode
-     react
-     vue
-     kubernetes
-     docker
-     figma
-     powershell
-     python
-     rust
-     database
-     ```
-  3. Lưu file (`Ctrl + S`) và bấm **"Nạp lại Gõ Tắt & Từ Điển"**.
-- Từ nay, khi bạn gõ những từ này rồi bấm phím cách (Space) hoặc dấu chấm phẩy (`;`), bộ gõ sẽ tự động trả về nguyên bản tiếng Anh, tuyệt đối không bị dính dấu sai chính tả.
+### 4. Tự Động Học Thói Quen Sửa Từ (Adaptive Habit Learner — Log 100 MB) & Từ Điển Cá Nhân
+Khi gõ code hoặc văn bản có lẫn từ tiếng Anh/thuật ngữ kỹ thuật hay tên riêng lạ, nếu bộ gõ lỡ biến thành dấu tiếng Việt và bạn sửa lại (bằng cách bấm `Backspace` xóa đi gõ lại chữ không dấu, gõ đúp phím dấu `ss`/`ff`/`ww`, bấm `Esc`, hoặc bấm `Flip Word`) từ **2 lần trở lên**:
+- **Tự động đưa vào Whitelist**: `VnCharKey` sẽ tự động học từ đó, ghi nối vào file `dictionary.conf` và lưu nhật ký tại `habit.log` (dung lượng tối đa **100 MB** tự động xoay vòng FIFO).
+- **Gặp lại là cho qua (Pass-through)**: Từ lần sau trở đi, khi bạn gõ lại từ đó, bộ gõ sẽ tự động giữ nguyên bản tiếng Anh mà bạn không bao giờ phải xóa đi sửa lại nữa!
+- **Thêm từ thủ công vào từ điển ngoại lệ**:
+  1. Chuột phải vào icon $\to$ tích chọn **"Tự động khôi phục Tiếng Anh"** và **"Bật Từ Điển Cá Nhân"**.
+  2. Chọn **"Chỉnh sửa Từ Điển Cá Nhân (dictionary.conf)..."** $\to$ Notepad sẽ mở ra.
+  3. Gõ mỗi từ tiếng Anh hoặc tên riêng trên một dòng, lưu file (`Ctrl + S`) và bấm **"Nạp lại Gõ Tắt & Từ Điển"**.
 
 ---
 
@@ -98,11 +83,11 @@ Khi đang gõ một từ tiếng Việt nhưng muốn hủy toàn bộ dấu v�
 
 ---
 
-### 7. Khởi Động Cùng Windows & Chế Độ Portable Tiện Dụng
+### 7. Khởi Động Cùng Windows & Chế Độ 100% Portable
 - **Khởi động cùng máy**: Chuột phải icon $\to$ tích chọn **"Khởi động cùng Windows"**. Ứng dụng sẽ tự khởi động ngầm êm ái mỗi khi mở máy.
-- **Chế độ Portable (Chép USB mang đi)**:
-  - `VnCharKey.exe` ưu tiên lưu toàn bộ cấu hình (`config.conf`, `macros.conf`, `dictionary.conf`) **ngay trong cùng thư mục với file `.exe`**.
-  - Bạn chỉ cần copy cả thư mục chứa `VnCharKey.exe` vào USB hoặc lưu ở Google Drive / OneDrive, mang sang máy khác là sử dụng được ngay với đầy đủ phím tắt và danh sách gõ tắt quen thuộc của bạn, không cần cài đặt hay phân quyền Administrator.
+- **Chế độ 100% Portable (Lưu tất cả tại một nơi duy nhất)**:
+  - `VnCharKey.exe` luôn lưu toàn bộ dữ liệu (`config.conf`, `macros.conf`, `dictionary.conf`, và `habit.log`) **trực tiếp ngay trong cùng thư mục chứa file `VnCharKey.exe`** (tuyệt đối không rải rác vào `%APPDATA%`).
+  - Bạn chỉ cần copy cả thư mục chứa `VnCharKey.exe` vào USB hoặc ổ đĩa đám mây, mang sang bất kỳ máy nào khác là sử dụng được ngay với đầy đủ phím tắt, bảng gõ tắt và toàn bộ từ vựng mà bộ gõ đã tự học được.
 
 ---
 
