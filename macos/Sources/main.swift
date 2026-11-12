@@ -1237,7 +1237,7 @@ class VnchKeyIPCServer {
         }
 
         // Set socket file permissions to 0666 so any user/app can connect
-        chmod(socketPath, 0o666)
+        chmod(socketPath, 0o600)
 
         let source = DispatchSource.makeReadSource(fileDescriptor: fd, queue: DispatchQueue.global(qos: .utility))
         source.setEventHandler { [weak self] in
