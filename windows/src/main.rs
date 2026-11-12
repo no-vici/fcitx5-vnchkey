@@ -218,29 +218,14 @@ mod win_app {
     }
 
     fn config_dir() -> PathBuf {
-        // Ưu tiên Chế độ Portable: Lưu trực tiếp trong thư mục chứa file VnCharKey.exe
+        // Chế độ 100% Portable: Luôn lưu toàn bộ cấu hình (config.conf, macros.conf,
+        // dictionary.conf, habit.log) ngay trong thư mục chứa file VnCharKey.exe
         if let Ok(exe_path) = std::env::current_exe() {
             if let Some(exe_dir) = exe_path.parent() {
-                let portable_marker = exe_dir.join("portable.txt");
-                let portable_cfg = exe_dir.join("config.conf");
-                // Nếu có file marker hoặc đã có config.conf tại chỗ, hoặc thư mục có quyền ghi
-                if portable_marker.exists() || portable_cfg.exists() {
-                    return exe_dir.to_path_buf();
-                }
-                // Thử tạo một test file để kiểm tra quyền ghi vào thư mục exe
-                let test_file = exe_dir.join(".write_test");
-                if fs::write(&test_file, b"ok").is_ok() {
-                    let _ = fs::remove_file(&test_file);
-                    return exe_dir.to_path_buf();
-                }
+                return exe_dir.to_path_buf();
             }
         }
-
-        // Fallback: Nếu không ghi được vào thư mục exe (ví dụ Program Files), dùng %APPDATA%\VnCharKey
-        let base = std::env::var("APPDATA")
-            .map(PathBuf::from)
-            .unwrap_or_else(|_| PathBuf::from("."));
-        base.join("VnCharKey")
+        PathBuf::from(".")
     }
 
     fn macros_path() -> PathBuf {
