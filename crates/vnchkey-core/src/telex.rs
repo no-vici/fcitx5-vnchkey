@@ -317,9 +317,10 @@ impl TelexEngine {
                         rebalance_tone(&mut letters, current_tone, self.tone_style);
                         return (letters.into_iter().collect(), true, true);
                     } else {
-                        // Promote to 'ươ'
-                        letters[u_idx] = compose_vowel('ư', 0, u_up);
-                        letters[o_idx] = compose_vowel('ơ', 0, o_up);
+                        // Promote to 'ươ' (harmonize casing: 'Ư' only if 'o' is also uppercase)
+                        let target_u_up = u_up && (o_up || ch.is_uppercase());
+                        letters[u_idx] = compose_vowel('ư', 0, target_u_up);
+                        letters[o_idx] = compose_vowel('ơ', 0, o_up || ch.is_uppercase());
                         rebalance_tone(&mut letters, current_tone, self.tone_style);
                         return (letters.into_iter().collect(), true, false);
                     }
@@ -570,7 +571,10 @@ pub fn apply_smart_uo_horn(letters: &mut [char]) -> bool {
             let (o_base, o_tone, o_up) = decompose_vowel(letters[o_idx]).unwrap();
             // Only auto-promote if 'o' is not explicitly circumflexed ('ô' as in 'cuộc', 'muốn')
             if o_base != 'ô' && (u_base == 'u' || o_base == 'o') {
-                letters[u_idx] = compose_vowel('ư', u_tone, u_up);
+                // TitleCase / Shift-bleed guard: if 'o' (and rest of syllable) is lowercase,
+                // 'u' cannot be uppercase 'Ư' in a TitleCase word (e.g. 'DUong' / 'Duong' -> 'Đường', never 'ĐƯờng').
+                let target_u_up = u_up && o_up;
+                letters[u_idx] = compose_vowel('ư', u_tone, target_u_up);
                 letters[o_idx] = compose_vowel('ơ', o_tone, o_up);
                 return true;
             }

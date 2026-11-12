@@ -209,7 +209,9 @@ impl VniEngine {
                             rebalance_tone(&mut letters, current_tone, self.tone_style);
                             return (letters.into_iter().collect(), true, true);
                         } else {
-                            letters[u_idx] = compose_vowel('ư', 0, u_up);
+                            // Promote to 'ươ' (harmonize casing: 'Ư' only if 'o' is also uppercase)
+                            let target_u_up = u_up && o_up;
+                            letters[u_idx] = compose_vowel('ư', 0, target_u_up);
                             letters[o_idx] = compose_vowel('ơ', 0, o_up);
                             rebalance_tone(&mut letters, current_tone, self.tone_style);
                             return (letters.into_iter().collect(), true, false);
@@ -400,5 +402,11 @@ mod tests {
         assert_eq!(vni.feed("quon74").0, "quỡn");
         assert_eq!(vni.feed("thuo73").0, "thuở");
         assert_eq!(vni.feed("huo7").0, "huơ");
+
+        // Capitalization and Shift-bleed preservation in VNI
+        assert_eq!(vni.feed("duong92").0, "đường");
+        assert_eq!(vni.feed("Duong92").0, "Đường");
+        assert_eq!(vni.feed("DUong92").0, "Đường");
+        assert_eq!(vni.feed("DUONG92").0, "ĐƯỜNG");
     }
 }

@@ -263,6 +263,22 @@ impl ParsedSyllable {
             }
         }
 
+        let is_all_upper = self.onset.chars().all(|c| c.is_uppercase())
+            && self.coda.chars().all(|c| c.is_uppercase())
+            && nuc_chars.iter().all(|c| c.is_uppercase());
+
+        // In TitleCase or lowercase syllables (not ALL-CAPS), diphthong/nucleus vowels cannot have
+        // accidental Shift-bleed uppercase like 'Ư' before 'ơ'/'ờ' (e.g. 'ĐƯờng' -> 'Đường').
+        if !is_all_upper && nuc_chars.len() >= 2 {
+            let has_lower = nuc_chars.iter().any(|c| c.is_lowercase())
+                || self.coda.chars().any(|c| c.is_lowercase());
+            if has_lower {
+                for c in nuc_chars.iter_mut() {
+                    *c = c.to_lowercase().next().unwrap_or(*c);
+                }
+            }
+        }
+
         if let Some(g) = glide_char {
             res.push(g);
         }
@@ -766,6 +782,14 @@ mod tests {
 
         let s4 = parse_syllable("QUỐC").unwrap();
         assert_eq!(s4.reconstruct(ToneStyle::Modern), "QUỐC");
+
+        // TitleCase harmonization: accidental Shift-bleed 'DUong' or 'ĐƯong' must reconstruct to 'Đường'
+        let s5 = parse_syllable("ĐƯờng").unwrap();
+        assert_eq!(s5.reconstruct(ToneStyle::Modern), "Đường");
+
+        let s6 = parse_syllable("ĐƯơng").unwrap();
+        let s6_toned = s6.with_tone(ToneMark::Grave);
+        assert_eq!(s6_toned.reconstruct(ToneStyle::Modern), "Đường");
     }
 
     #[test]
