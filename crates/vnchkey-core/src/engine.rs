@@ -914,9 +914,11 @@ impl Engine {
         // If the previous action was a macro expansion ending with Space (stage: Expanded),
         // and the incoming key is a punctuation that attaches directly to the word,
         // automatically eat the preceding space and snap the punctuation to the word!
+        // Note: ':' is excluded so users can immediately begin a new inline symbol shortcode (e.g. "Việt Nam :smile:").
         if let Some(macro_state) = self.last_macro.take() {
             if macro_state.delimiter == ' '
                 && macro_state.stage == MacroUndoStage::Expanded
+                && ch != ':'
                 && is_snappable_punctuation(ch)
             {
                 return EngineOutput {
@@ -929,6 +931,50 @@ impl Engine {
                 };
             }
             // For any other key, macro undo state is cleared
+        }
+
+        // Inline Math Symbols & Emoji Prefix (:smile:, :alpha:, :check:)
+        if ch == ':' {
+            self.reopen_state = None;
+            self.last_delimiter = Some(':');
+            self.last_delimiter_spaced = false;
+
+            if self.current_word.is_empty() {
+                // Starts an inline shortcode sequence (e.g. :smile)
+                self.raw_strokes.push(':');
+                self.current_word.push(':');
+                self.english_locked = true;
+                return EngineOutput {
+                    backspaces: 0,
+                    commit_text: self.format_commit(":"),
+                    consumed: false,
+                    auto_restored: false,
+                    macro_expanded: false,
+                    adaptive_delay_ms: 0,
+                };
+            } else if self.current_word.starts_with(':') && self.current_word.len() > 1 {
+                // Closing colon of an inline shortcode (e.g. ":smile" + ':' -> ":smile:")
+                if let Some(symbol) = crate::symbols::lookup_symbol(&self.current_word) {
+                    let backspaces = self.current_word.chars().count();
+                    let trigger = format!("{}:", self.current_word);
+                    self.reset();
+                    self.last_macro = Some(LastMacroExpansion {
+                        trigger: trigger.clone(),
+                        expansion: symbol.to_string(),
+                        delimiter: ':',
+                        stage: MacroUndoStage::TrailingSpaceRemoved, // Expansion directly replaces trigger without trailing delimiter
+                    });
+                    self.last_completed_word = Some(symbol.to_string());
+                    return EngineOutput {
+                        backspaces,
+                        commit_text: symbol.to_string(),
+                        consumed: true,
+                        auto_restored: false,
+                        macro_expanded: true,
+                        adaptive_delay_ms: 0,
+                    };
+                }
+            }
         }
 
         // Developer-Aware: Underscore code identifier handling (e.g. _variable, __init__, snake_case)
@@ -973,6 +1019,31 @@ impl Engine {
             self.last_delimiter_spaced = ch == ' ';
 
             if !self.current_word.is_empty() {
+                // 0. Inline Math Symbol / Emoji expansion on Space (e.g. ":smile " -> "😄 ")
+                if ch == ' ' && self.current_word.starts_with(':') && self.current_word.len() > 1 {
+                    if let Some(symbol) = crate::symbols::lookup_symbol(&self.current_word) {
+                        let backspaces = self.current_word.chars().count();
+                        let trigger = format!("{} ", self.current_word);
+                        let commit_text = format!("{} ", symbol);
+                        self.reset();
+                        self.last_macro = Some(LastMacroExpansion {
+                            trigger,
+                            expansion: symbol.to_string(),
+                            delimiter: ' ',
+                            stage: MacroUndoStage::Expanded,
+                        });
+                        self.last_completed_word = Some(commit_text.clone());
+                        return EngineOutput {
+                            backspaces,
+                            commit_text,
+                            consumed: true,
+                            auto_restored: false,
+                            macro_expanded: true,
+                            adaptive_delay_ms: 0,
+                        };
+                    }
+                }
+
                 // 1. Macro expansion check (suppressed if this word was just reverted via Backspace)
                 let is_suppressed = self.suppressed_macro.as_deref() == Some(&self.current_word);
                 if self.config.enable_macro && !is_suppressed {
@@ -1886,6 +1957,45 @@ mod tests {
         let comma_after_bs = engine.process_key(',', 0.0);
         assert_eq!(comma_after_bs.backspaces, 0);
         assert_eq!(comma_after_bs.commit_text, ",");
+    }
+
+    #[test]
+    fn test_inline_symbol_and_emoji_expansion() {
+        let mut engine = Engine::new(EngineConfig::default());
+
+        // 1. Emoji expansion with closing colon: ":smile:" -> "😄"
+        let res1 = type_word(&mut engine, ":smile:");
+        assert_eq!(res1, "😄");
+
+        // 2. Math symbol expansion with closing colon: ":alpha:" -> "α"
+        engine.reset();
+        let res2 = type_word(&mut engine, ":alpha:");
+        assert_eq!(res2, "α");
+
+        // 3. Math symbol expansion with space delimiter: ":sum " -> "∑ "
+        engine.reset();
+        let res3 = type_word(&mut engine, ":sum ");
+        assert_eq!(res3, "∑ ");
+
+        // 4. Arrow expansion: ":arrow:" -> "➔"
+        engine.reset();
+        let res4 = type_word(&mut engine, ":arrow:");
+        assert_eq!(res4, "➔");
+
+        // 5. Check mark expansion: ":check:" -> "✓"
+        engine.reset();
+        let res5 = type_word(&mut engine, ":check:");
+        assert_eq!(res5, "✓");
+
+        // 6. Two-step undo on Backspace: ":smile:" expanded to "😄", Backspace restores ":smile:"
+        engine.reset();
+        type_word(&mut engine, ":smile:");
+        let undo = engine.undo_macro_expansion();
+        assert!(undo.is_some());
+        let (bs, restore) = undo.unwrap();
+        // Since delimiter was ':', first backspace deletes the single expansion char and restores shortcode
+        assert_eq!(bs, 1);
+        assert_eq!(restore, ":smile:");
     }
 
     #[test]

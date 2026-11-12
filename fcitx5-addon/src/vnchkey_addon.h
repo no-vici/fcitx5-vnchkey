@@ -15,6 +15,7 @@
 #include <fcitx/userinterfacemanager.h>
 #include <fcitx-utils/signals.h>
 #include <fcitx-utils/textformatflags.h>
+#include <fcitx/candidatelist.h>
 #include <cstdint>
 #include <cstddef>
 #include <chrono>
@@ -66,6 +67,7 @@ extern "C" {
     int fcitx5_vnchkey_undo_escape(void* ctx, size_t* out_backspaces, char** out_commit);
     int fcitx5_vnchkey_rescue_sentence(void* ctx, const char* text, char** out_rescued);
     int fcitx5_vnchkey_apply_accent_to_selection(void* ctx, const char* selection, uint32_t ch, char** out_transformed);
+    char* fcitx5_vnchkey_search_symbols(const char* query, uint32_t limit);
 }
 
 class VnchkeyEngine : public fcitx::InputMethodEngineV2 {

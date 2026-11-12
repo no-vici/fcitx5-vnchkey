@@ -1,6 +1,6 @@
 //! C ABI Bridge for Fcitx5 Addon Integration.
 
-use std::ffi::CString;
+use std::ffi::{CStr, CString};
 use std::os::raw::{c_char, c_int};
 use vnchkey_core::{Engine, EngineConfig};
 
@@ -520,6 +520,40 @@ pub unsafe extern "C" fn fcitx5_vnchkey_get_tone_style(ctx: *mut Fcitx5VnchkeyCo
         }
     } else {
         0
+    }
+}
+
+/// Searches for matching math symbols and emojis by shortcode prefix.
+/// Results are formatted as lines of `symbol\t:shortcode:\n`.
+/// Must be freed with `fcitx5_vnchkey_free_string`.
+#[no_mangle]
+pub unsafe extern "C" fn fcitx5_vnchkey_search_symbols(
+    query: *const c_char,
+    limit: u32,
+) -> *mut c_char {
+    if query.is_null() {
+        return std::ptr::null_mut();
+    }
+    let c_str = match CStr::from_ptr(query).to_str() {
+        Ok(s) => s,
+        Err(_) => return std::ptr::null_mut(),
+    };
+    let matches = vnchkey_core::search_symbols(c_str, limit as usize);
+    if matches.is_empty() {
+        return std::ptr::null_mut();
+    }
+    let mut out = String::new();
+    for (sym, code) in matches {
+        out.push_str(sym);
+        out.push('\t');
+        out.push(':');
+        out.push_str(code);
+        out.push(':');
+        out.push('\n');
+    }
+    match CString::new(out) {
+        Ok(cs) => cs.into_raw(),
+        Err(_) => std::ptr::null_mut(),
     }
 }
 

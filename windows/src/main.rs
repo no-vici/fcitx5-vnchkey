@@ -251,6 +251,18 @@ mod win_app {
         let c_path = config_path();
         if !c_path.exists() {
             let default_cfg = "# VnCharKey Windows Configuration\n\
+                               method=auto\n\
+                               charset=unicode\n\
+                               tone_style=classic\n\
+                               spell_check=true\n\
+                               auto_restore=true\n\
+                               esc_restore=true\n\
+                               bracket_transform=false\n\
+                               quick_telex=false\n\
+                               quick_start_consonant=false\n\
+                               quick_end_consonant=false\n\
+                               macro_enabled=true\n\
+                               dict_enabled=true\n\
                                ctrl=true\n\
                                shift=true\n\
                                alt=false\n\
@@ -357,10 +369,131 @@ mod win_app {
         }
     }
 
-    fn save_shortcut_config(sc: &CustomShortcut, flip_sc: &CustomShortcut) {
+    fn load_full_config(st: &mut AppState) {
         let path = config_path();
+        if let Ok(content) = fs::read_to_string(&path) {
+            for line in content.lines() {
+                let trimmed = line.trim();
+                if trimmed.is_empty() || trimmed.starts_with('#') {
+                    continue;
+                }
+                if let Some((k, v)) = trimmed.split_once('=') {
+                    let k = k.trim().to_lowercase();
+                    let v = v.trim().to_lowercase();
+                    match k.as_str() {
+                        "method" => {
+                            match v.as_str() {
+                                "telex" => {
+                                    st.method = InputMethod::Telex;
+                                    st.engine.set_method(InputMethod::Telex);
+                                }
+                                "vni" => {
+                                    st.method = InputMethod::Vni;
+                                    st.engine.set_method(InputMethod::Vni);
+                                }
+                                "simpletelex" | "simple_telex" => {
+                                    st.method = InputMethod::SimpleTelex;
+                                    st.engine.set_method(InputMethod::SimpleTelex);
+                                }
+                                _ => {
+                                    st.method = InputMethod::Auto;
+                                    st.engine.set_method(InputMethod::Auto);
+                                }
+                            }
+                        }
+                        "charset" => {
+                            if v == "composite" || v == "nfd" {
+                                st.charset = Charset::UnicodeComposite;
+                                st.engine.set_charset(Charset::UnicodeComposite);
+                            } else {
+                                st.charset = Charset::Unicode;
+                                st.engine.set_charset(Charset::Unicode);
+                            }
+                        }
+                        "tone_style" => {
+                            if v == "modern" {
+                                st.tone_style = ToneStyle::Modern;
+                                st.engine.set_tone_style(ToneStyle::Modern);
+                            } else {
+                                st.tone_style = ToneStyle::Classic;
+                                st.engine.set_tone_style(ToneStyle::Classic);
+                            }
+                        }
+                        "spell_check" => {
+                            let val = v == "true" || v == "1";
+                            st.spell_check = val;
+                            st.engine.set_spell_check(val);
+                        }
+                        "auto_restore" => {
+                            let val = v == "true" || v == "1";
+                            st.auto_restore = val;
+                            st.engine.set_auto_restore_english(val);
+                        }
+                        "esc_restore" => {
+                            st.esc_restore = v == "true" || v == "1";
+                        }
+                        "bracket_transform" => {
+                            let val = v == "true" || v == "1";
+                            st.bracket_transform = val;
+                            st.engine.set_bracket_transform(val);
+                        }
+                        "quick_telex" => {
+                            st.engine.set_quick_telex(v == "true" || v == "1");
+                        }
+                        "quick_start_consonant" => {
+                            st.engine.set_quick_start_consonant(v == "true" || v == "1");
+                        }
+                        "quick_end_consonant" => {
+                            st.engine.set_quick_end_consonant(v == "true" || v == "1");
+                        }
+                        "macro_enabled" => {
+                            let val = v == "true" || v == "1";
+                            st.macro_enabled = val;
+                            st.engine.set_enable_macro(val);
+                        }
+                        "dict_enabled" => {
+                            let val = v == "true" || v == "1";
+                            st.dict_enabled = val;
+                            st.engine.set_enable_dictionary(val);
+                        }
+                        _ => {}
+                    }
+                }
+            }
+        }
+    }
+
+    fn save_app_config(st: &AppState) {
+        let path = config_path();
+        let method_str = match st.method {
+            InputMethod::Auto => "auto",
+            InputMethod::Telex => "telex",
+            InputMethod::Vni => "vni",
+            InputMethod::SimpleTelex => "simpletelex",
+        };
+        let charset_str = match st.charset {
+            Charset::Unicode => "unicode",
+            Charset::UnicodeComposite => "composite",
+        };
+        let tone_str = match st.tone_style {
+            ToneStyle::Modern => "modern",
+            ToneStyle::Classic => "classic",
+        };
+
         let content = format!(
             "# VnCharKey Windows Configuration\n\
+             method={}\n\
+             charset={}\n\
+             tone_style={}\n\
+             spell_check={}\n\
+             auto_restore={}\n\
+             esc_restore={}\n\
+             bracket_transform={}\n\
+             quick_telex={}\n\
+             quick_start_consonant={}\n\
+             quick_end_consonant={}\n\
+             macro_enabled={}\n\
+             dict_enabled={}\n\
              ctrl={}\n\
              shift={}\n\
              alt={}\n\
@@ -371,10 +504,32 @@ mod win_app {
              flip_alt={}\n\
              flip_win={}\n\
              flip_vk={}\n",
-            sc.ctrl, sc.shift, sc.alt, sc.win, sc.key_code,
-            flip_sc.ctrl, flip_sc.shift, flip_sc.alt, flip_sc.win, flip_sc.key_code
+            method_str,
+            charset_str,
+            tone_str,
+            st.spell_check,
+            st.auto_restore,
+            st.esc_restore,
+            st.bracket_transform,
+            st.engine.quick_telex(),
+            st.engine.quick_start_consonant(),
+            st.engine.quick_end_consonant(),
+            st.macro_enabled,
+            st.dict_enabled,
+            st.shortcut.ctrl, st.shortcut.shift, st.shortcut.alt, st.shortcut.win, st.shortcut.key_code,
+            st.flip_shortcut.ctrl, st.flip_shortcut.shift, st.flip_shortcut.alt, st.flip_shortcut.win, st.flip_shortcut.key_code
         );
         let _ = fs::write(&path, content);
+    }
+
+    fn save_shortcut_config(sc: &CustomShortcut, flip_sc: &CustomShortcut) {
+        STATE.with(|s| {
+            if let Ok(mut st) = s.try_borrow_mut() {
+                st.shortcut = *sc;
+                st.flip_shortcut = *flip_sc;
+                save_app_config(&st);
+            }
+        });
     }
 
     fn reload_files(engine: &mut Engine) {
@@ -1329,37 +1484,45 @@ mod win_app {
                             st.method = InputMethod::Auto;
                             st.engine.set_method(InputMethod::Auto);
                             update_tray_tooltip(hwnd, st.enabled, st.method);
+                            save_app_config(&st);
                         }
                         ID_METHOD_TELEX => {
                             st.method = InputMethod::Telex;
                             st.engine.set_method(InputMethod::Telex);
                             update_tray_tooltip(hwnd, st.enabled, st.method);
+                            save_app_config(&st);
                         }
                         ID_METHOD_VNI => {
                             st.method = InputMethod::Vni;
                             st.engine.set_method(InputMethod::Vni);
                             update_tray_tooltip(hwnd, st.enabled, st.method);
+                            save_app_config(&st);
                         }
                         ID_METHOD_SIMPLETELEX => {
                             st.method = InputMethod::SimpleTelex;
                             st.engine.set_method(InputMethod::SimpleTelex);
                             update_tray_tooltip(hwnd, st.enabled, st.method);
+                            save_app_config(&st);
                         }
                         ID_TONE_MODERN => {
                             st.tone_style = ToneStyle::Modern;
                             st.engine.set_tone_style(ToneStyle::Modern);
+                            save_app_config(&st);
                         }
                         ID_TONE_CLASSIC => {
                             st.tone_style = ToneStyle::Classic;
                             st.engine.set_tone_style(ToneStyle::Classic);
+                            save_app_config(&st);
                         }
                         ID_CHARSET_NFC => {
                             st.charset = Charset::Unicode;
                             st.engine.set_charset(Charset::Unicode);
+                            save_app_config(&st);
                         }
                         ID_CHARSET_NFD => {
                             st.charset = Charset::UnicodeComposite;
                             st.engine.set_charset(Charset::UnicodeComposite);
+                            save_app_config(&st);
                         }
                         ID_SHORTCUT_CTRL_SHIFT => {
                             st.shortcut = CustomShortcut::from_modifiers_and_key(true, true, false, false, 0);
@@ -1425,36 +1588,44 @@ mod win_app {
                             let val = !st.spell_check;
                             st.spell_check = val;
                             st.engine.set_spell_check(val);
+                            save_app_config(&st);
                         }
                         ID_TOGGLE_AUTORESTORE => {
                             let val = !st.auto_restore;
                             st.auto_restore = val;
                             st.engine.set_auto_restore_english(val);
+                            save_app_config(&st);
                         }
                         ID_TOGGLE_ESCRESTORE => {
                             st.esc_restore = !st.esc_restore;
+                            save_app_config(&st);
                         }
                         ID_TOGGLE_BRACKET => {
                             let val = !st.bracket_transform;
                             st.bracket_transform = val;
                             st.engine.set_bracket_transform(val);
+                            save_app_config(&st);
                         }
                         ID_TOGGLE_QUICK_TELEX => {
                             let val = !st.engine.quick_telex();
                             st.engine.set_quick_telex(val);
+                            save_app_config(&st);
                         }
                         ID_TOGGLE_QUICK_START => {
                             let val = !st.engine.quick_start_consonant();
                             st.engine.set_quick_start_consonant(val);
+                            save_app_config(&st);
                         }
                         ID_TOGGLE_QUICK_END => {
                             let val = !st.engine.quick_end_consonant();
                             st.engine.set_quick_end_consonant(val);
+                            save_app_config(&st);
                         }
                         ID_TOGGLE_MACRO => {
                             let val = !st.macro_enabled;
                             st.macro_enabled = val;
                             st.engine.set_enable_macro(val);
+                            save_app_config(&st);
                         }
                         ID_OPEN_MACROS => {
                             open_file_in_notepad(macros_path());
@@ -1463,6 +1634,7 @@ mod win_app {
                             let val = !st.dict_enabled;
                             st.dict_enabled = val;
                             st.engine.set_enable_dictionary(val);
+                            save_app_config(&st);
                         }
                         ID_OPEN_DICT => {
                             open_file_in_notepad(dict_path());
@@ -1507,6 +1679,7 @@ mod win_app {
             if let Ok(mut st) = s.try_borrow_mut() {
                 st.shortcut = initial_shortcut;
                 st.flip_shortcut = initial_flip_shortcut;
+                load_full_config(&mut st);
                 reload_files(&mut st.engine);
             }
         });

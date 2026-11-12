@@ -13,6 +13,7 @@ pub mod casing;
 pub mod engine;
 pub mod habit_learner;
 pub mod macros;
+pub mod symbols;
 pub mod syllable_parser;
 pub mod telex;
 pub mod vietnamese_dict;
@@ -28,6 +29,7 @@ pub use habit_learner::{
     CorrectionKind, HabitLearner, DEFAULT_MAX_LOG_BYTES, DEFAULT_PROMOTE_THRESHOLD,
 };
 pub use macros::MacroTable;
+pub use symbols::{lookup_symbol, search_symbols, SymbolEntry, SYMBOL_TABLE};
 pub use syllable_parser::{parse_syllable, ParsedSyllable, ToneMark};
 pub use telex::TelexEngine;
 pub use vietnamese_dict::{
