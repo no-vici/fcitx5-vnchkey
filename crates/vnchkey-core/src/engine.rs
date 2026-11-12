@@ -601,21 +601,28 @@ impl Engine {
             false
         } else {
             self.reopen_state = None;
-            // Track accented word candidate before user deletes it via Backspace:
-            // If the user finishes deleting and retypes the raw strokes, we learn it!
-            if has_vietnamese_diacritic(&self.current_word)
+            let was_accented = has_vietnamese_diacritic(&self.current_word)
                 && self.raw_strokes != self.current_word
-                && self.raw_strokes.len() >= 2
-                && self.deleted_accented_candidate.is_none()
-            {
-                self.deleted_accented_candidate =
-                    Some((self.raw_strokes.clone(), self.current_word.clone()));
-            }
+                && self.raw_strokes.len() >= 2;
+            let cand_to_save = if was_accented && self.deleted_accented_candidate.is_none() {
+                Some((self.raw_strokes.clone(), self.current_word.clone()))
+            } else {
+                None
+            };
+
             self.current_word.pop();
             self.raw_strokes.pop();
             if self.current_word.is_empty() {
+                // User has deleted the ENTIRE accented word down to empty:
+                // Only now do we arm deleted_accented_candidate for BackspaceRetype learning.
+                if let Some(cand) = cand_to_save {
+                    self.deleted_accented_candidate = Some(cand);
+                }
                 self.reset_word_buffers();
             } else {
+                // If user only partially backspaced (e.g. 'thương' -> 'thư' to fix typing error),
+                // cancel any candidate so it doesn't mistakenly learn typos.
+                self.deleted_accented_candidate = None;
                 self.manual_undo = true;
             }
             false
@@ -1146,7 +1153,8 @@ impl Engine {
 
             // No macro or auto-restore needed: reset word buffer and let delimiter pass through natively
             let has_word = !self.current_word.is_empty();
-            let target = format!("{}{}", self.current_word, ch);
+            let raw_target = format!("{}{}", self.current_word, ch);
+            let formatted_target = self.format_commit(&raw_target);
             if ch == ' ' && has_word && self.raw_strokes.len() <= 32 {
                 self.reopen_state = Some(ReopenWordState {
                     current_word: self.current_word.clone(),
@@ -1161,7 +1169,7 @@ impl Engine {
             }
             self.reset_word_buffers();
             if has_word {
-                self.last_completed_word = Some(target);
+                self.last_completed_word = Some(formatted_target);
             }
             return EngineOutput {
                 backspaces: 0,
