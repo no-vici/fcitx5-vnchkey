@@ -1756,7 +1756,7 @@ mod win_app {
         _id_event_thread: u32,
         _dwms_event_time: u32,
     ) {
-        if event == EVENT_SYSTEM_FOREGROUND && id_object == OBJID_WINDOW && id_child == INDEXID_CONTAINER {
+        if event == EVENT_SYSTEM_FOREGROUND && id_object == OBJID_WINDOW && id_child == 0 {
             if hwnd.is_null() || IsWindow(hwnd) == 0 {
                 return;
             }
