@@ -43,7 +43,26 @@ Tất cả những thay đổi nổi bật của dự án **vnchKey** (**fcitx5-
 ---
 
 ## [0.3.2] - 2026-11-12
-- Khắc phục triệt để hiện tượng Shift-bleed casing (ví dụ: `Duong92` ➔ `Đường`).
-- Bổ sung tùy chọn phím tắt Đảo Từ (Flip Word) vào Fcitx5 Settings (`Ctrl+Shift+Z`, `Alt+X`, `Ctrl+Alt+Z`, hoặc Tắt).
-- Cải thiện System Doctor kiểm tra biến môi trường Qt/Wayland.
+
+### 🐛 Sửa Lỗi & Cải Tiến
+- **Khắc phục hiện tượng Shift-bleed Casing**: Sửa lỗi gõ VNI TitleCase `Duong92` / `DUong92` bị thành `ĐƯờng`, đảm bảo luôn ra chuẩn `Đường`.
+- **Tùy chọn Phím Tắt Đảo Từ (Flip Word)**: Bổ sung cấu hình phím tắt cho Linux Fcitx5 Settings (`Ctrl+Shift+Z`, `Alt+X`, `Ctrl+Alt+Z`, hoặc Tắt) đồng bộ với Windows.
+- **Hệ Thống Chẩn Đoán System Doctor**: Cải tiến giao diện kiểm tra chẩn đoán biến môi trường Wayland/Qt (`QT_IM_MODULE`, `XMODIFIERS`).
+
+---
+
+## [0.3.1] - 2026-11-10
+
+### 🚀 Tính Năng Mới
+- **VnCharKey Cho Windows**: Phát hành phiên bản chính thức đầu tiên dành cho Windows dưới dạng file portable độc lập (`VnCharKey.exe`) với biểu tượng nón lá đặc trưng.
+- **Tự Động Đóng Gói CI/CD**: Thiết lập GitHub Actions tự động build và đóng gói file zip cho Windows.
+
+---
+
+## [0.3.0] - 2026-11-09
+
+### 🚀 Tính Năng Mới & Đột Phá
+- **Keystroke Idle Timeout**: Tự động giải phóng từ đang gõ dở sau một khoảng thời gian chờ (configurable idle timeout).
+- **Tích Hợp Chuyên Sâu Cho Neovim**: Hỗ trợ Esc thoát lệnh Neovim ngay lập tức và chế độ hoàn nguyên chữ thô với `Shift+Esc`.
+- **Học Tập Thói Quen (Adaptive Habit Learner)**: Giới hạn file log 100MB và tự động thăng cấp từ tiếng Anh thường dùng vào danh sách bỏ qua (Whitelist).
 
