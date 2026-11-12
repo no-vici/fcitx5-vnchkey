@@ -13,6 +13,33 @@
 #include <fstream>
 #include <cstdlib>
 #include <unistd.h>
+#include <spawn.h>
+
+extern char **environ;
+
+static void launchVnchkeySettings() {
+    // 1. Try absolute standard path first with posix_spawnp (avoids PATH environment issues)
+    pid_t pid;
+    char* const argv1[] = {(char*)"fcitx5-vnchkey-settings", nullptr};
+    if (posix_spawnp(&pid, "/usr/bin/fcitx5-vnchkey-settings", nullptr, nullptr, argv1, environ) == 0) {
+        return;
+    }
+    char* const argv2[] = {(char*)"vnchkey-settings", nullptr};
+    if (posix_spawnp(&pid, "/usr/bin/vnchkey-settings", nullptr, nullptr, argv2, environ) == 0) {
+        return;
+    }
+
+    // 2. Try looking up in PATH
+    if (posix_spawnp(&pid, "fcitx5-vnchkey-settings", nullptr, nullptr, argv1, environ) == 0) {
+        return;
+    }
+    if (posix_spawnp(&pid, "vnchkey-settings", nullptr, nullptr, argv2, environ) == 0) {
+        return;
+    }
+
+    // 3. Last fallback: fcitx::startProcess
+    fcitx::startProcess({"fcitx5-vnchkey-settings"});
+}
 
 VnchkeyEngine::VnchkeyEngine(fcitx::AddonManager* manager)
     : manager_(manager) {
@@ -287,7 +314,7 @@ void VnchkeyEngine::setupStatusMenu() {
     actionSettings_->setLongText("Cài Đặt Fcitx5 vnchKey...");
     actionSettings_->setIcon("preferences-system");
     connections_.push_back(actionSettings_->connect<fcitx::SimpleAction::Activated>([](fcitx::InputContext*) {
-        fcitx::startProcess({"fcitx5-vnchkey-settings"});
+        launchVnchkeySettings();
     }));
     statusMenu_->addAction(actionSettings_.get());
 
