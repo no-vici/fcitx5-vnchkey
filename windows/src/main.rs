@@ -22,7 +22,7 @@ mod win_app {
     use std::ptr::null_mut;
     use std::time::{SystemTime, UNIX_EPOCH};
 
-    use vnchkey_core::{Charset, Engine, EngineConfig, InputMethod, ToneStyle, W2UType};
+    use vnchkey_core::{Charset, Engine, EngineConfig, InputMethod, ToneStyle};
     use windows_sys::Win32::Foundation::{HWND, LPARAM, LRESULT, POINT, WPARAM};
     use windows_sys::Win32::System::LibraryLoader::GetModuleHandleW;
     use windows_sys::Win32::System::ProcessStatus::GetModuleBaseNameW;
@@ -541,8 +541,8 @@ mod win_app {
     fn save_shortcut_config(sc: &CustomShortcut, flip_sc: &CustomShortcut) {
         STATE.with(|s| {
             if let Ok(mut st) = s.try_borrow_mut() {
-                st.shortcut = *sc;
-                st.flip_shortcut = *flip_sc;
+                st.shortcut = sc.clone();
+                st.flip_shortcut = flip_sc.clone();
                 save_app_config(&st);
             }
         });
@@ -781,10 +781,10 @@ mod win_app {
         let ctrl_down = ((GetAsyncKeyState(VK_CONTROL as i32) as u16 & 0x8000) != 0 || (is_keydown && is_ctrl)) && !(is_keyup && is_ctrl);
         let shift_down = ((GetAsyncKeyState(VK_SHIFT as i32) as u16 & 0x8000) != 0 || (is_keydown && is_shift)) && !(is_keyup && is_shift);
         let alt_down = ((GetAsyncKeyState(VK_MENU as i32) as u16 & 0x8000) != 0 || (is_keydown && is_alt)) && !(is_keyup && is_alt);
-        let win_down = (((GetAsyncKeyState(VK_LWIN as i32) as u16 & 0x8000) != 0
+        let win_down = ((GetAsyncKeyState(VK_LWIN as i32) as u16 & 0x8000) != 0
             || (GetAsyncKeyState(VK_RWIN as i32) as u16 & 0x8000) != 0
             || (is_keydown && is_win))
-            && !(is_keyup && is_win));
+            && !(is_keyup && is_win);
 
         // --- Custom Shortcut Recorder Mode ---
         let mut recorded_new_shortcut = false;
@@ -908,7 +908,9 @@ mod win_app {
                 if let Ok(mut st) = s.try_borrow_mut() {
                     st.enabled = !st.enabled;
                     if st.per_app && !st.current_app.is_empty() {
-                        st.app_states.insert(st.current_app.clone(), st.enabled);
+                        let cur_app = st.current_app.clone();
+                        let enabled = st.enabled;
+                        st.app_states.insert(cur_app, enabled);
                     }
                     st.engine.reset();
                     update_tray_tooltip(st.hwnd, st.enabled, st.method);
@@ -1504,7 +1506,9 @@ mod win_app {
                         if let Ok(mut st) = s.try_borrow_mut() {
                             st.enabled = !st.enabled;
                             if st.per_app && !st.current_app.is_empty() {
-                                st.app_states.insert(st.current_app.clone(), st.enabled);
+                                let cur_app = st.current_app.clone();
+                                let enabled = st.enabled;
+                                st.app_states.insert(cur_app, enabled);
                             }
                             st.engine.reset();
                             update_tray_tooltip(hwnd, st.enabled, st.method);
@@ -1522,7 +1526,9 @@ mod win_app {
                         ID_TRAY_TOGGLE => {
                             st.enabled = !st.enabled;
                             if st.per_app && !st.current_app.is_empty() {
-                                st.app_states.insert(st.current_app.clone(), st.enabled);
+                                let cur_app = st.current_app.clone();
+                                let enabled = st.enabled;
+                                st.app_states.insert(cur_app, enabled);
                             }
                             st.engine.reset();
                             update_tray_tooltip(hwnd, st.enabled, st.method);
@@ -1776,7 +1782,9 @@ mod win_app {
 
                         // Save current app's state if we are leaving it
                         if !st.current_app.is_empty() {
-                            st.app_states.insert(st.current_app.clone(), st.enabled);
+                            let cur_app = st.current_app.clone();
+                            let enabled = st.enabled;
+                            st.app_states.insert(cur_app, enabled);
                         }
 
                         st.current_app = proc_name.clone();
