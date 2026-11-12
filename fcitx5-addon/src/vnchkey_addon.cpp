@@ -1,6 +1,7 @@
 #include "vnchkey_addon.h"
 #include <fcitx-utils/keysym.h>
 #include <fcitx-utils/key.h>
+#include <fcitx-utils/misc.h>
 #include <fcitx/inputcontext.h>
 #include <fcitx/inputcontextmanager.h>
 #include <fcitx/statusarea.h>
@@ -280,16 +281,13 @@ void VnchkeyEngine::setupStatusMenu() {
     actionSeparator3_->setSeparator(true);
     statusMenu_->addAction(actionSeparator3_.get());
 
-    // 4. Launch Settings GUI
+    // 4. Launch Settings GUI safely without deadlock in multi-threaded event loop
     actionSettings_ = std::make_unique<fcitx::SimpleAction>();
     actionSettings_->setShortText("Cài Đặt");
     actionSettings_->setLongText("Cài Đặt Fcitx5 vnchKey...");
     actionSettings_->setIcon("preferences-system");
     connections_.push_back(actionSettings_->connect<fcitx::SimpleAction::Activated>([](fcitx::InputContext*) {
-        if (fork() == 0) {
-            execlp("fcitx5-vnchkey-settings", "fcitx5-vnchkey-settings", nullptr);
-            _exit(0);
-        }
+        fcitx::startProcess({"fcitx5-vnchkey-settings"});
     }));
     statusMenu_->addAction(actionSettings_.get());
 
@@ -731,6 +729,12 @@ void VnchkeyEngine::loadConfig() {
                 config_modern_style_ = (line.find("False") == std::string::npos && line.find("false") == std::string::npos);
             } else if (line.rfind("BracketTransform=", 0) == 0) {
                 config_bracket_transform_ = (line.find("True") != std::string::npos || line.find("true") != std::string::npos);
+            } else if (line.rfind("FastConsonantDoubling=", 0) == 0 || line.rfind("QuickTelex=", 0) == 0) {
+                config_quick_telex_ = (line.find("True") != std::string::npos || line.find("true") != std::string::npos);
+            } else if (line.rfind("QuickStartConsonant=", 0) == 0) {
+                config_quick_start_consonant_ = (line.find("True") != std::string::npos || line.find("true") != std::string::npos);
+            } else if (line.rfind("QuickEndConsonant=", 0) == 0) {
+                config_quick_end_consonant_ = (line.find("True") != std::string::npos || line.find("true") != std::string::npos);
             } else if (line.rfind("TypeW2U=", 0) == 0) {
                 std::string val = line.substr(8);
                 if (val.find("Always") != std::string::npos) {
@@ -760,6 +764,9 @@ void VnchkeyEngine::loadConfig() {
         fcitx5_vnchkey_set_dictionary_enabled(ctx, config_dictionary_);
         fcitx5_vnchkey_set_tone_style(ctx, config_modern_style_ ? 0 : 1);
         fcitx5_vnchkey_set_bracket_transform(ctx, config_bracket_transform_);
+        fcitx5_vnchkey_set_quick_telex(ctx, config_quick_telex_);
+        fcitx5_vnchkey_set_quick_start_consonant(ctx, config_quick_start_consonant_);
+        fcitx5_vnchkey_set_quick_end_consonant(ctx, config_quick_end_consonant_);
         fcitx5_vnchkey_set_w2u(ctx, config_w2u_);
         uint32_t charset_code = (config_charset_.find("Composite") != std::string::npos || config_charset_.find("Tổ hợp") != std::string::npos) ? 1 : 0;
         fcitx5_vnchkey_set_charset(ctx, charset_code);
@@ -791,6 +798,10 @@ void VnchkeyEngine::saveConfig() {
                     l.rfind("EnableMacro=", 0) != 0 &&
                     l.rfind("EscRestoreRaw=", 0) != 0 &&
                     l.rfind("FlipShortcut=", 0) != 0 &&
+                    l.rfind("FastConsonantDoubling=", 0) != 0 &&
+                    l.rfind("QuickTelex=", 0) != 0 &&
+                    l.rfind("QuickStartConsonant=", 0) != 0 &&
+                    l.rfind("QuickEndConsonant=", 0) != 0 &&
                     l.rfind("SpellCheck=", 0) != 0 &&
                     l.rfind("EnableDictionary=", 0) != 0) {
                     lines.push_back(l);
@@ -818,6 +829,10 @@ void VnchkeyEngine::saveConfig() {
         out << "EnableMacro=" << (config_macro_ ? "True" : "False") << "\n";
         out << "EscRestoreRaw=" << (config_esc_restore_raw_ ? "True" : "False") << "\n";
         out << "FlipShortcut=" << config_flip_shortcut_ << "\n";
+        out << "FastConsonantDoubling=" << (config_quick_telex_ ? "True" : "False") << "\n";
+        out << "QuickTelex=" << (config_quick_telex_ ? "True" : "False") << "\n";
+        out << "QuickStartConsonant=" << (config_quick_start_consonant_ ? "True" : "False") << "\n";
+        out << "QuickEndConsonant=" << (config_quick_end_consonant_ ? "True" : "False") << "\n";
         out << "SpellCheck=" << (config_spell_check_ ? "True" : "False") << "\n";
         out << "EnableDictionary=" << (config_dictionary_ ? "True" : "False") << "\n";
     }

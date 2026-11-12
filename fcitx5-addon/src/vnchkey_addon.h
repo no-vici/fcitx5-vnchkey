@@ -52,6 +52,9 @@ extern "C" {
     void fcitx5_vnchkey_set_macro_enabled(void* ctx, bool enabled);
     bool fcitx5_vnchkey_get_macro_enabled(void* ctx);
     void fcitx5_vnchkey_set_bracket_transform(void* ctx, bool enabled);
+    void fcitx5_vnchkey_set_quick_telex(void* ctx, bool enabled);
+    void fcitx5_vnchkey_set_quick_start_consonant(void* ctx, bool enabled);
+    void fcitx5_vnchkey_set_quick_end_consonant(void* ctx, bool enabled);
     void fcitx5_vnchkey_set_w2u(void* ctx, uint32_t mode);
     void fcitx5_vnchkey_set_tone_style(void* ctx, uint32_t style);
     uint32_t fcitx5_vnchkey_get_tone_style(void* ctx);
@@ -119,6 +122,9 @@ private:
     bool config_dictionary_ = true;
     bool config_modern_style_ = false;
     bool config_bracket_transform_ = false;
+    bool config_quick_telex_ = false;
+    bool config_quick_start_consonant_ = false;
+    bool config_quick_end_consonant_ = false;
     uint32_t config_w2u_ = 0;
     bool config_esc_restore_raw_ = false; // false = Esc passes through to app (Neovim mode), Shift+Esc undos; true = Esc undos to raw
     bool config_select_and_replace_web_ = true;

@@ -30,6 +30,8 @@ pub struct VnchkeyConfig {
     pub smart_casing: bool,
     pub free_marking: bool,
     pub fast_consonant_doubling: bool,
+    pub quick_start_consonant: bool,
+    pub quick_end_consonant: bool,
     pub enable_macro: bool,
     pub capitalize_macro: bool,
     pub esc_restore_raw: bool,
@@ -64,6 +66,8 @@ impl Default for VnchkeyConfig {
             smart_casing: true,
             free_marking: true,
             fast_consonant_doubling: false,
+            quick_start_consonant: false,
+            quick_end_consonant: false,
             enable_macro: true,
             capitalize_macro: true,
             esc_restore_raw: false,
@@ -174,6 +178,9 @@ impl ConfigManager {
             if let Some(v) = map.get("SmartCasing") { cfg.smart_casing = v.eq_ignore_ascii_case("true"); }
             if let Some(v) = map.get("FreeMarking") { cfg.free_marking = v.eq_ignore_ascii_case("true"); }
             if let Some(v) = map.get("FastConsonantDoubling") { cfg.fast_consonant_doubling = v.eq_ignore_ascii_case("true"); }
+            if let Some(v) = map.get("QuickTelex") { cfg.fast_consonant_doubling = v.eq_ignore_ascii_case("true"); }
+            if let Some(v) = map.get("QuickStartConsonant") { cfg.quick_start_consonant = v.eq_ignore_ascii_case("true"); }
+            if let Some(v) = map.get("QuickEndConsonant") { cfg.quick_end_consonant = v.eq_ignore_ascii_case("true"); }
             if let Some(v) = map.get("EnableMacro") { cfg.enable_macro = v.eq_ignore_ascii_case("true"); }
             if let Some(v) = map.get("CapitalizeMacro") { cfg.capitalize_macro = v.eq_ignore_ascii_case("true"); }
             if let Some(v) = map.get("EscRestoreRaw") { cfg.esc_restore_raw = v.eq_ignore_ascii_case("true"); }
@@ -216,6 +223,9 @@ impl ConfigManager {
         lines.push(format!("SmartCasing={}", if cfg.smart_casing { "True" } else { "False" }));
         lines.push(format!("FreeMarking={}", if cfg.free_marking { "True" } else { "False" }));
         lines.push(format!("FastConsonantDoubling={}", if cfg.fast_consonant_doubling { "True" } else { "False" }));
+        lines.push(format!("QuickTelex={}", if cfg.fast_consonant_doubling { "True" } else { "False" }));
+        lines.push(format!("QuickStartConsonant={}", if cfg.quick_start_consonant { "True" } else { "False" }));
+        lines.push(format!("QuickEndConsonant={}", if cfg.quick_end_consonant { "True" } else { "False" }));
         lines.push(format!("EnableMacro={}", if cfg.enable_macro { "True" } else { "False" }));
         lines.push(format!("CapitalizeMacro={}", if cfg.capitalize_macro { "True" } else { "False" }));
         lines.push(format!("EscRestoreRaw={}", if cfg.esc_restore_raw { "True" } else { "False" }));
@@ -356,9 +366,20 @@ impl ConfigManager {
         let dir = Self::config_dir();
         fs::create_dir_all(&dir)?;
 
+        // Merge with existing on-disk dictionary to preserve newly learned words from HabitLearner
+        let mut merged = Self::load_dictionary();
+        for w in words {
+            let trimmed = w.trim();
+            if !trimmed.is_empty() && !merged.iter().any(|m| m.eq_ignore_ascii_case(trimmed)) {
+                merged.push(trimmed.to_string());
+            }
+        }
+        merged.sort_by_key(|a| a.to_lowercase());
+        merged.dedup_by(|a, b| a.eq_ignore_ascii_case(b));
+
         let mut lines = Vec::new();
         lines.push("# vnchKey Custom User Words Dictionary".to_string());
-        for w in words {
+        for w in &merged {
             let trimmed = w.trim();
             if !trimmed.is_empty() {
                 lines.push(trimmed.to_string());

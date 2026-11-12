@@ -738,7 +738,19 @@ impl SettingsApp {
 
         ui.checkbox(
             &mut self.config.fast_consonant_doubling,
-            "Gõ nhanh phụ âm đầu (cc -> ch, gg -> gi, kk -> kh)",
+            "Gõ nhanh phụ âm đôi (cc -> ch, gg -> gi, kk -> kh, nn -> ng, pp -> ph, tt -> th)",
+        );
+        ui.add_space(6.0);
+
+        ui.checkbox(
+            &mut self.config.quick_start_consonant,
+            "Gõ nhanh phụ âm đầu (f -> ph, j -> gi, w -> qu)",
+        );
+        ui.add_space(6.0);
+
+        ui.checkbox(
+            &mut self.config.quick_end_consonant,
+            "Gõ nhanh phụ âm cuối (g -> ng, h -> nh, k -> ch)",
         );
         ui.add_space(6.0);
 
