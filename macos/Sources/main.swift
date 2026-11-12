@@ -31,11 +31,16 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     private var dashMacroCheckbox: NSButton?
     private var dashDictCheckbox: NSButton?
     private var dashOpenAtLoginCheckbox: NSButton?
+    private var dashPerAppCheckbox: NSButton?
 
     // Biến instance giữ reference tới CLI IPC server
     private var ipcServer: VnchKeyIPCServer?
 
     private var permissionPollTimer: Timer?
+
+    // Per-App Input State: Lưu trạng thái bật/tắt theo từng Bundle ID
+    private var appStates: [String: Bool] = [:]
+    private var currentActiveBundleId: String?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         loadIcons()
@@ -45,9 +50,13 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         }
         keyManager = KeyTapManager(method: UInt32(defaults.integer(forKey: "vnchkey.method")))
         keyManager?.onToggleEnabledByShortcut = { [weak self] in
-            self?.updateStatusButton()
-            self?.rebuildMenu()
-            self?.syncDashboardControls()
+            guard let self = self else { return }
+            if self.isPerAppEnabled(), let currentId = self.currentActiveBundleId, let km = self.keyManager {
+                self.appStates[currentId] = km.isEnabled
+            }
+            self.updateStatusButton()
+            self.rebuildMenu()
+            self.syncDashboardControls()
         }
         keyManager?.onShortcutRecorded = { [weak self] recorded in
             self?.saveCustomShortcut(recorded)
@@ -56,6 +65,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         }
         applySavedPreferences()
         setupStatusBar()
+
+        // Tự động lắng nghe chuyển đổi ứng dụng để lưu và phục hồi trạng thái gõ tương ứng
+        setupAppFocusWatcher()
 
         // Khởi chạy IPC server lắng nghe lệnh toggle/on/off từ Neovim / CLI
         startIPCServer()
@@ -109,7 +121,12 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             defaults.set(false, forKey: "vnchkey.bracket")    // Gõ [ ] thành ơ ư
             defaults.set(0, forKey: "vnchkey.w2u")            // W -> ư (Không ở đầu từ)
             defaults.set(0, forKey: "vnchkey.idleTimeout")  // Mặc định tắt (0ms) để không ngắt gõ dấu VNI / flip word khi dừng tay
+            defaults.set(true, forKey: "vnchkey.perApp")     // Mặc định nhớ trạng thái theo từng ứng dụng
             saveCustomShortcut(.defaultShortcut)
+        }
+
+        if defaults.object(forKey: "vnchkey.perApp") == nil {
+            defaults.set(true, forKey: "vnchkey.perApp")
         }
 
         if defaults.object(forKey: "vnchkey.idleTimeout") == nil {
@@ -373,6 +390,10 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         menu.addItem(reloadFilesItem)
 
         menu.addItem(NSMenuItem.separator())
+        let perAppItem = NSMenuItem(title: "Nhớ theo từng ứng dụng (Per-App)", action: #selector(togglePerAppFromMenu(_:)), keyEquivalent: "")
+        perAppItem.state = isPerAppEnabled() ? .on : .off
+        menu.addItem(perAppItem)
+
         let loginItem = NSMenuItem(title: "Khởi động cùng máy (Open at login)", action: #selector(toggleOpenAtLoginFromMenu(_:)), keyEquivalent: "")
         loginItem.state = isOpenAtLoginEnabled() ? .on : .off
         menu.addItem(loginItem)
@@ -405,6 +426,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     @objc func toggleEnabled(_ sender: NSMenuItem) {
         guard let km = keyManager else { return }
         km.isEnabled.toggle()
+        if isPerAppEnabled(), let currentId = currentActiveBundleId {
+            appStates[currentId] = km.isEnabled
+        }
         updateStatusButton()
         rebuildMenu()
         syncDashboardControls()
@@ -571,9 +595,14 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         content.addSubview(generalBox)
 
         let enableCheck = NSButton(checkboxWithTitle: "Bật chế độ gõ Tiếng Việt", target: self, action: #selector(dashToggleEnabled(_:)))
-        enableCheck.frame = NSRect(x: 16, y: 162, width: 240, height: 22)
+        enableCheck.frame = NSRect(x: 16, y: 162, width: 210, height: 22)
         generalBox.addSubview(enableCheck)
         self.dashEnableCheckbox = enableCheck
+
+        let perAppCheck = NSButton(checkboxWithTitle: "Nhớ theo từng ứng dụng (Per-App)", target: self, action: #selector(dashPerAppChanged(_:)))
+        perAppCheck.frame = NSRect(x: 230, y: 162, width: 230, height: 22)
+        generalBox.addSubview(perAppCheck)
+        self.dashPerAppCheckbox = perAppCheck
 
         let methodLabel = NSTextField(labelWithString: "Kiểu gõ:")
         methodLabel.frame = NSRect(x: 16, y: 130, width: 150, height: 20)
@@ -802,11 +831,15 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         dashMacroCheckbox?.state = km.getMacroEnabled() ? .on : .off
         dashDictCheckbox?.state = km.getDictionaryEnabled() ? .on : .off
         dashOpenAtLoginCheckbox?.state = isOpenAtLoginEnabled() ? .on : .off
+        dashPerAppCheckbox?.state = isPerAppEnabled() ? .on : .off
     }
 
     @objc func dashToggleEnabled(_ sender: NSButton) {
         guard let km = keyManager else { return }
         km.isEnabled = (sender.state == .on)
+        if isPerAppEnabled(), let currentId = currentActiveBundleId {
+            appStates[currentId] = km.isEnabled
+        }
         updateStatusButton()
         rebuildMenu()
     }
@@ -1353,6 +1386,64 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
+    // MARK: - Per-App Input State (Nhớ trạng thái theo từng ứng dụng)
+
+    func isPerAppEnabled() -> Bool {
+        if defaults.object(forKey: "vnchkey.perApp") == nil { return true }
+        return defaults.bool(forKey: "vnchkey.perApp")
+    }
+
+    func setupAppFocusWatcher() {
+        if let frontApp = NSWorkspace.shared.frontmostApplication {
+            currentActiveBundleId = frontApp.bundleIdentifier ?? frontApp.localizedName
+        }
+        NSWorkspace.shared.notificationCenter.addObserver(
+            self,
+            selector: #selector(handleAppActivated(_:)),
+            name: NSWorkspace.didActivateApplicationNotification,
+            object: nil
+        )
+    }
+
+    @objc func handleAppActivated(_ notification: Notification) {
+        guard isPerAppEnabled(), let km = keyManager else { return }
+        guard let app = notification.userInfo?[NSWorkspace.applicationUserInfoKey] as? NSRunningApplication else { return }
+        let bundleId = app.bundleIdentifier ?? app.localizedName ?? "unknown"
+
+        // Bỏ qua nếu là chính app vnchKey
+        if bundleId == Bundle.main.bundleIdentifier { return }
+
+        // Lưu trạng thái ứng dụng trước khi rời đi
+        if let prevId = currentActiveBundleId {
+            appStates[prevId] = km.isEnabled
+        }
+
+        currentActiveBundleId = bundleId
+
+        // Khôi phục trạng thái cho ứng dụng mới (mặc định true nếu chưa có trong bộ nhớ)
+        let nextState = appStates[bundleId] ?? true
+        if km.isEnabled != nextState {
+            km.isEnabled = nextState
+            updateStatusButton()
+            rebuildMenu()
+            syncDashboardControls()
+        }
+    }
+
+    @objc func togglePerAppFromMenu(_ sender: NSMenuItem) {
+        let next = !isPerAppEnabled()
+        defaults.set(next, forKey: "vnchkey.perApp")
+        rebuildMenu()
+        syncDashboardControls()
+    }
+
+    @objc func dashPerAppChanged(_ sender: NSButton) {
+        let next = (sender.state == .on)
+        defaults.set(next, forKey: "vnchkey.perApp")
+        rebuildMenu()
+        syncDashboardControls()
+    }
+
     // MARK: - CLI & IPC Server for Neovim Modal Toggle
     func startIPCServer() {
         self.ipcServer = VnchKeyIPCServer { [weak self] command in
@@ -1369,6 +1460,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                     break
                 default:
                     break
+                }
+                if self.isPerAppEnabled(), let currentId = self.currentActiveBundleId {
+                    self.appStates[currentId] = km.isEnabled
                 }
                 self.updateStatusButton()
                 self.rebuildMenu()
