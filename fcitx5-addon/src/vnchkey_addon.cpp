@@ -15,6 +15,8 @@
 #include <unistd.h>
 #include <spawn.h>
 #include <sstream>
+#include <cstring>
+#include <cctype>
 
 extern char **environ;
 
@@ -22,8 +24,7 @@ class SymbolCandidateWord : public fcitx::CandidateWord {
 public:
     SymbolCandidateWord(void* engine_ctx, std::string symbol, std::string shortcode)
         : engine_ctx_(engine_ctx), symbol_(std::move(symbol)) {
-        setText(fcitx::Text(symbol_));
-        setComment(fcitx::Text(std::string(" ") + shortcode));
+        setText(fcitx::Text(symbol_ + " " + shortcode));
     }
 
     void select(fcitx::InputContext *ic) const override {

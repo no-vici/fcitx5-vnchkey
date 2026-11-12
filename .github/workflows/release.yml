@@ -83,7 +83,11 @@ jobs:
         shell: pwsh
         run: |
           mkdir dist
-          Copy-Item windows/target/release/VnCharKey.exe dist/
+          if (Test-Path windows/target/release/VnCharKey.exe) {
+              Copy-Item windows/target/release/VnCharKey.exe dist/
+          } elseif (Test-Path target/release/VnCharKey.exe) {
+              Copy-Item target/release/VnCharKey.exe dist/
+          }
           Copy-Item windows/assets/vncharkey.ico dist/
           Copy-Item windows/README.md dist/
           Compress-Archive -Path dist/* -DestinationPath VnCharKey-Windows-x64.zip
@@ -93,7 +97,7 @@ jobs:
         with:
           files: |
             VnCharKey-Windows-x64.zip
-            windows/target/release/VnCharKey.exe
+            dist/VnCharKey.exe
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
