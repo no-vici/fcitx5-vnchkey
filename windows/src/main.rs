@@ -14,6 +14,7 @@
 #[cfg(windows)]
 mod win_app {
     use std::cell::RefCell;
+    use std::collections::HashMap;
     use std::fs;
     use std::mem::size_of;
     use std::path::PathBuf;
@@ -24,6 +25,9 @@ mod win_app {
     use vnchkey_core::{Charset, Engine, EngineConfig, InputMethod, ToneStyle, W2UType};
     use windows_sys::Win32::Foundation::{HWND, LPARAM, LRESULT, POINT, WPARAM};
     use windows_sys::Win32::System::LibraryLoader::GetModuleHandleW;
+    use windows_sys::Win32::System::ProcessStatus::GetModuleBaseNameW;
+    use windows_sys::Win32::System::Threading::{OpenProcess, PROCESS_QUERY_INFORMATION, PROCESS_VM_READ};
+    use windows_sys::Win32::UI::Accessibility::{SetWinEventHook, UnhookWinEvent, HWINEVENTHOOK};
     use windows_sys::Win32::UI::Input::KeyboardAndMouse::*;
     use windows_sys::Win32::UI::Shell::*;
     use windows_sys::Win32::UI::WindowsAndMessaging::*;
@@ -32,6 +36,7 @@ mod win_app {
 
     // Menu Action IDs
     const ID_TRAY_TOGGLE: usize = 1001;
+    const ID_TOGGLE_PER_APP: usize = 1006;
 
     const ID_METHOD_AUTO: usize = 1002;
     const ID_METHOD_TELEX: usize = 1003;
@@ -176,6 +181,9 @@ mod win_app {
         bracket_transform: bool,
         macro_enabled: bool,
         dict_enabled: bool,
+        per_app: bool,
+        app_states: HashMap<String, bool>,
+        current_app: String,
         shortcut: CustomShortcut,
         flip_shortcut: CustomShortcut,
         recording_mode: RecordingMode,
@@ -197,6 +205,9 @@ mod win_app {
             bracket_transform: false,
             macro_enabled: true,
             dict_enabled: true,
+            per_app: true,
+            app_states: HashMap::new(),
+            current_app: String::new(),
             shortcut: CustomShortcut::default(),
             flip_shortcut: CustomShortcut::from_modifiers_and_key(true, true, false, false, 0x5A),
             recording_mode: RecordingMode::None,
@@ -456,6 +467,9 @@ mod win_app {
                             st.dict_enabled = val;
                             st.engine.set_enable_dictionary(val);
                         }
+                        "per_app" => {
+                            st.per_app = v == "true" || v == "1";
+                        }
                         _ => {}
                     }
                 }
@@ -494,6 +508,7 @@ mod win_app {
              quick_end_consonant={}\n\
              macro_enabled={}\n\
              dict_enabled={}\n\
+             per_app={}\n\
              ctrl={}\n\
              shift={}\n\
              alt={}\n\
@@ -516,6 +531,7 @@ mod win_app {
             st.engine.quick_end_consonant(),
             st.macro_enabled,
             st.dict_enabled,
+            st.per_app,
             st.shortcut.ctrl, st.shortcut.shift, st.shortcut.alt, st.shortcut.win, st.shortcut.key_code,
             st.flip_shortcut.ctrl, st.flip_shortcut.shift, st.flip_shortcut.alt, st.flip_shortcut.win, st.flip_shortcut.key_code
         );
@@ -891,6 +907,9 @@ mod win_app {
             STATE.with(|s| {
                 if let Ok(mut st) = s.try_borrow_mut() {
                     st.enabled = !st.enabled;
+                    if st.per_app && !st.current_app.is_empty() {
+                        st.app_states.insert(st.current_app.clone(), st.enabled);
+                    }
                     st.engine.reset();
                     update_tray_tooltip(st.hwnd, st.enabled, st.method);
                 }
@@ -1011,6 +1030,23 @@ mod win_app {
         CallNextHookEx(null_mut(), code, wparam, lparam)
     }
 
+    unsafe fn get_tray_icon(enabled: bool) -> windows_sys::Win32::UI::WindowsAndMessaging::HICON {
+        let hinstance = GetModuleHandleW(null_mut());
+        // Resource ID 2: 'V' badge icon, Resource ID 3: 'E' badge icon, Resource ID 1: default icon
+        let icon_id = if enabled { 2 } else { 3 };
+        let icon = LoadIconW(hinstance, icon_id as *const u16);
+        if !icon.is_null() {
+            icon
+        } else {
+            let fallback_icon = LoadIconW(hinstance, 1 as *const u16);
+            if !fallback_icon.is_null() {
+                fallback_icon
+            } else {
+                LoadIconW(null_mut(), IDI_APPLICATION)
+            }
+        }
+    }
+
     unsafe fn add_tray_icon(hwnd: HWND) {
         let mut nid: NOTIFYICONDATAW = std::mem::zeroed();
         nid.cbSize = size_of::<NOTIFYICONDATAW>() as u32;
@@ -1018,13 +1054,7 @@ mod win_app {
         nid.uID = 1;
         nid.uFlags = NIF_ICON | NIF_MESSAGE | NIF_TIP;
         nid.uCallbackMessage = WM_TRAYICON;
-        let hinstance = GetModuleHandleW(null_mut());
-        let custom_icon = LoadIconW(hinstance, 1 as *const u16);
-        nid.hIcon = if !custom_icon.is_null() {
-            custom_icon
-        } else {
-            LoadIconW(null_mut(), IDI_APPLICATION)
-        };
+        nid.hIcon = get_tray_icon(true);
 
         let tip = to_wstring("VnCharKey [V] - Gõ Tiếng Việt (Tự do)\nNhấp trái để Bật/Tắt • Chuột phải để Mở Menu");
         for (i, &ch) in tip.iter().take(127).enumerate() {
@@ -1039,7 +1069,8 @@ mod win_app {
         nid.cbSize = size_of::<NOTIFYICONDATAW>() as u32;
         nid.hWnd = hwnd;
         nid.uID = 1;
-        nid.uFlags = NIF_TIP;
+        nid.uFlags = NIF_TIP | NIF_ICON;
+        nid.hIcon = get_tray_icon(enabled);
 
         let m_str = match method {
             InputMethod::Auto => "Tự động (Auto)",
@@ -1081,6 +1112,7 @@ mod win_app {
             bracket,
             macro_en,
             dict_en,
+            per_app,
             shortcut,
             flip_shortcut,
         )) = STATE.with(|s| {
@@ -1095,6 +1127,7 @@ mod win_app {
                 st.bracket_transform,
                 st.macro_enabled,
                 st.dict_enabled,
+                st.per_app,
                 st.shortcut.clone(),
                 st.flip_shortcut.clone(),
             ))
@@ -1110,6 +1143,14 @@ mod win_app {
             MF_STRING | if enabled { MF_CHECKED } else { MF_UNCHECKED },
             ID_TRAY_TOGGLE,
             toggle_label.as_ptr(),
+        );
+
+        let per_app_label = to_wstring("Nhớ theo từng ứng dụng (Per-App)");
+        AppendMenuW(
+            menu,
+            MF_STRING | if per_app { MF_CHECKED } else { MF_UNCHECKED },
+            ID_TOGGLE_PER_APP,
+            per_app_label.as_ptr(),
         );
         AppendMenuW(menu, MF_SEPARATOR, 0, null_mut());
 
@@ -1462,6 +1503,9 @@ mod win_app {
                     STATE.with(|s| {
                         if let Ok(mut st) = s.try_borrow_mut() {
                             st.enabled = !st.enabled;
+                            if st.per_app && !st.current_app.is_empty() {
+                                st.app_states.insert(st.current_app.clone(), st.enabled);
+                            }
                             st.engine.reset();
                             update_tray_tooltip(hwnd, st.enabled, st.method);
                         }
@@ -1477,8 +1521,15 @@ mod win_app {
                     match id {
                         ID_TRAY_TOGGLE => {
                             st.enabled = !st.enabled;
+                            if st.per_app && !st.current_app.is_empty() {
+                                st.app_states.insert(st.current_app.clone(), st.enabled);
+                            }
                             st.engine.reset();
                             update_tray_tooltip(hwnd, st.enabled, st.method);
+                        }
+                        ID_TOGGLE_PER_APP => {
+                            st.per_app = !st.per_app;
+                            save_app_config(&st);
                         }
                         ID_METHOD_AUTO => {
                             st.method = InputMethod::Auto;
@@ -1672,6 +1723,79 @@ mod win_app {
         }
     }
 
+    unsafe fn get_process_name_for_hwnd(hwnd: HWND) -> Option<String> {
+        let mut pid: u32 = 0;
+        windows_sys::Win32::UI::WindowsAndMessaging::GetWindowThreadProcessId(hwnd, &mut pid);
+        if pid == 0 {
+            return None;
+        }
+
+        let h_proc = OpenProcess(PROCESS_QUERY_INFORMATION | PROCESS_VM_READ, 0, pid);
+        if h_proc.is_null() {
+            return None;
+        }
+
+        let mut buf = [0u16; 260];
+        let len = GetModuleBaseNameW(h_proc, null_mut(), buf.as_mut_ptr(), buf.len() as u32);
+        windows_sys::Win32::Foundation::CloseHandle(h_proc);
+
+        if len > 0 {
+            let name = String::from_utf16_lossy(&buf[..len as usize]).to_lowercase();
+            Some(name)
+        } else {
+            None
+        }
+    }
+
+    unsafe extern "system" fn win_event_proc(
+        _h_win_event_hook: HWINEVENTHOOK,
+        event: u32,
+        hwnd: HWND,
+        id_object: i32,
+        id_child: i32,
+        _id_event_thread: u32,
+        _dwms_event_time: u32,
+    ) {
+        if event == EVENT_SYSTEM_FOREGROUND && id_object == OBJID_WINDOW && id_child == INDEXID_CONTAINER {
+            if hwnd.is_null() || IsWindow(hwnd) == 0 {
+                return;
+            }
+
+            if let Some(proc_name) = get_process_name_for_hwnd(hwnd) {
+                // Ignore our own process
+                if proc_name.contains("vncharkey") {
+                    return;
+                }
+
+                STATE.with(|s| {
+                    if let Ok(mut st) = s.try_borrow_mut() {
+                        if !st.per_app {
+                            st.current_app = proc_name;
+                            return;
+                        }
+
+                        // Save current app's state if we are leaving it
+                        if !st.current_app.is_empty() {
+                            st.app_states.insert(st.current_app.clone(), st.enabled);
+                        }
+
+                        st.current_app = proc_name.clone();
+
+                        // Restore state for newly focused app (default to true)
+                        let next_state = *st.app_states.get(&proc_name).unwrap_or(&true);
+                        if st.enabled != next_state {
+                            st.enabled = next_state;
+                            st.engine.reset();
+                            let h = st.hwnd;
+                            let m = st.method;
+                            update_tray_tooltip(h, next_state, m);
+                        }
+                    }
+                });
+            }
+        }
+    }
+
     pub unsafe fn run() {
         ensure_config_files();
         let (initial_shortcut, initial_flip_shortcut) = load_shortcut_config();
@@ -1727,12 +1851,26 @@ mod win_app {
         let kbd_hook = SetWindowsHookExW(WH_KEYBOARD_LL, Some(keyboard_hook_proc), hinstance, 0);
         let mouse_hook = SetWindowsHookExW(WH_MOUSE_LL, Some(mouse_hook_proc), hinstance, 0);
 
+        // WinEventHook for tracking window focus changes (Per-App Input State)
+        let event_hook = SetWinEventHook(
+            EVENT_SYSTEM_FOREGROUND,
+            EVENT_SYSTEM_FOREGROUND,
+            null_mut(),
+            Some(win_event_proc),
+            0,
+            0,
+            WINEVENT_OUTOFCONTEXT | WINEVENT_SKIPOWNPROCESS,
+        );
+
         let mut msg: MSG = std::mem::zeroed();
         while GetMessageW(&mut msg, null_mut(), 0, 0) > 0 {
             TranslateMessage(&msg);
             DispatchMessageW(&msg);
         }
 
+        if !event_hook.is_null() {
+            UnhookWinEvent(event_hook);
+        }
         if !kbd_hook.is_null() {
             UnhookWindowsHookEx(kbd_hook);
         }

@@ -1,14 +1,13 @@
 fn main() {
     #[cfg(windows)]
     {
-        let manifest_dir = std::env::var("CARGO_MANIFEST_DIR").unwrap_or_else(|_| ".".to_string());
-        let icon_path = std::path::Path::new(&manifest_dir).join("assets").join("vncharkey.ico");
         let mut res = winres::WindowsResource::new();
-        if icon_path.exists() {
-            res.set_icon(icon_path.to_str().unwrap());
-        } else {
-            res.set_icon("assets/vncharkey.ico");
-        }
+        // ID 1: Default App Icon (vncharkey.ico)
+        res.set_icon("assets/vncharkey.ico");
+        // ID 2: 'V' Badge Icon for Vietnamese mode
+        res.set_icon_with_id("assets/vncharkey_v.ico", "2");
+        // ID 3: 'E' Badge Icon for English mode
+        res.set_icon_with_id("assets/vncharkey_e.ico", "3");
         let _ = res.compile();
     }
 }
