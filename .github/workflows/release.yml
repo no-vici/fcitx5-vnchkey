@@ -77,8 +77,7 @@ jobs:
 
       - name: Build VnCharKey for Windows
         run: |
-          cd windows
-          cargo build --release
+          cargo build --release --manifest-path windows/Cargo.toml
 
       - name: Package Windows Zip
         shell: pwsh

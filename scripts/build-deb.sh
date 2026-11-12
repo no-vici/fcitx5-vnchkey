@@ -111,6 +111,9 @@ echo "2.0" > "$BUILD_DIR/debian-binary"
 
 ar rcs "$OUTPUT_DEB" "$BUILD_DIR/debian-binary" "$BUILD_DIR/control.tar.gz" "$BUILD_DIR/data.tar.gz"
 
+# Dọn dẹp thư mục tạm để tránh tồn đọng tệp build cũ
+rm -rf "$BUILD_DIR"
+
 echo ""
 echo "🎉 ĐÓNG GÓI THÀNH CÔNG!"
 echo "Tệp cài đặt: $OUTPUT_DEB"
