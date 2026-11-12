@@ -716,6 +716,13 @@ void VnchkeyEngine::loadConfig() {
                 // Read into config if needed
             } else if (line.rfind("EscRestoreRaw=", 0) == 0) {
                 config_esc_restore_raw_ = (line.find("True") != std::string::npos || line.find("true") != std::string::npos);
+            } else if (line.rfind("FlipShortcut=", 0) == 0) {
+                std::string val = line.substr(13);
+                size_t start = val.find_first_not_of(" \t\"'");
+                size_t end = val.find_last_not_of(" \t\"'");
+                if (start != std::string::npos && end != std::string::npos) {
+                    config_flip_shortcut_ = val.substr(start, end - start + 1);
+                }
             } else if (line.rfind("SpellCheck=", 0) == 0) {
                 config_spell_check_ = (line.find("False") == std::string::npos);
             } else if (line.rfind("EnableDictionary=", 0) == 0) {
@@ -783,6 +790,7 @@ void VnchkeyEngine::saveConfig() {
                     l.rfind("AutoRestoreEnglish=", 0) != 0 &&
                     l.rfind("EnableMacro=", 0) != 0 &&
                     l.rfind("EscRestoreRaw=", 0) != 0 &&
+                    l.rfind("FlipShortcut=", 0) != 0 &&
                     l.rfind("SpellCheck=", 0) != 0 &&
                     l.rfind("EnableDictionary=", 0) != 0) {
                     lines.push_back(l);
@@ -809,6 +817,7 @@ void VnchkeyEngine::saveConfig() {
         out << "AutoRestoreEnglish=" << (config_auto_restore_ ? "True" : "False") << "\n";
         out << "EnableMacro=" << (config_macro_ ? "True" : "False") << "\n";
         out << "EscRestoreRaw=" << (config_esc_restore_raw_ ? "True" : "False") << "\n";
+        out << "FlipShortcut=" << config_flip_shortcut_ << "\n";
         out << "SpellCheck=" << (config_spell_check_ ? "True" : "False") << "\n";
         out << "EnableDictionary=" << (config_dictionary_ ? "True" : "False") << "\n";
     }
@@ -883,10 +892,25 @@ void VnchkeyEngine::keyEvent(const fcitx::InputMethodEntry &entry, fcitx::KeyEve
     auto states = rawKey.states();
     auto sym = rawKey.sym();
 
-    // Flip Word shortcut (Ctrl + Shift + Z): instantly toggle between Vietnamese and raw strokes
-    const bool isFlipWord = states.test(fcitx::KeyState::Ctrl) &&
-                            states.test(fcitx::KeyState::Shift) &&
-                            (sym == FcitxKey_Z || sym == FcitxKey_z);
+    // Flip Word shortcut: instantly toggle between Vietnamese and raw strokes
+    // Options: "Ctrl+Shift+Z", "Alt+X", "Ctrl+Alt+Z", or "Disabled"
+    bool isFlipWord = false;
+    if (config_flip_shortcut_ == "Ctrl+Shift+Z") {
+        isFlipWord = states.test(fcitx::KeyState::Ctrl) &&
+                     states.test(fcitx::KeyState::Shift) &&
+                     !states.test(fcitx::KeyState::Alt) &&
+                     (sym == FcitxKey_Z || sym == FcitxKey_z);
+    } else if (config_flip_shortcut_ == "Alt+X") {
+        isFlipWord = states.test(fcitx::KeyState::Alt) &&
+                     !states.test(fcitx::KeyState::Ctrl) &&
+                     !states.test(fcitx::KeyState::Shift) &&
+                     (sym == FcitxKey_X || sym == FcitxKey_x);
+    } else if (config_flip_shortcut_ == "Ctrl+Alt+Z") {
+        isFlipWord = states.test(fcitx::KeyState::Ctrl) &&
+                     states.test(fcitx::KeyState::Alt) &&
+                     !states.test(fcitx::KeyState::Shift) &&
+                     (sym == FcitxKey_Z || sym == FcitxKey_z);
+    }
     if (isFlipWord && fcitx5_vnchkey_has_active_word(ctx)) {
         size_t bs = 0;
         char* commitText = nullptr;

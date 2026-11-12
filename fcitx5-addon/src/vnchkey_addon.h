@@ -98,6 +98,7 @@ private:
     std::string config_method_ = "Auto";
     std::string config_charset_ = "Unicode";
     std::string config_output_mode_ = "Direct";
+    std::string config_flip_shortcut_ = "Ctrl+Shift+Z";
     bool config_remember_app_mode_ = true;
     bool config_preedit_tooltip_ = true;
     bool config_persistent_guard_ = true;

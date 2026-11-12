@@ -1693,6 +1693,22 @@ impl SettingsApp {
                     });
             });
         });
+        ui.add_space(8.0);
+
+        ui.horizontal(|ui| {
+            ui.label(egui::RichText::new("Phím tắt Đảo Từ (Flip Word)").size(13.0));
+            ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                egui::ComboBox::from_id_salt("flip_shortcut")
+                    .selected_text(&self.config.flip_shortcut)
+                    .width(200.0)
+                    .show_ui(ui, |ui| {
+                        ui.selectable_value(&mut self.config.flip_shortcut, "Ctrl+Shift+Z".to_string(), "Ctrl+Shift+Z");
+                        ui.selectable_value(&mut self.config.flip_shortcut, "Alt+X".to_string(), "Alt+X");
+                        ui.selectable_value(&mut self.config.flip_shortcut, "Ctrl+Alt+Z".to_string(), "Ctrl+Alt+Z");
+                        ui.selectable_value(&mut self.config.flip_shortcut, "Disabled".to_string(), "Tắt (Disabled)");
+                    });
+            });
+        });
     }
 
     // 8. Appearance Page
