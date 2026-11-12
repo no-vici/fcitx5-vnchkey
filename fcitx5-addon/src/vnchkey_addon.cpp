@@ -374,6 +374,66 @@ void VnchkeyEngine::setupStatusMenu() {
     }));
     statusMenu_->addAction(actionDictionary_.get());
 
+    // 3b. Quick Consonants Submenu (Tùy chọn Tốc ký...)
+    actionQuickMenuParent_ = std::make_unique<fcitx::SimpleAction>();
+    actionQuickMenuParent_->setShortText("Tốc Ký (Quick Consonants)");
+    actionQuickMenuParent_->setLongText("Tùy chọn Tốc ký (Quick Consonants)...");
+    quickSubMenu_ = std::make_unique<fcitx::Menu>();
+    actionQuickMenuParent_->setMenu(quickSubMenu_.get());
+
+    actionQuickTelex_ = std::make_unique<fcitx::SimpleAction>();
+    actionQuickTelex_->setCheckable(true);
+    actionQuickTelex_->setLongText("Quick Telex (cc->ch, kk->kh, tt->th...)");
+    connections_.push_back(actionQuickTelex_->connect<fcitx::SimpleAction::Activated>([this](fcitx::InputContext* ic) {
+        config_quick_telex_ = !config_quick_telex_;
+        for (void* ctx : {ctx_auto_, ctx_telex_, ctx_vni_}) {
+            if (ctx) fcitx5_vnchkey_set_quick_telex(ctx, config_quick_telex_);
+        }
+        updateActionState();
+        saveConfig();
+        if (ic && actionQuickTelex_) {
+            actionQuickTelex_->update(ic);
+            ic->updateUserInterface(fcitx::UserInterfaceComponent::StatusArea);
+        }
+    }));
+    quickSubMenu_->addAction(actionQuickTelex_.get());
+
+    actionQuickStartConsonant_ = std::make_unique<fcitx::SimpleAction>();
+    actionQuickStartConsonant_->setCheckable(true);
+    actionQuickStartConsonant_->setLongText("Phụ âm đầu nhanh (f->ph, j->gi, w->qu)");
+    connections_.push_back(actionQuickStartConsonant_->connect<fcitx::SimpleAction::Activated>([this](fcitx::InputContext* ic) {
+        config_quick_start_consonant_ = !config_quick_start_consonant_;
+        for (void* ctx : {ctx_auto_, ctx_telex_, ctx_vni_}) {
+            if (ctx) fcitx5_vnchkey_set_quick_start_consonant(ctx, config_quick_start_consonant_);
+        }
+        updateActionState();
+        saveConfig();
+        if (ic && actionQuickStartConsonant_) {
+            actionQuickStartConsonant_->update(ic);
+            ic->updateUserInterface(fcitx::UserInterfaceComponent::StatusArea);
+        }
+    }));
+    quickSubMenu_->addAction(actionQuickStartConsonant_.get());
+
+    actionQuickEndConsonant_ = std::make_unique<fcitx::SimpleAction>();
+    actionQuickEndConsonant_->setCheckable(true);
+    actionQuickEndConsonant_->setLongText("Phụ âm cuối nhanh (g->ng, h->nh, k->ch)");
+    connections_.push_back(actionQuickEndConsonant_->connect<fcitx::SimpleAction::Activated>([this](fcitx::InputContext* ic) {
+        config_quick_end_consonant_ = !config_quick_end_consonant_;
+        for (void* ctx : {ctx_auto_, ctx_telex_, ctx_vni_}) {
+            if (ctx) fcitx5_vnchkey_set_quick_end_consonant(ctx, config_quick_end_consonant_);
+        }
+        updateActionState();
+        saveConfig();
+        if (ic && actionQuickEndConsonant_) {
+            actionQuickEndConsonant_->update(ic);
+            ic->updateUserInterface(fcitx::UserInterfaceComponent::StatusArea);
+        }
+    }));
+    quickSubMenu_->addAction(actionQuickEndConsonant_.get());
+
+    statusMenu_->addAction(actionQuickMenuParent_.get());
+
     // Separator 3
     actionSeparator3_ = std::make_unique<fcitx::SimpleAction>();
     actionSeparator3_->setSeparator(true);
@@ -450,6 +510,19 @@ void VnchkeyEngine::updateActionState(fcitx::InputContext* ic) {
     if (actionDictionary_) {
         actionDictionary_->setChecked(config_dictionary_);
         actionDictionary_->setShortText(std::string(config_dictionary_ ? "✔ " : "✖ ") + "Custom Dictionary");
+    }
+
+    if (actionQuickTelex_) {
+        actionQuickTelex_->setChecked(config_quick_telex_);
+        actionQuickTelex_->setShortText(std::string(config_quick_telex_ ? "✔ " : "✖ ") + "Quick Telex (cc->ch, kk->kh, tt->th...)");
+    }
+    if (actionQuickStartConsonant_) {
+        actionQuickStartConsonant_->setChecked(config_quick_start_consonant_);
+        actionQuickStartConsonant_->setShortText(std::string(config_quick_start_consonant_ ? "✔ " : "✖ ") + "Phụ âm đầu (f->ph, j->gi, w->qu)");
+    }
+    if (actionQuickEndConsonant_) {
+        actionQuickEndConsonant_->setChecked(config_quick_end_consonant_);
+        actionQuickEndConsonant_->setShortText(std::string(config_quick_end_consonant_ ? "✔ " : "✖ ") + "Phụ âm cuối (g->ng, h->nh, k->ch)");
     }
 }
 

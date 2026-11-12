@@ -158,6 +158,13 @@ private:
     std::unique_ptr<fcitx::SimpleAction> actionSpellCheck_;
     std::unique_ptr<fcitx::SimpleAction> actionDictionary_;
 
+    // Quick Consonants Submenu
+    std::unique_ptr<fcitx::SimpleAction> actionQuickMenuParent_;
+    std::unique_ptr<fcitx::Menu> quickSubMenu_;
+    std::unique_ptr<fcitx::SimpleAction> actionQuickTelex_;
+    std::unique_ptr<fcitx::SimpleAction> actionQuickStartConsonant_;
+    std::unique_ptr<fcitx::SimpleAction> actionQuickEndConsonant_;
+
     std::unique_ptr<fcitx::SimpleAction> actionSeparator1_;
     std::unique_ptr<fcitx::SimpleAction> actionSeparator2_;
     std::unique_ptr<fcitx::SimpleAction> actionSeparator3_;

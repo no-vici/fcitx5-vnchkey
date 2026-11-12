@@ -1828,7 +1828,7 @@ impl SettingsApp {
                 .inner_margin(egui::Margin::symmetric(14, 4))
                 .show(ui, |ui| {
                     ui.label(
-                        egui::RichText::new("Version 0.3.2 (Stable)")
+                        egui::RichText::new(format!("Version {} (Stable)", env!("CARGO_PKG_VERSION")))
                             .size(11.0)
                             .color(egui::Color32::from_rgb(0xb4, 0xbe, 0xfe)),
                     );
@@ -2025,7 +2025,7 @@ impl SettingsApp {
         {
             let mut log_content = String::new();
             log_content.push_str("=== Fcitx5 vnchKey Debug Log Export ===\n");
-            log_content.push_str("Version: 0.3.2 (Stable)\n");
+            log_content.push_str(&format!("Version: {} (Stable)\n", env!("CARGO_PKG_VERSION")));
             let user = std::env::var("USER").unwrap_or_else(|_| "unknown".to_string());
             log_content.push_str(&format!("User: {}\n", user));
             log_content.push_str("--------------------------------------\n\n");
