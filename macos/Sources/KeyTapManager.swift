@@ -195,6 +195,10 @@ public class KeyTapManager {
         return "\(configDirPath())/dictionary.conf"
     }
 
+    public func habitLogFilePath() -> String {
+        return "\(configDirPath())/vnchkey-habit.log"
+    }
+
     public func ensureDefaultConfigFiles() {
         let fm = FileManager.default
         let dir = configDirPath()

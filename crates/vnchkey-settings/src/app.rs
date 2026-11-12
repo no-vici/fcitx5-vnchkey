@@ -1752,17 +1752,24 @@ impl SettingsApp {
 
     // 9. Backup Page
     fn show_backup_page(&mut self, ui: &mut egui::Ui) {
-        self.render_header(ui, "Backup", "Export or restore your configuration, macros, and dictionaries.");
+        self.render_header(ui, "Backup", "Export or restore your configuration, macros, dictionaries, and learned habits.");
         self.render_group_header(ui, "Sao Lưu & Phục Hồi Dữ Liệu");
 
-        if ui.button("📥 Xuất Sao Lưu Ra Tệp JSON (Export Backup)").clicked() {
+        ui.label(
+            egui::RichText::new("Bao gồm: Cấu hình gõ, Bảng gõ tắt (Macros), Từ điển người dùng và Dữ liệu thói quen học tập (Habit Learner Log) để khi cài lại máy không phải cho bộ gõ học lại từ đầu.")
+                .size(12.0)
+                .color(egui::Color32::from_rgb(0xa6, 0xad, 0xc8)),
+        );
+        ui.add_space(8.0);
+
+        if ui.button("📥 Xuất Toàn Bộ Sao Lưu Ra Tệp JSON (Export Backup)").clicked() {
             if let Some(path) = rfd::FileDialog::new()
                 .set_file_name("vnchkey-backup.json")
                 .add_filter("JSON", &["json"])
                 .save_file()
             {
                 if ConfigManager::export_backup(&path).is_ok() {
-                    self.status_message = Some((format!("Đã xuất sao lưu ra: {}", path.display()), true));
+                    self.status_message = Some((format!("Đã xuất sao lưu thành công ra: {}", path.display()), true));
                 } else {
                     self.status_message = Some(("Không thể xuất bản sao lưu!".to_string(), false));
                 }
@@ -1770,7 +1777,7 @@ impl SettingsApp {
         }
         ui.add_space(10.0);
 
-        if ui.button("📤 Phục Hồi Cài Đặt Từ Tệp JSON (Import Backup)").clicked() {
+        if ui.button("📤 Phục Hồi Cài Đặt & Thói Quen Từ Tệp JSON (Import Backup)").clicked() {
             if let Some(path) = rfd::FileDialog::new()
                 .add_filter("JSON", &["json"])
                 .pick_file()
@@ -1780,7 +1787,7 @@ impl SettingsApp {
                     self.macros = ConfigManager::load_macros();
                     self.dictionary = ConfigManager::load_dictionary();
                     self.app_modes = ConfigManager::load_app_modes();
-                    self.status_message = Some(("Phục hồi bản sao lưu thành công!".to_string(), true));
+                    self.status_message = Some(("Phục hồi toàn bộ cài đặt & dữ liệu thói quen thành công!".to_string(), true));
                 } else {
                     self.status_message = Some(("Không thể đọc tệp sao lưu đã chọn!".to_string(), false));
                 }

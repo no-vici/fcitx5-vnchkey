@@ -532,7 +532,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             return
         }
 
-        let winRect = NSRect(x: 0, y: 0, width: 520, height: 610)
+        let winRect = NSRect(x: 0, y: 0, width: 520, height: 655)
         let win = NSWindow(
             contentRect: winRect,
             styleMask: [.titled, .closable, .miniaturizable],
@@ -548,24 +548,24 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         // Header: Logo + Tiêu đề
         if let appIconPath = Bundle.main.path(forResource: "AppIcon", ofType: "png"),
            let iconImg = NSImage(contentsOfFile: appIconPath) {
-            let imageView = NSImageView(frame: NSRect(x: 24, y: 542, width: 48, height: 48))
+            let imageView = NSImageView(frame: NSRect(x: 24, y: 587, width: 48, height: 48))
             imageView.image = iconImg
             content.addSubview(imageView)
         }
 
         let titleLabel = NSTextField(labelWithString: "vnchKey cho macOS — Bảng Điều Khiển")
         titleLabel.font = NSFont.boldSystemFont(ofSize: 16)
-        titleLabel.frame = NSRect(x: 84, y: 566, width: 410, height: 22)
+        titleLabel.frame = NSRect(x: 84, y: 611, width: 410, height: 22)
         content.addSubview(titleLabel)
 
         let subtitleLabel = NSTextField(labelWithString: "Bộ gõ Tiếng Việt hiệu năng cao • Tự do tuỳ biến phím tắt & tính năng")
         subtitleLabel.font = NSFont.systemFont(ofSize: 12)
         subtitleLabel.textColor = .secondaryLabelColor
-        subtitleLabel.frame = NSRect(x: 84, y: 544, width: 410, height: 18)
+        subtitleLabel.frame = NSRect(x: 84, y: 589, width: 410, height: 18)
         content.addSubview(subtitleLabel)
 
         // Khung 1: Chế độ gõ & Phím tắt tự do (kiểu xKey / OpenKey)
-        let generalBox = NSBox(frame: NSRect(x: 20, y: 318, width: 480, height: 214))
+        let generalBox = NSBox(frame: NSRect(x: 20, y: 363, width: 480, height: 214))
         generalBox.title = "Thiết lập Kiểu gõ & Phím tắt chuyển Việt / Anh tự do"
         content.addSubview(generalBox)
 
@@ -652,7 +652,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         self.dashRecordShortcutBtn = recordBtn
 
         // Khung 2: Tính năng thông minh & Tối ưu Neovim
-        let smartBox = NSBox(frame: NSRect(x: 20, y: 144, width: 480, height: 166))
+        let smartBox = NSBox(frame: NSRect(x: 20, y: 189, width: 480, height: 166))
         smartBox.title = "Tính năng thông minh & Tối ưu Neovim / Terminal"
         content.addSubview(smartBox)
 
@@ -706,39 +706,49 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         self.dashTimeoutValueLabel = timeoutValLabel
 
         // Khung 3: Quản lý Gõ Tắt & Từ Điển Cá Nhân
-        let dataBox = NSBox(frame: NSRect(x: 20, y: 52, width: 480, height: 84))
-        dataBox.title = "Gõ Tắt (Macros) & Từ Điển Cá Nhân"
+        let dataBox = NSBox(frame: NSRect(x: 20, y: 52, width: 480, height: 129))
+        dataBox.title = "Gõ Tắt (Macros), Từ Điển & Thói Quen (Habit Learner)"
         content.addSubview(dataBox)
 
         let macroCheck = NSButton(checkboxWithTitle: "Bật Gõ Tắt (Macro)", target: self, action: #selector(dashMacroChanged(_:)))
-        macroCheck.frame = NSRect(x: 16, y: 36, width: 155, height: 22)
+        macroCheck.frame = NSRect(x: 16, y: 81, width: 155, height: 22)
         dataBox.addSubview(macroCheck)
         self.dashMacroCheckbox = macroCheck
 
         let addMacroBtn = NSButton(title: "➕ Thêm Gõ Tắt", target: self, action: #selector(promptAddMacro))
         addMacroBtn.bezelStyle = .rounded
-        addMacroBtn.frame = NSRect(x: 180, y: 32, width: 140, height: 28)
+        addMacroBtn.frame = NSRect(x: 180, y: 77, width: 140, height: 28)
         dataBox.addSubview(addMacroBtn)
 
         let openMacroBtn = NSButton(title: "Mở macros.conf", target: self, action: #selector(openMacrosFile))
         openMacroBtn.bezelStyle = .rounded
-        openMacroBtn.frame = NSRect(x: 326, y: 32, width: 135, height: 28)
+        openMacroBtn.frame = NSRect(x: 326, y: 77, width: 135, height: 28)
         dataBox.addSubview(openMacroBtn)
 
         let dictCheck = NSButton(checkboxWithTitle: "Bật Từ Điển Riêng", target: self, action: #selector(dashDictChanged(_:)))
-        dictCheck.frame = NSRect(x: 16, y: 6, width: 155, height: 22)
+        dictCheck.frame = NSRect(x: 16, y: 51, width: 155, height: 22)
         dataBox.addSubview(dictCheck)
         self.dashDictCheckbox = dictCheck
 
         let addDictBtn = NSButton(title: "➕ Thêm Từ Điển", target: self, action: #selector(promptAddDictionaryWord))
         addDictBtn.bezelStyle = .rounded
-        addDictBtn.frame = NSRect(x: 180, y: 2, width: 140, height: 28)
+        addDictBtn.frame = NSRect(x: 180, y: 47, width: 140, height: 28)
         dataBox.addSubview(addDictBtn)
 
         let openDictBtn = NSButton(title: "Mở dictionary.conf", target: self, action: #selector(openDictionaryFile))
         openDictBtn.bezelStyle = .rounded
-        openDictBtn.frame = NSRect(x: 326, y: 2, width: 135, height: 28)
+        openDictBtn.frame = NSRect(x: 326, y: 47, width: 135, height: 28)
         dataBox.addSubview(openDictBtn)
+
+        let exportHabitBtn = NSButton(title: "📥 Xuất Sao Lưu & Thói Quen (JSON)", target: self, action: #selector(exportBackupAndHabits))
+        exportHabitBtn.bezelStyle = .rounded
+        exportHabitBtn.frame = NSRect(x: 16, y: 12, width: 225, height: 28)
+        dataBox.addSubview(exportHabitBtn)
+
+        let importHabitBtn = NSButton(title: "📤 Phục Hồi Dữ Liệu (JSON)", target: self, action: #selector(importBackupAndHabits))
+        importHabitBtn.bezelStyle = .rounded
+        importHabitBtn.frame = NSRect(x: 246, y: 12, width: 215, height: 28)
+        dataBox.addSubview(importHabitBtn)
 
         // Thanh nút dưới cùng
         let resetBtn = NSButton(title: "Khôi phục mặc định", target: self, action: #selector(dashResetDefaults))
@@ -928,6 +938,106 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             alert.messageText = "Không thể mở tập tin cấu hình"
             alert.informativeText = "Đường dẫn: \(filePath)\nLỗi: \(error.localizedDescription)"
             alert.alertStyle = .warning
+            alert.runModal()
+        }
+    }
+
+    @objc func exportBackupAndHabits() {
+        guard let km = keyManager else { return }
+        km.ensureDefaultConfigFiles()
+
+        let panel = NSSavePanel()
+        panel.title = "Xuất Toàn Bộ Dữ Liệu vnchKey & Thói Quen Học Tập"
+        panel.nameFieldStringValue = "vnchkey-backup.json"
+        panel.allowedContentTypes = [.json]
+
+        NSApp.activate(ignoringOtherApps: true)
+        if panel.runModal() == .OK, let url = panel.url {
+            let macros = (try? String(contentsOfFile: km.macrosFilePath(), encoding: .utf8)) ?? ""
+            let dict = (try? String(contentsOfFile: km.dictionaryFilePath(), encoding: .utf8)) ?? ""
+            let habit = (try? String(contentsOfFile: km.habitLogFilePath(), encoding: .utf8)) ?? ""
+
+            var dictWords: [String] = []
+            for line in dict.components(separatedBy: .newlines) {
+                let trimmed = line.trimmingCharacters(in: .whitespaces)
+                if !trimmed.isEmpty && !trimmed.hasPrefix("#") {
+                    dictWords.append(trimmed)
+                }
+            }
+
+            var macroPairs: [[String]] = []
+            for line in macros.components(separatedBy: .newlines) {
+                let trimmed = line.trimmingCharacters(in: .whitespaces)
+                if !trimmed.isEmpty && !trimmed.hasPrefix("#"), let eqIdx = trimmed.firstIndex(of: "=") {
+                    let k = String(trimmed[..<eqIdx]).trimmingCharacters(in: .whitespaces)
+                    let v = String(trimmed[trimmed.index(after: eqIdx)...]).trimmingCharacters(in: .whitespaces)
+                    macroPairs.append([k, v])
+                }
+            }
+
+            let backupDict: [String: Any] = [
+                "version": "0.3.3",
+                "method": km.getMethod(),
+                "charset": defaults.integer(forKey: "vnchkey.charset"),
+                "toneStyle": km.getToneStyle(),
+                "macros": macroPairs,
+                "dictionary": dictWords,
+                "habit_log": habit
+            ]
+
+            if let jsonData = try? JSONSerialization.data(withJSONObject: backupDict, options: .prettyPrinted) {
+                try? jsonData.write(to: url)
+                let alert = NSAlert()
+                alert.messageText = "Xuất Sao Lưu Thành Công"
+                alert.informativeText = "Dữ liệu cấu hình, từ điển, gõ tắt và toàn bộ lịch sử thói quen học tập đã được lưu tại:\n\(url.path)"
+                alert.alertStyle = .informational
+                alert.runModal()
+            }
+        }
+    }
+
+    @objc func importBackupAndHabits() {
+        guard let km = keyManager else { return }
+        km.ensureDefaultConfigFiles()
+
+        let panel = NSOpenPanel()
+        panel.title = "Phục Hồi Dữ Liệu vnchKey & Thói Quen Học Tập"
+        panel.allowedContentTypes = [.json]
+        panel.allowsMultipleSelection = false
+
+        NSApp.activate(ignoringOtherApps: true)
+        if panel.runModal() == .OK, let url = panel.url {
+            guard let data = try? Data(contentsOf: url),
+                  let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+                let alert = NSAlert()
+                alert.messageText = "Lỗi đọc tệp sao lưu"
+                alert.informativeText = "Tệp JSON không hợp lệ hoặc không đúng định dạng sao lưu vnchKey."
+                alert.alertStyle = .warning
+                alert.runModal()
+                return
+            }
+
+            if let dictWords = json["dictionary"] as? [String] {
+                km.saveDictionaryWords(dictWords)
+            }
+            if let macroPairs = json["macros"] as? [[String]] {
+                var lines = ["# Bảng Gõ Tắt (Macros)"]
+                for p in macroPairs where p.count == 2 {
+                    lines.append("\(p[0])=\(p[1])")
+                }
+                try? lines.joined(separator: "\n").write(toFile: km.macrosFilePath(), atomically: true, encoding: .utf8)
+            }
+            if let habitLog = json["habit_log"] as? String, !habitLog.isEmpty {
+                try? habitLog.write(toFile: km.habitLogFilePath(), atomically: true, encoding: .utf8)
+            }
+
+            km.reloadMacrosAndDictionary()
+            syncDashboardControls()
+
+            let alert = NSAlert()
+            alert.messageText = "Phục Hồi Dữ Liệu Thành Công"
+            alert.informativeText = "Toàn bộ cài đặt, gõ tắt, từ điển và dữ liệu thói quen học tập đã được nạp lại thành công vào máy!"
+            alert.alertStyle = .informational
             alert.runModal()
         }
     }

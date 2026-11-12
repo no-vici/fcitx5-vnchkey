@@ -87,6 +87,8 @@ pub struct BackupData {
     pub macros: Vec<(String, String)>,
     pub dictionary: Vec<String>,
     pub app_modes: Vec<(String, String)>,
+    #[serde(default)]
+    pub habit_log: Option<String>,
 }
 
 pub struct ConfigManager;
@@ -126,6 +128,10 @@ impl ConfigManager {
 
     pub fn dict_path() -> PathBuf {
         Self::config_dir().join("vnchkey-dictionary.conf")
+    }
+
+    pub fn habit_log_path() -> PathBuf {
+        Self::config_dir().join("vnchkey-habit.log")
     }
 
     pub fn app_modes_path() -> PathBuf {
@@ -451,11 +457,13 @@ impl ConfigManager {
     }
 
     pub fn export_backup(path: &Path) -> std::io::Result<()> {
+        let habit_log_content = fs::read_to_string(Self::habit_log_path()).ok();
         let backup = BackupData {
             config: Self::load_config(),
             macros: Self::load_macros(),
             dictionary: Self::load_dictionary(),
             app_modes: Self::load_app_modes(),
+            habit_log: habit_log_content,
         };
         let json = serde_json::to_string_pretty(&backup).map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e))?;
         fs::write(path, json)
@@ -468,6 +476,10 @@ impl ConfigManager {
         Self::save_macros(&backup.macros)?;
         Self::save_dictionary(&backup.dictionary)?;
         Self::save_app_modes(&backup.app_modes)?;
+        if let Some(log_data) = backup.habit_log {
+            let log_p = Self::habit_log_path();
+            let _ = fs::write(log_p, log_data);
+        }
         Ok(())
     }
 
