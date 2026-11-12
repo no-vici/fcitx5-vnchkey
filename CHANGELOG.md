@@ -9,9 +9,8 @@ Tất cả những thay đổi nổi bật của dự án **vnchKey** (**fcitx5-
 ### 🚀 Tính Năng Mới & Cải Tiến Đột Phá
 - **Nhập Ký Tự Toán Học & Emoji Nhanh Qua Tiền Tố (Inline Symbol & Emoji Picker)**:
   - Hỗ trợ gõ shortcode bắt đầu bằng dấu hai chấm (ví dụ: `:smile:` ➔ 😄, `:arrow:` ➔ ➔, `:alpha:` ➔ α, `:pi:` ➔ π, `:check:` ➔ ✓, `:sum:` ➔ ∑).
-  - Tự động thay thế khi kết thúc bằng dấu `:` hoặc phím cách (Space).
+  - Tự động thay thế trực tiếp ngay khi kết thúc bằng dấu `:` hoặc phím cách (Space).
   - Hỗ trợ Undo hai bước khi nhấn Backspace để quay lại mã shortcode ban đầu.
-  - Tích hợp khung chọn nhanh (candidate popup) trên Fcitx5 và Windows.
   - Danh mục Emoji & Symbol được chọn lọc trung lập, chuyên dụng cho tài liệu kỹ thuật, toán học và biểu cảm thường nhật; tuyệt đối không chứa biểu tượng chính trị.
 - **Tốc Ký Toàn Diện Trên Linux (Quick Consonants)**:
   - Kết nối đầy đủ 3 chế độ gõ nhanh phụ âm trên GUI Settings (`vnchkey-settings`) sang Fcitx5 Addon và Rust FFI:
@@ -47,3 +46,4 @@ Tất cả những thay đổi nổi bật của dự án **vnchKey** (**fcitx5-
 - Khắc phục triệt để hiện tượng Shift-bleed casing (ví dụ: `Duong92` ➔ `Đường`).
 - Bổ sung tùy chọn phím tắt Đảo Từ (Flip Word) vào Fcitx5 Settings (`Ctrl+Shift+Z`, `Alt+X`, `Ctrl+Alt+Z`, hoặc Tắt).
 - Cải thiện System Doctor kiểm tra biến môi trường Qt/Wayland.
+
