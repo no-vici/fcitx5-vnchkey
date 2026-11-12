@@ -950,7 +950,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     @objc func dashResetDefaults() {
-        defaults.removeObject(forKey: "vnchkey.initialized")
+        let domain = Bundle.main.bundleIdentifier ?? "com.vnchkey.macos"
+        defaults.removePersistentDomain(forName: domain)
+        defaults.synchronize()
         applySavedPreferences()
         updateStatusButton()
         rebuildMenu()
