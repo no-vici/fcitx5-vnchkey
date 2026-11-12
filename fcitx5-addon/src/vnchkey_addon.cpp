@@ -1079,15 +1079,49 @@ void VnchkeyEngine::keyEvent(const fcitx::InputMethodEntry &entry, fcitx::KeyEve
     auto sym = rawKey.sym();
 
     // Check if candidate list is currently shown for symbol/emoji picker
-    if (ic && ic->inputPanel().candidateList() && !states.test(fcitx::KeyState::Ctrl) && !states.test(fcitx::KeyState::Alt)) {
+    // Quick Selection options:
+    // 1. Direct number 1..5 ONLY when current word is not a numeric shortcode prefix (to avoid blocking :100: or :check2:)
+    // 2. Or explicitly via Ctrl + 1..5 / Alt + 1..5
+    if (ic && ic->inputPanel().candidateList()) {
+        const bool hasCtrl = states.test(fcitx::KeyState::Ctrl);
+        const bool hasAlt = states.test(fcitx::KeyState::Alt);
+
         if (sym >= FcitxKey_1 && sym <= FcitxKey_5) {
-            int selected_idx = sym - FcitxKey_1;
-            auto clist = ic->inputPanel().candidateList();
-            if (clist && selected_idx < clist->size()) {
-                const auto& cand = clist->candidate(selected_idx);
-                cand.select(ic);
-                keyEvent.filterAndAccept();
-                return;
+            bool allowNumberSelect = false;
+            if (hasCtrl || hasAlt) {
+                // Ctrl+1..5 or Alt+1..5 always selects candidate
+                allowNumberSelect = true;
+            } else if (!states.test(fcitx::KeyState::Shift)) {
+                // Check if current word has digit or if any candidate shortcode starts with digit
+                char* cur = fcitx5_vnchkey_get_current_word(ctx);
+                if (cur) {
+                    std::string word(cur);
+                    fcitx5_vnchkey_free_string(cur);
+                    // If word is just ":", allow digits only if not typing a number like :100
+                    // If word has letters (e.g. ":sm"), typing 1..5 selects candidate!
+                    // If word starts with digit (e.g. ":1"), digits are passed through to type!
+                    bool hasDigitInWord = false;
+                    for (size_t i = 1; i < word.length(); ++i) {
+                        if (std::isdigit(static_cast<unsigned char>(word[i]))) {
+                            hasDigitInWord = true;
+                            break;
+                        }
+                    }
+                    if (!hasDigitInWord && word.length() >= 2) {
+                        allowNumberSelect = true;
+                    }
+                }
+            }
+
+            if (allowNumberSelect) {
+                int selected_idx = sym - FcitxKey_1;
+                auto clist = ic->inputPanel().candidateList();
+                if (clist && selected_idx < clist->size()) {
+                    const auto& cand = clist->candidate(selected_idx);
+                    cand.select(ic);
+                    keyEvent.filterAndAccept();
+                    return;
+                }
             }
         }
     }

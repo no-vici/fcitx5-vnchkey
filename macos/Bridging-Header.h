@@ -125,6 +125,11 @@ int fcitx5_vnchkey_apply_accent_to_selection(
     char** out_transformed
 );
 
+/// Searches for matching math symbols and emojis by shortcode prefix.
+/// Results are formatted as lines of `symbol\t:shortcode:\n`.
+/// Must be freed with `fcitx5_vnchkey_free_string`.
+char* fcitx5_vnchkey_search_symbols(const char* query, uint32_t limit);
+
 #ifdef __cplusplus
 }
 #endif

@@ -329,6 +329,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             }
         }
         macroSubmenu.addItem(NSMenuItem.separator())
+        macroSubmenu.addItem(NSMenuItem(title: "📜 Nạp Mẫu Sài Gòn Xưa...", action: #selector(loadSaigonXuaPresets), keyEquivalent: ""))
         macroSubmenu.addItem(NSMenuItem(title: "Mở tập tin macros.conf bằng TextEdit...", action: #selector(openMacrosFile), keyEquivalent: ""))
 
         let macroListParent = NSMenuItem(title: "Danh sách Gõ Tắt (\(macrosList.count))", action: nil, keyEquivalent: "")
@@ -1039,6 +1040,90 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             alert.informativeText = "Toàn bộ cài đặt, gõ tắt, từ điển và dữ liệu thói quen học tập đã được nạp lại thành công vào máy!"
             alert.alertStyle = .informational
             alert.runModal()
+        }
+    }
+
+    @objc func loadSaigonXuaPresets() {
+        guard let km = keyManager else { return }
+        let alert = NSAlert()
+        alert.messageText = "Nạp Bảng Gõ Tắt Sài Gòn Xưa"
+        alert.informativeText = "Bạn có muốn nạp thêm hơn 60 thành ngữ và tiếng lóng Sài Gòn Xưa vào danh sách Gõ Tắt hiện tại không? (Các mục trùng lặp sẽ được giữ nguyên)."
+        alert.alertStyle = .informational
+        alert.addButton(withTitle: "Nạp ngay")
+        alert.addButton(withTitle: "Huỷ")
+
+        NSApp.activate(ignoringOtherApps: true)
+        if alert.runModal() == .alertFirstButtonReturn {
+            let saigonPresets: [(String, String)] = [
+                ("bcbc", "bá cháy bù chét"),
+                ("blbx", "bá láp bá xàm"),
+                ("blbxao", "ba la ba xạo"),
+                ("bxbk", "ba xạo ba kép"),
+                ("bcl", "bà chằn lửa"),
+                ("cdcc", "cứng đầu cứng cổ"),
+                ("crct", "cà rịch cà tang"),
+                ("cncn", "cà nhỏng cà nhỏng"),
+                ("ccca", "cà chớn cà cháo"),
+                ("cccc", "cà chớn cà chác"),
+                ("ccl", "cù lần lữa"),
+                ("hghs", "hết ga hết số"),
+                ("hxqu", "hết xí quách"),
+                ("mtd", "mưa thúi đất"),
+                ("nlcd", "ngon lành cành đào"),
+                ("qtmb", "quỉ tha ma bắt"),
+                ("tdtd", "trời đánh thánh đâm"),
+                ("tlml", "tào lao mía lao"),
+                ("tlcd", "tào lao chi địa"),
+                ("vglc", "vắt giò lên cổ"),
+                ("xmdn", "xách mé đâm ngoáy"),
+                ("xtxt", "xoắn tít mù khơi"),
+                ("bct", "bạc con thoi"),
+                ("cct", "chạy có cờ"),
+                ("ctt", "chạy tụt quần"),
+                ("dtc", "đứt từng khúc ruột"),
+                ("dcd", "đâm cha chém chú"),
+                ("kck", "kêu cha gọi mẹ"),
+                ("lcl", "lên bờ xuống ruộng"),
+                ("mcm", "mặt chai mày đá"),
+                ("ncn", "ngậm đắng nuốt cay"),
+                ("tct", "thấp thỏm không yên"),
+                ("vcv", "vò đầu bứt tai"),
+                ("xch", "xuống chó lên voi"),
+                ("bđ", "bảnh bao"),
+                ("cc", "chảnh chọe"),
+                ("cl", "cà lơ phất phơ"),
+                ("cp", "cù phơ cù bất"),
+                ("đb", "đỏm dáng"),
+                ("đc", "điệu đàng"),
+                ("hl", "hầm hố"),
+                ("ht", "hổ báo"),
+                ("kl", "khệnh khạng"),
+                ("ll", "lấc cấc"),
+                ("lp", "lấc phấc"),
+                ("nb", "ngổ ngáo"),
+                ("pd", "phách lối"),
+                ("pl", "phè phỡn"),
+                ("tb", "tinh tướng"),
+                ("tc", "trịch thượng")
+            ]
+            var list = km.readMacrosList()
+            var existingKeys = Set(list.map { $0.0.lowercased() })
+            var addedCount = 0
+            for (trig, exp) in saigonPresets {
+                if !existingKeys.contains(trig.lowercased()) {
+                    list.append((trig, exp))
+                    existingKeys.insert(trig.lowercased())
+                    addedCount += 1
+                }
+            }
+            km.saveMacrosList(list)
+            rebuildMenu()
+
+            let doneAlert = NSAlert()
+            doneAlert.messageText = "Đã Nạp Xong"
+            doneAlert.informativeText = "Đã bổ sung thành công \(addedCount) mục Gõ Tắt Sài Gòn Xưa."
+            doneAlert.alertStyle = .informational
+            doneAlert.runModal()
         }
     }
 

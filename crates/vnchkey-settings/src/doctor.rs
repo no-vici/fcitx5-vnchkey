@@ -297,6 +297,8 @@ pub fn scan_electron_processes(is_wayland: bool) -> Vec<ElectronProcReport> {
         "codium",
         "cursor",
         "windsurf",
+        "antigravity",
+        "zed",
         "discord",
         "vesktop",
         "slack",

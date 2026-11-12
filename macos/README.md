@@ -19,6 +19,10 @@ Bản port chính thức của bộ gõ **vnchKey (Tự Do Edition)** dành cho 
    - Bạn cũng có thể tự tích chọn rời từng phím bổ trợ (`⌃ Ctrl`, `⌥ Opt`, `⇧ Shift`, `⌘ Cmd`) ngay trên Bảng điều khiển như xKey / OpenKey.
    - Tích hợp cửa sổ **Bảng điều khiển...** (Cocoa原生) cho phép tuỳ chỉnh tập trung tất cả tính năng, quy tắc gõ phím `W → ư` và thanh trượt thời gian ngắt bộ đệm cho Neovim (`0ms` – `2000ms`).
 5. **Kiểm tra Chánh Tả, Tự động khôi phục Tiếng Anh, Hoàn nguyên từ bằng phím `Esc`, Quy tắc dấu mới/cũ & Bảng mã Unicode NFC / NFD**.
+6. **Gõ Ký Tự Toán Học & Emoji Nhanh (`:shortcode:`)**:
+   - Hỗ trợ gõ trực tiếp các mã ngắn bắt đầu và kết thúc bằng dấu hai chấm (ví dụ: `:smile:` $\to$ `😄`, `:alpha:` $\to$ `α`, `:sum:` $\to$ `∑`, `:check:` $\to$ `✓`, `:arrow:` $\to$ `➔`, `:pi:` $\to$ `π`).
+   - Hỗ trợ bung nhanh bằng phím cách (`Space`) đối với shortcode từ 3 ký tự trở lên (ví dụ `:smile ` $\to$ `😄 `).
+   - Hỗ trợ hoàn tác hai bước khi nhấn phím `Backspace` để quay lại mã shortcode ban đầu. *(Lưu ý: Khung chọn trực quan `CandidateList` hiện được tích hợp trên Fcitx5 Linux; trên macOS tính năng vận hành theo cơ chế gõ shortcode trực tiếp tương tự Slack/Discord/GitHub).*
 
 ---
 
