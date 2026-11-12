@@ -14,8 +14,79 @@
 #include <cstdlib>
 #include <unistd.h>
 #include <spawn.h>
+#include <sstream>
 
 extern char **environ;
+
+class SymbolCandidateWord : public fcitx::CandidateWord {
+public:
+    SymbolCandidateWord(void* engine_ctx, std::string symbol, std::string shortcode)
+        : engine_ctx_(engine_ctx), symbol_(std::move(symbol)) {
+        setText(fcitx::Text(symbol_));
+        setComment(fcitx::Text(std::string(" ") + shortcode));
+    }
+
+    void select(fcitx::InputContext *ic) const override {
+        if (!ic) return;
+        if (engine_ctx_) {
+            fcitx5_vnchkey_reset(engine_ctx_);
+        }
+        ic->inputPanel().reset();
+        ic->updatePreedit();
+        ic->commitString(symbol_);
+        ic->updateUserInterface(fcitx::UserInterfaceComponent::InputPanel);
+    }
+
+private:
+    void* engine_ctx_;
+    std::string symbol_;
+};
+
+static void updateSymbolCandidates(fcitx::InputContext* ic, void* ctx, const char* cur_word) {
+    if (!ic) return;
+    if (!cur_word || cur_word[0] != ':' || std::strlen(cur_word) <= 1) {
+        ic->inputPanel().setCandidateList(nullptr);
+        return;
+    }
+
+    char* results = fcitx5_vnchkey_search_symbols(cur_word, 5);
+    if (!results || results[0] == '\0') {
+        if (results) fcitx5_vnchkey_free_string(results);
+        ic->inputPanel().setCandidateList(nullptr);
+        return;
+    }
+
+    auto candidateList = std::make_unique<fcitx::CommonCandidateList>();
+    candidateList->setLayoutHint(fcitx::CandidateLayoutHint::Vertical);
+    candidateList->setPageSize(5);
+
+    std::stringstream ss(results);
+    std::string line;
+    while (std::getline(ss, line)) {
+        if (line.empty()) continue;
+        auto tab_pos = line.find('\t');
+        if (tab_pos != std::string::npos) {
+            std::string sym = line.substr(0, tab_pos);
+            std::string code = line.substr(tab_pos + 1);
+            candidateList->append(std::make_unique<SymbolCandidateWord>(ctx, sym, code));
+        }
+    }
+    fcitx5_vnchkey_free_string(results);
+
+    if (candidateList->totalSize() > 0) {
+        static const std::vector<fcitx::Key> selKeys = {
+            fcitx::Key{FcitxKey_1},
+            fcitx::Key{FcitxKey_2},
+            fcitx::Key{FcitxKey_3},
+            fcitx::Key{FcitxKey_4},
+            fcitx::Key{FcitxKey_5},
+        };
+        candidateList->setSelectionKey(selKeys);
+        ic->inputPanel().setCandidateList(std::move(candidateList));
+    } else {
+        ic->inputPanel().setCandidateList(nullptr);
+    }
+}
 
 static void launchVnchkeySettings() {
     // 1. Try absolute standard path first with posix_spawnp (avoids PATH environment issues)
@@ -934,6 +1005,20 @@ void VnchkeyEngine::keyEvent(const fcitx::InputMethodEntry &entry, fcitx::KeyEve
     auto states = rawKey.states();
     auto sym = rawKey.sym();
 
+    // Check if candidate list is currently shown for symbol/emoji picker
+    if (ic && ic->inputPanel().candidateList() && !states.test(fcitx::KeyState::Ctrl) && !states.test(fcitx::KeyState::Alt)) {
+        if (sym >= FcitxKey_1 && sym <= FcitxKey_5) {
+            int selected_idx = sym - FcitxKey_1;
+            auto clist = ic->inputPanel().candidateList();
+            if (clist && selected_idx < clist->size()) {
+                const auto& cand = clist->candidate(selected_idx);
+                cand.select(ic);
+                keyEvent.filterAndAccept();
+                return;
+            }
+        }
+    }
+
     // Flip Word shortcut: instantly toggle between Vietnamese and raw strokes
     // Options: "Ctrl+Shift+Z", "Alt+X", "Ctrl+Alt+Z", or "Disabled"
     bool isFlipWord = false;
@@ -1191,6 +1276,7 @@ void VnchkeyEngine::keyEvent(const fcitx::InputMethodEntry &entry, fcitx::KeyEve
                     if (config_preedit_tooltip_ || isWpsOffice(ic->program())) {
                         ic->inputPanel().setPreedit(text);
                     }
+                    updateSymbolCandidates(ic, ctx, cur);
                     ic->updatePreedit();
                     ic->updateUserInterface(fcitx::UserInterfaceComponent::InputPanel);
                     fcitx5_vnchkey_free_string(cur);
@@ -1210,6 +1296,17 @@ void VnchkeyEngine::keyEvent(const fcitx::InputMethodEntry &entry, fcitx::KeyEve
 
         // Direct Mode: let the app delete character naturally, sync engine state
         fcitx5_vnchkey_handle_backspace(ctx);
+        if (ic) {
+            char* cur = fcitx5_vnchkey_get_current_word(ctx);
+            if (cur) {
+                updateSymbolCandidates(ic, ctx, cur);
+                ic->updateUserInterface(fcitx::UserInterfaceComponent::InputPanel);
+                fcitx5_vnchkey_free_string(cur);
+            } else if (ic->inputPanel().candidateList()) {
+                ic->inputPanel().setCandidateList(nullptr);
+                ic->updateUserInterface(fcitx::UserInterfaceComponent::InputPanel);
+            }
+        }
         return;
     }
 
@@ -1296,6 +1393,7 @@ void VnchkeyEngine::keyEvent(const fcitx::InputMethodEntry &entry, fcitx::KeyEve
                 if (config_preedit_tooltip_ || isWpsOffice(ic->program())) {
                     ic->inputPanel().setPreedit(text);
                 }
+                updateSymbolCandidates(ic, ctx, cur);
                 ic->updatePreedit();
                 ic->updateUserInterface(fcitx::UserInterfaceComponent::InputPanel);
                 fcitx5_vnchkey_free_string(cur);
@@ -1354,6 +1452,19 @@ void VnchkeyEngine::keyEvent(const fcitx::InputMethodEntry &entry, fcitx::KeyEve
             }
 
             keyEvent.filterAndAccept();
+        }
+
+        // Direct Mode Candidate Popup for Symbol & Emoji picker
+        if (ic) {
+            char* cur = fcitx5_vnchkey_get_current_word(ctx);
+            if (cur) {
+                updateSymbolCandidates(ic, ctx, cur);
+                ic->updateUserInterface(fcitx::UserInterfaceComponent::InputPanel);
+                fcitx5_vnchkey_free_string(cur);
+            } else if (ic->inputPanel().candidateList()) {
+                ic->inputPanel().setCandidateList(nullptr);
+                ic->updateUserInterface(fcitx::UserInterfaceComponent::InputPanel);
+            }
         }
     }
 

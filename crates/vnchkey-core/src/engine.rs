@@ -1027,27 +1027,38 @@ impl Engine {
 
             if !self.current_word.is_empty() {
                 // 0. Inline Math Symbol / Emoji expansion on Space (e.g. ":smile " -> "😄 ")
+                // Safety Guard: To prevent collision with time formatting (":30 "), URLs (":// "),
+                // or code syntax (e.g. "x : int", "for x : in list", ":in", ":or", ":le", ":ge"),
+                // Space expansion ONLY triggers for shortcodes with 3+ alphabetic chars,
+                // or where all chars after ':' are strictly alphabetic.
+                // 2-character keywords (like :in, :or, :le, :ge, :pi, :nu) REQUIRE a closing ':' (e.g. :in:).
                 if ch == ' ' && self.current_word.starts_with(':') && self.current_word.len() > 1 {
-                    if let Some(symbol) = crate::symbols::lookup_symbol(&self.current_word) {
-                        let backspaces = self.current_word.chars().count();
-                        let trigger = format!("{} ", self.current_word);
-                        let commit_text = format!("{} ", symbol);
-                        self.reset();
-                        self.last_macro = Some(LastMacroExpansion {
-                            trigger,
-                            expansion: symbol.to_string(),
-                            delimiter: ' ',
-                            stage: MacroUndoStage::Expanded,
-                        });
-                        self.last_completed_word = Some(commit_text.clone());
-                        return EngineOutput {
-                            backspaces,
-                            commit_text,
-                            consumed: true,
-                            auto_restored: false,
-                            macro_expanded: true,
-                            adaptive_delay_ms: 0,
-                        };
+                    let code_part = &self.current_word[1..];
+                    let is_valid_space_shortcode = code_part.len() >= 3
+                        && code_part.chars().all(|c| c.is_alphabetic());
+
+                    if is_valid_space_shortcode {
+                        if let Some(symbol) = crate::symbols::lookup_symbol(&self.current_word) {
+                            let backspaces = self.current_word.chars().count();
+                            let trigger = format!("{} ", self.current_word);
+                            let commit_text = format!("{} ", symbol);
+                            self.reset();
+                            self.last_macro = Some(LastMacroExpansion {
+                                trigger,
+                                expansion: symbol.to_string(),
+                                delimiter: ' ',
+                                stage: MacroUndoStage::Expanded,
+                            });
+                            self.last_completed_word = Some(commit_text.clone());
+                            return EngineOutput {
+                                backspaces,
+                                commit_text,
+                                consumed: true,
+                                auto_restored: false,
+                                macro_expanded: true,
+                                adaptive_delay_ms: 0,
+                            };
+                        }
                     }
                 }
 
@@ -2004,6 +2015,28 @@ mod tests {
         // Since delimiter was ':', first backspace deletes the single expansion char and restores shortcode
         assert_eq!(bs, 1);
         assert_eq!(restore, ":smile:");
+
+        // 7. Safety against collision: 2-letter keywords do NOT expand on Space (e.g. ":in ", ":pi ")
+        engine.reset();
+        let res_in = type_word(&mut engine, ":in ");
+        assert_eq!(res_in, ":in ");
+
+        let res_pi = type_word(&mut engine, ":pi ");
+        assert_eq!(res_pi, ":pi ");
+
+        // But 2-letter keywords expand with closing colon: ":in:" -> "∈", ":pi:" -> "π"
+        engine.reset();
+        let res_in_colon = type_word(&mut engine, ":in:");
+        assert_eq!(res_in_colon, "∈");
+
+        engine.reset();
+        let res_pi_colon = type_word(&mut engine, ":pi:");
+        assert_eq!(res_pi_colon, "π");
+
+        // 8. Safety against numbers / time collision: ":30 " does NOT expand
+        engine.reset();
+        let res_time = type_word(&mut engine, ":30 ");
+        assert_eq!(res_time, ":30 ");
     }
 
     #[test]
