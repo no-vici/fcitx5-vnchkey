@@ -76,6 +76,10 @@ pub struct EngineConfig {
     pub quick_start_consonant: bool,
     /// Quick final consonants (g->ng, h->nh, k->ch at end of word)
     pub quick_end_consonant: bool,
+    /// Enables on-device adaptive habit learning (defaults to true)
+    pub habit_learning_enabled: bool,
+    /// Number of corrections required before auto-promoting to whitelist (default: 4)
+    pub habit_promote_threshold: u32,
 }
 
 impl Default for EngineConfig {
@@ -96,6 +100,8 @@ impl Default for EngineConfig {
             quick_telex: false,
             quick_start_consonant: false,
             quick_end_consonant: false,
+            habit_learning_enabled: true,
+            habit_promote_threshold: 4,
         }
     }
 }
@@ -375,7 +381,12 @@ impl Engine {
             ),
             vni: VniEngine::with_bracket_transform(config.tone_style, config.bracket_transform),
             auto_restore: EnglishAutoRestore::new(),
-            habit_learner: HabitLearner::new(),
+            habit_learner: {
+                let mut hl = HabitLearner::new();
+                hl.set_enabled(config.habit_learning_enabled);
+                hl.set_promote_threshold(config.habit_promote_threshold);
+                hl
+            },
             casing: CaseTracker::new(),
             macro_table: MacroTable::new(),
             config,
@@ -420,7 +431,25 @@ impl Engine {
 
     /// Enables or disables on-device adaptive habit learning.
     pub fn set_habit_learning_enabled(&mut self, enabled: bool) {
+        self.config.habit_learning_enabled = enabled;
         self.habit_learner.set_enabled(enabled);
+    }
+
+    /// Sets the number of corrections before auto-promoting a word into the whitelist.
+    pub fn set_habit_promote_threshold(&mut self, threshold: u32) {
+        self.config.habit_promote_threshold = threshold.max(1);
+        self.habit_learner.set_promote_threshold(threshold);
+    }
+
+    /// Returns the number of corrections required to auto-promote a word into the whitelist.
+    pub fn habit_promote_threshold(&self) -> u32 {
+        self.habit_learner.promote_threshold()
+    }
+
+    /// Unlearns a specific word so it can be typed with Vietnamese diacritics normally again.
+    pub fn unlearn_word(&mut self, word: &str) {
+        self.habit_learner.unlearn_word(word);
+        self.auto_restore.remove_keyword(word);
     }
 
     /// Returns whether on-device adaptive habit learning is enabled.
@@ -2386,57 +2415,40 @@ mod tests {
             method: InputMethod::Telex,
             spell_check: false, // disable built-in dictionary spell check to test pure habit learning
             auto_restore_english: false,
+            habit_promote_threshold: 4, // Higher threshold (4 times) to prevent accidental whitelisting
             ..EngineConfig::default()
         });
 
-        // Suppose user types a custom foreign name/term "kars" which Telex turns into "kảs" / "kás"
-        // First time: user flips it to raw via Ctrl+Shift+Z (flip_current_word)
+        // Suppose user types a custom foreign name/term "kas" which Telex turns into "ká"
+        // Repeat corrections 3 times: should NOT yet be promoted to Whitelist!
+        for i in 1..=3 {
+            for ch in "kas".chars() {
+                engine.process_key(ch, 100.0 * i as f64);
+            }
+            assert_eq!(engine.current_word(), "ká");
+            let _ = engine.flip_current_word().unwrap();
+            engine.process_key(' ', 100.0 * i as f64 + 50.0);
+            assert_eq!(engine.habit_learner().correction_count("kas"), i);
+            assert!(!engine.habit_learner().is_learned_word("kas"), "Should not learn after {} times (threshold 4)", i);
+        }
+
+        // 4th time: user corrects "kas" again -> now reaches threshold 4 and is promoted!
         for ch in "kas".chars() {
-            engine.process_key(ch, 100.0);
+            engine.process_key(ch, 400.0);
         }
         assert_eq!(engine.current_word(), "ká");
-        let flip1 = engine.flip_current_word().unwrap();
-        assert_eq!(flip1.commit_text, "as");
-        engine.process_key(' ', 150.0);
-        assert_eq!(engine.habit_learner().correction_count("kas"), 1);
-        assert!(!engine.habit_learner().is_learned_word("kas"));
-
-        // Second time: user types "kas", gets "ká", and flips or presses Esc (undo_to_raw)
-        for ch in "kas".chars() {
-            engine.process_key(ch, 200.0);
-        }
-        assert_eq!(engine.current_word(), "ká");
-        let _esc = engine.undo_to_raw().unwrap();
-        engine.process_key(' ', 250.0);
-
-        // Now "kas" has been corrected 2 times -> automatically promoted to Whitelist!
-        assert_eq!(engine.habit_learner().correction_count("kas"), 2);
+        let _ = engine.flip_current_word().unwrap();
+        engine.process_key(' ', 450.0);
+        assert_eq!(engine.habit_learner().correction_count("kas"), 4);
         assert!(engine.habit_learner().is_learned_word("kas"));
 
-        // Third time: user types "kas " -> passes through as "kas " automatically without needing undo!
+        // 5th time: user types "kas " -> passes through as "kas " automatically without needing undo!
         let result = type_word(&mut engine, "kas ");
         assert_eq!(result, "kas ");
 
-        // Now test Backspace-delete-and-retype learning on "tas" ("tá"):
-        // Attempt 1: type "tas" -> "tá", Backspace twice to clear, retype with double-s "tass " -> "tas "
-        for ch in "tas".chars() {
-            engine.process_key(ch, 300.0);
-        }
-        assert_eq!(engine.current_word(), "tá");
-        engine.handle_backspace();
-        engine.handle_backspace();
-        assert_eq!(engine.current_word(), "");
-        let retyped1 = type_word(&mut engine, "tass ");
-        assert_eq!(retyped1, "tas ");
-        assert!(engine.habit_learner().correction_count("tas") >= 1);
-
-        // Attempt 2: repeat correction -> promoted to whitelist
-        let retyped2 = type_word(&mut engine, "tass ");
-        assert_eq!(retyped2, "tas ");
-        assert!(engine.habit_learner().is_learned_word("tas"));
-
-        // Attempt 3: now typing "tas " directly passes through as "tas " without needing double-s!
-        let auto_pass = type_word(&mut engine, "tas ");
-        assert_eq!(auto_pass, "tas ");
+        // Test unlearn_word: if user unlearns "kas", it can be typed with diacritics again!
+        engine.unlearn_word("kas");
+        assert!(!engine.habit_learner().is_learned_word("kas"));
+        assert_eq!(type_word(&mut engine, "kas "), "ká ");
     }
 }

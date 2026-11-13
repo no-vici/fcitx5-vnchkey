@@ -359,6 +359,7 @@ public class KeyTapManager {
         let norm = word.trimmingCharacters(in: .whitespaces).lowercased()
         let words = readDictionaryWords().filter { $0.lowercased() != norm }
         saveDictionaryWords(words)
+        unlearnWord(norm)
     }
 
     public func reloadMacrosAndDictionary() {
@@ -486,6 +487,35 @@ public class KeyTapManager {
     public func setQuickEndConsonant(_ enabled: Bool) {
         if let engine = self.engine {
             fcitx5_vnchkey_set_quick_end_consonant(engine, enabled)
+        }
+    }
+
+    public func setHabitLearningEnabled(_ enabled: Bool) {
+        if let engine = self.engine {
+            fcitx5_vnchkey_set_habit_learning_enabled(engine, enabled)
+        }
+    }
+
+    public func getHabitLearningEnabled() -> Bool {
+        guard let engine = self.engine else { return true }
+        return fcitx5_vnchkey_get_habit_learning_enabled(engine)
+    }
+
+    public func setHabitPromoteThreshold(_ threshold: UInt32) {
+        if let engine = self.engine {
+            fcitx5_vnchkey_set_habit_promote_threshold(engine, threshold)
+        }
+    }
+
+    public func getHabitPromoteThreshold() -> UInt32 {
+        guard let engine = self.engine else { return 4 }
+        return fcitx5_vnchkey_get_habit_promote_threshold(engine)
+    }
+
+    public func unlearnWord(_ word: String) {
+        guard let engine = self.engine else { return }
+        word.withCString { ptr in
+            fcitx5_vnchkey_unlearn_word(engine, ptr)
         }
     }
 

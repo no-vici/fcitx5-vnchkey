@@ -55,6 +55,13 @@ mod win_app {
     const ID_TOGGLE_BRACKET: usize = 1033;
     const ID_TOGGLE_MACRO: usize = 1034;
     const ID_TOGGLE_DICT: usize = 1035;
+    const ID_TOGGLE_HABIT_LEARNING: usize = 1053;
+    const ID_HABIT_THRESHOLD_2: usize = 1054;
+    const ID_HABIT_THRESHOLD_3: usize = 1055;
+    const ID_HABIT_THRESHOLD_4: usize = 1056;
+    const ID_HABIT_THRESHOLD_5: usize = 1057;
+    const ID_HABIT_THRESHOLD_6: usize = 1058;
+    const ID_HABIT_THRESHOLD_8: usize = 1059;
 
     const ID_TOGGLE_QUICK_TELEX: usize = 1037;
     const ID_TOGGLE_QUICK_START: usize = 1038;
@@ -467,6 +474,14 @@ mod win_app {
                             st.dict_enabled = val;
                             st.engine.set_enable_dictionary(val);
                         }
+                        "learn_habits" | "habit_learning" => {
+                            let val = v == "true" || v == "1";
+                            st.engine.set_habit_learning_enabled(val);
+                        }
+                        "habit_threshold" => {
+                            let val = v.parse::<u32>().unwrap_or(4).max(1);
+                            st.engine.set_habit_promote_threshold(val);
+                        }
                         "per_app" => {
                             st.per_app = v == "true" || v == "1";
                         }
@@ -508,6 +523,8 @@ mod win_app {
              quick_end_consonant={}\n\
              macro_enabled={}\n\
              dict_enabled={}\n\
+             learn_habits={}\n\
+             habit_threshold={}\n\
              per_app={}\n\
              ctrl={}\n\
              shift={}\n\
@@ -531,6 +548,8 @@ mod win_app {
             st.engine.quick_end_consonant(),
             st.macro_enabled,
             st.dict_enabled,
+            st.engine.habit_learning_enabled(),
+            st.engine.habit_promote_threshold(),
             st.per_app,
             st.shortcut.ctrl, st.shortcut.shift, st.shortcut.alt, st.shortcut.win, st.shortcut.key_code,
             st.flip_shortcut.ctrl, st.flip_shortcut.shift, st.flip_shortcut.alt, st.flip_shortcut.win, st.flip_shortcut.key_code
@@ -1123,6 +1142,8 @@ mod win_app {
             macro_en,
             dict_en,
             per_app,
+            habit_en,
+            habit_threshold,
             shortcut,
             flip_shortcut,
         )) = STATE.with(|s| {
@@ -1138,6 +1159,8 @@ mod win_app {
                 st.macro_enabled,
                 st.dict_enabled,
                 st.per_app,
+                st.engine.habit_learning_enabled(),
+                st.engine.habit_promote_threshold(),
                 st.shortcut.clone(),
                 st.flip_shortcut.clone(),
             ))
@@ -1448,6 +1471,60 @@ mod win_app {
             to_wstring("Nạp lại Gõ Tắt & Từ Điển").as_ptr(),
         );
 
+        // 6b. Tự Động Học Thói Quen (Adaptive Habit Learning)
+        let habit_sub = CreatePopupMenu();
+        AppendMenuW(
+            habit_sub,
+            MF_STRING | if habit_en { MF_CHECKED } else { 0 },
+            ID_TOGGLE_HABIT_LEARNING,
+            to_wstring("Bật Tự Động Học Sửa Từ").as_ptr(),
+        );
+        AppendMenuW(habit_sub, MF_SEPARATOR, 0, null_mut());
+        let cur_th_label = format!("Ngưỡng học hiện tại: [{} lần sửa/xoá]", habit_threshold);
+        AppendMenuW(habit_sub, MF_STRING | MF_GRAYED, 0, to_wstring(&cur_th_label).as_ptr());
+        AppendMenuW(
+            habit_sub,
+            MF_STRING | if habit_threshold == 2 { MF_CHECKED } else { 0 },
+            ID_HABIT_THRESHOLD_2,
+            to_wstring("2 lần (Nhanh nhất)").as_ptr(),
+        );
+        AppendMenuW(
+            habit_sub,
+            MF_STRING | if habit_threshold == 3 { MF_CHECKED } else { 0 },
+            ID_HABIT_THRESHOLD_3,
+            to_wstring("3 lần").as_ptr(),
+        );
+        AppendMenuW(
+            habit_sub,
+            MF_STRING | if habit_threshold == 4 { MF_CHECKED } else { 0 },
+            ID_HABIT_THRESHOLD_4,
+            to_wstring("4 lần (Khuyên dùng)").as_ptr(),
+        );
+        AppendMenuW(
+            habit_sub,
+            MF_STRING | if habit_threshold == 5 { MF_CHECKED } else { 0 },
+            ID_HABIT_THRESHOLD_5,
+            to_wstring("5 lần (An toàn)").as_ptr(),
+        );
+        AppendMenuW(
+            habit_sub,
+            MF_STRING | if habit_threshold == 6 { MF_CHECKED } else { 0 },
+            ID_HABIT_THRESHOLD_6,
+            to_wstring("6 lần").as_ptr(),
+        );
+        AppendMenuW(
+            habit_sub,
+            MF_STRING | if habit_threshold == 8 { MF_CHECKED } else { 0 },
+            ID_HABIT_THRESHOLD_8,
+            to_wstring("8 lần").as_ptr(),
+        );
+        AppendMenuW(
+            menu,
+            MF_POPUP,
+            habit_sub as usize,
+            to_wstring("Học thói quen sửa từ (Adaptive Learning)...").as_ptr(),
+        );
+
         AppendMenuW(menu, MF_SEPARATOR, 0, null_mut());
 
         // 7. Khởi động cùng Windows
@@ -1704,6 +1781,35 @@ mod win_app {
                         }
                         ID_RELOAD_FILES => {
                             reload_files(&mut st.engine);
+                        }
+                        ID_TOGGLE_HABIT_LEARNING => {
+                            let val = !st.engine.habit_learning_enabled();
+                            st.engine.set_habit_learning_enabled(val);
+                            save_app_config(&st);
+                        }
+                        ID_HABIT_THRESHOLD_2 => {
+                            st.engine.set_habit_promote_threshold(2);
+                            save_app_config(&st);
+                        }
+                        ID_HABIT_THRESHOLD_3 => {
+                            st.engine.set_habit_promote_threshold(3);
+                            save_app_config(&st);
+                        }
+                        ID_HABIT_THRESHOLD_4 => {
+                            st.engine.set_habit_promote_threshold(4);
+                            save_app_config(&st);
+                        }
+                        ID_HABIT_THRESHOLD_5 => {
+                            st.engine.set_habit_promote_threshold(5);
+                            save_app_config(&st);
+                        }
+                        ID_HABIT_THRESHOLD_6 => {
+                            st.engine.set_habit_promote_threshold(6);
+                            save_app_config(&st);
+                        }
+                        ID_HABIT_THRESHOLD_8 => {
+                            st.engine.set_habit_promote_threshold(8);
+                            save_app_config(&st);
                         }
                         ID_TOGGLE_AUTORUN => {
                             let current = is_autorun_enabled();

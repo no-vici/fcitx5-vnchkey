@@ -40,6 +40,8 @@ pub struct VnchkeyConfig {
     pub temp_english_mode: String,
     pub tray_icon_theme: String,
     pub show_indicator_badge: bool,
+    pub learn_typing_habits: bool,
+    pub habit_promote_threshold: u32,
 }
 
 impl Default for VnchkeyConfig {
@@ -76,6 +78,8 @@ impl Default for VnchkeyConfig {
             temp_english_mode: "Disabled".to_string(),
             tray_icon_theme: "Default".to_string(),
             show_indicator_badge: true,
+            learn_typing_habits: true,
+            habit_promote_threshold: 4,
         }
     }
 }
@@ -195,6 +199,8 @@ impl ConfigManager {
             if let Some(v) = map.get("TempEnglishMode") { cfg.temp_english_mode = v.clone(); }
             if let Some(v) = map.get("TrayIconTheme") { cfg.tray_icon_theme = v.clone(); }
             if let Some(v) = map.get("ShowIndicatorBadge") { cfg.show_indicator_badge = v.eq_ignore_ascii_case("true"); }
+            if let Some(v) = map.get("LearnTypingHabits") { cfg.learn_typing_habits = v.eq_ignore_ascii_case("true"); }
+            if let Some(v) = map.get("HabitPromoteThreshold") { cfg.habit_promote_threshold = v.parse().unwrap_or(4).max(1); }
         }
 
         cfg
@@ -240,6 +246,8 @@ impl ConfigManager {
         lines.push(format!("TempEnglishMode={}", cfg.temp_english_mode));
         lines.push(format!("TrayIconTheme={}", cfg.tray_icon_theme));
         lines.push(format!("ShowIndicatorBadge={}", if cfg.show_indicator_badge { "True" } else { "False" }));
+        lines.push(format!("LearnTypingHabits={}", if cfg.learn_typing_habits { "True" } else { "False" }));
+        lines.push(format!("HabitPromoteThreshold={}", cfg.habit_promote_threshold));
 
         fs::write(Self::conf_path(), lines.join("\n") + "\n")?;
         Self::reload_fcitx5();

@@ -15,8 +15,8 @@ use std::path::Path;
 /// Default maximum habit log size: 100 MB (100 * 1024 * 1024 bytes).
 pub const DEFAULT_MAX_LOG_BYTES: u64 = 100 * 1024 * 1024;
 
-/// Default number of corrections before a word is automatically promoted to the whitelist.
-pub const DEFAULT_PROMOTE_THRESHOLD: u32 = 2;
+/// Default number of corrections before a word is automatically promoted to the whitelist (default: 4).
+pub const DEFAULT_PROMOTE_THRESHOLD: u32 = 4;
 
 /// Type of user correction event recorded by the adaptive habit learner.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -116,6 +116,7 @@ impl HabitLearner {
     /// Sets the user dictionary path and loads existing words so we don't duplicate entries.
     pub fn set_dictionary_path(&mut self, path: &str) {
         self.dictionary_path = Some(path.to_string());
+        self.promoted_words.clear();
         if let Ok(content) = fs::read_to_string(path) {
             for line in content.lines() {
                 let clean = line.trim().to_lowercase();
@@ -124,6 +125,14 @@ impl HabitLearner {
                 }
             }
         }
+    }
+
+    /// Explicitly unlearns a word: removes it from the promoted whitelist and resets its correction count.
+    /// Used when a user deletes a word from the User Dictionary so they can type Vietnamese marks normally again.
+    pub fn unlearn_word(&mut self, word: &str) {
+        let clean = word.trim().to_lowercase();
+        self.promoted_words.remove(&clean);
+        self.correction_counts.remove(&clean);
     }
 
     /// Configures the habit log file path and replays historical correction counts from disk.

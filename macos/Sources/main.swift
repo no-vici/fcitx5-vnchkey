@@ -115,6 +115,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             defaults.set(true, forKey: "vnchkey.autoRestore") // Tự động khôi phục Tiếng Anh
             defaults.set(true, forKey: "vnchkey.macro")       // Bật Gõ Tắt
             defaults.set(true, forKey: "vnchkey.dictionary")  // Bật Từ Điển Cá Nhân
+            defaults.set(true, forKey: "vnchkey.habitLearning") // Bật Học thói quen sửa từ
+            defaults.set(4, forKey: "vnchkey.habitThreshold")   // Ngưỡng sửa/xoá (mặc định 4)
             defaults.set(true, forKey: "vnchkey.escRestore")  // Bấm Esc hoàn nguyên từ
             defaults.set(1, forKey: "vnchkey.toneStyle")      // Dấu cũ (hòa, ủy)
             defaults.set(0, forKey: "vnchkey.charset")        // Unicode dựng sẵn NFC
@@ -141,6 +143,10 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         km.setAutoRestore(defaults.bool(forKey: "vnchkey.autoRestore"))
         km.setMacroEnabled(defaults.bool(forKey: "vnchkey.macro"))
         km.setDictionaryEnabled(defaults.bool(forKey: "vnchkey.dictionary"))
+        let habitLearningVal = defaults.object(forKey: "vnchkey.habitLearning") != nil ? defaults.bool(forKey: "vnchkey.habitLearning") : true
+        km.setHabitLearningEnabled(habitLearningVal)
+        let habitThresholdVal = defaults.object(forKey: "vnchkey.habitThreshold") != nil ? UInt32(defaults.integer(forKey: "vnchkey.habitThreshold")) : 4
+        km.setHabitPromoteThreshold(habitThresholdVal)
         km.escRestoreEnabled = defaults.bool(forKey: "vnchkey.escRestore")
         let toneStyleVal = defaults.object(forKey: "vnchkey.toneStyle") != nil ? UInt32(defaults.integer(forKey: "vnchkey.toneStyle")) : 1
         km.setToneStyle(toneStyleVal)
@@ -389,6 +395,30 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         let reloadFilesItem = NSMenuItem(title: "Nạp lại Gõ Tắt & Từ Điển", action: #selector(reloadConfigFiles), keyEquivalent: "r")
         menu.addItem(reloadFilesItem)
 
+        // Tự động học thói quen (Adaptive Habit Learning)
+        let habitSubmenu = NSMenu()
+        let habitToggleItem = NSMenuItem(title: "Bật Tự Động Học Sửa Từ", action: #selector(toggleHabitLearning(_:)), keyEquivalent: "")
+        habitToggleItem.state = km.getHabitLearningEnabled() ? .on : .off
+        habitSubmenu.addItem(habitToggleItem)
+        habitSubmenu.addItem(NSMenuItem.separator())
+
+        let curTh = km.getHabitPromoteThreshold()
+        let thHint = NSMenuItem(title: "Ngưỡng học hiện tại: [\(curTh) lần sửa/xoá]", action: nil, keyEquivalent: "")
+        thHint.isEnabled = false
+        habitSubmenu.addItem(thHint)
+
+        for th in [2, 3, 4, 5, 6, 8] {
+            let label = th == 4 ? "\(th) lần (Khuyên dùng)" : (th == 5 ? "\(th) lần (An toàn)" : "\(th) lần")
+            let item = NSMenuItem(title: label, action: #selector(selectHabitThreshold(_:)), keyEquivalent: "")
+            item.tag = th
+            item.state = (curTh == th) ? .on : .off
+            habitSubmenu.addItem(item)
+        }
+
+        let habitParent = NSMenuItem(title: "Học thói quen sửa từ (Adaptive Learning)...", action: nil, keyEquivalent: "")
+        habitParent.submenu = habitSubmenu
+        menu.addItem(habitParent)
+
         menu.addItem(NSMenuItem.separator())
         let perAppItem = NSMenuItem(title: "Nhớ theo từng ứng dụng (Per-App)", action: #selector(togglePerAppFromMenu(_:)), keyEquivalent: "")
         perAppItem.state = isPerAppEnabled() ? .on : .off
@@ -545,6 +575,22 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         km.setDictionaryEnabled(next)
         rebuildMenu()
         syncDashboardControls()
+    }
+
+    @objc func toggleHabitLearning(_ sender: NSMenuItem) {
+        guard let km = keyManager else { return }
+        let next = !km.getHabitLearningEnabled()
+        defaults.set(next, forKey: "vnchkey.habitLearning")
+        km.setHabitLearningEnabled(next)
+        rebuildMenu()
+    }
+
+    @objc func selectHabitThreshold(_ sender: NSMenuItem) {
+        guard let km = keyManager else { return }
+        let th = UInt32(sender.tag)
+        defaults.set(th, forKey: "vnchkey.habitThreshold")
+        km.setHabitPromoteThreshold(th)
+        rebuildMenu()
     }
 
     // MARK: - Bảng Điều Khiển (Dashboard Window kiểu xKey / OpenKey)

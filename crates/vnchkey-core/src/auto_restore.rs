@@ -154,6 +154,12 @@ impl EnglishAutoRestore {
         }
     }
 
+    /// Removes a word from the in-memory bypass dictionary (e.g. when unlearned/deleted by user).
+    pub fn remove_keyword(&mut self, word: &str) {
+        let clean = word.trim().to_lowercase();
+        self.keywords.remove(&clean);
+    }
+
     /// Checks if the raw keystroke sequence forms an English or user-bypassed keyword.
     #[inline]
     pub fn is_english_keyword(&self, raw: &str) -> bool {

@@ -510,6 +510,52 @@ pub unsafe extern "C" fn fcitx5_vnchkey_get_idle_timeout(ctx: *mut Fcitx5Vnchkey
     }
 }
 
+/// Enables or disables on-device adaptive habit learning.
+#[no_mangle]
+pub unsafe extern "C" fn fcitx5_vnchkey_set_habit_learning_enabled(ctx: *mut Fcitx5VnchkeyContext, enabled: bool) {
+    if !ctx.is_null() {
+        (*ctx).engine.set_habit_learning_enabled(enabled);
+    }
+}
+
+/// Returns whether on-device adaptive habit learning is enabled.
+#[no_mangle]
+pub unsafe extern "C" fn fcitx5_vnchkey_get_habit_learning_enabled(ctx: *mut Fcitx5VnchkeyContext) -> bool {
+    if !ctx.is_null() {
+        (*ctx).engine.habit_learning_enabled()
+    } else {
+        false
+    }
+}
+
+/// Sets the number of corrections required before auto-promoting a word into the whitelist.
+#[no_mangle]
+pub unsafe extern "C" fn fcitx5_vnchkey_set_habit_promote_threshold(ctx: *mut Fcitx5VnchkeyContext, threshold: u32) {
+    if !ctx.is_null() {
+        (*ctx).engine.set_habit_promote_threshold(threshold);
+    }
+}
+
+/// Returns the number of corrections required to auto-promote a word into the whitelist.
+#[no_mangle]
+pub unsafe extern "C" fn fcitx5_vnchkey_get_habit_promote_threshold(ctx: *mut Fcitx5VnchkeyContext) -> u32 {
+    if !ctx.is_null() {
+        (*ctx).engine.habit_promote_threshold()
+    } else {
+        4
+    }
+}
+
+/// Unlearns a specific word so it can be typed with Vietnamese diacritics normally again.
+#[no_mangle]
+pub unsafe extern "C" fn fcitx5_vnchkey_unlearn_word(ctx: *mut Fcitx5VnchkeyContext, word: *const c_char) {
+    if !ctx.is_null() && !word.is_null() {
+        if let Ok(c_str) = CStr::from_ptr(word).to_str() {
+            (*ctx).engine.unlearn_word(c_str);
+        }
+    }
+}
+
 /// Returns tone style (0 = Modern: oà, uý; 1 = Classic: hòa, ủy).
 #[no_mangle]
 pub unsafe extern "C" fn fcitx5_vnchkey_get_tone_style(ctx: *mut Fcitx5VnchkeyContext) -> u32 {

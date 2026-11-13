@@ -290,16 +290,19 @@ Chắt lọc và nâng cấp từ thuật toán hoán đổi dấu phụ của *
 
 ---
 
-### 3.13. Tự Động Học Thói Quen Gõ & Đưa Vào Whitelist (Adaptive Habit Learner — Log 100 MB)
+### 3.13. Tự Động Học Thói Quen Gõ & Đưa Vào Whitelist (Adaptive Habit Learner — Tự Do Cấu Hình)
 Tích hợp bộ máy học thích nghi cục bộ (`habit_learner.rs`) ngay trong lõi `vnchkey-core` cho cả 3 hệ điều hành (Linux, Windows, macOS):
 - **Tự động phát hiện 4 hành vi sửa lỗi của người dùng**:
   1. **Xóa bằng `Backspace` rồi gõ lại chữ không dấu (`BackspaceRetype`)**: Khi một từ bị bỏ dấu nhầm, người dùng bấm `Backspace` xóa đi rồi gõ lại từ nguyên bản.
   2. **Nhấn đúp phím dấu để khử dấu (`DoubleKeyUndo`)**: Gõ `ss`, `ff`, `rr`, `ww`... để hoàn tác dấu thanh/dấu mũ về chữ ASCII.
   3. **Bấm phím Lật Từ (`FlipToRaw`)**: Dùng `Ctrl + Shift + Z` / `Alt + X` để trả từ tiếng Việt về chuỗi phím gốc.
   4. **Bấm phím Hoàn Nguyên (`EscapeToRaw`)**: Dùng `Esc` / `Shift + Esc` để hủy bỏ dấu vừa gõ.
-- **Tự động thăng cấp vào Whitelist (Auto-Promote)**:
-  - Khi người dùng sửa cùng một từ **từ 2 lần trở lên**, `vnchkey-core` lập tức nạp từ đó vào bộ nhớ `EnglishAutoRestore` và ghi nối vĩnh viễn vào tệp **Từ Điển Cá Nhân** (`vnchkey-dictionary.conf` / `dictionary.conf`).
-  - Từ lần tiếp theo trở đi, mỗi khi gặp lại từ đó, bộ gõ sẽ **cho pass-through nguyên bản 100%** mà bạn không bao giờ phải xóa đi sửa lại nữa.
+- **Tự Do Bật/Tắt & Toàn Quyền Đặt Ngưỡng Học (Custom Promotion Threshold)**:
+  - Cho phép người dùng **bật hoặc tắt hoàn toàn** tính năng tự học nếu không muốn bộ gõ tự ý thay đổi hành vi.
+  - Ngưỡng sửa/xóa mặc định được nâng lên **4 lần** (thay vì 2 lần dễ bị tai nạn khi gõ nhầm thao tác nhanh), đồng thời người dùng có thể tùy chỉnh tự do ngưỡng này (từ 2 đến 10 lần trên Linux/Windows/macOS).
+- **Tự động đưa vào Từ Điển Cá Nhân & Phục Hồi Tức Thì (Instant Unlearn)**:
+  - Từ được học sẽ tự động được ghi nối vào tệp **Từ Điển Cá Nhân** (`vnchkey-dictionary.conf` / `dictionary.conf`).
+  - Nếu lỡ bị "tai nạn" học nhầm từ tiếng Việt, người dùng chỉ cần mở tab **Dictionary** trên GUI hoặc chỉnh sửa file từ điển để **xóa từ đó đi** — bộ gõ sẽ lập tức unlearn và phục hồi khả năng gõ dấu tiếng Việt bình thường ngay tức khắc!
 - **Nhật ký thói quen dung lượng cao (100 MB FIFO Rotation) & Bảo mật tuyệt đối**:
   - Hỗ trợ lưu lịch sử học tập lên tới **100 MB** (`vnchkey-habit.log` / `habit.log`), tự động xoay vòng FIFO giữ lại 70% dữ liệu mới nhất khi đầy.
   - Chỉ ghi nhận các từ chữ cái đơn thuần (2–32 ký tự), tuyệt đối không ghi nhận chuỗi số, mã PIN hay mật khẩu.

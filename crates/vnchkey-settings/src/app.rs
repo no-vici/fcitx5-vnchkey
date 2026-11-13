@@ -1571,6 +1571,18 @@ impl SettingsApp {
                         vn_count
                     ),
                 );
+                ui.add_space(6.0);
+                ui.checkbox(
+                    &mut self.config.learn_typing_habits,
+                    "Tự động học thói quen sửa từ (Adaptive Habit Learning)",
+                );
+                if self.config.learn_typing_habits {
+                    ui.add_space(4.0);
+                    ui.horizontal(|ui| {
+                        ui.label("  ↳ Ngưỡng học tự động (Số lần sửa/xoá để đưa vào User Dict):");
+                        ui.add(egui::Slider::new(&mut self.config.habit_promote_threshold, 2..=10).text("lần"));
+                    });
+                }
             });
 
         ui.add_space(12.0);
