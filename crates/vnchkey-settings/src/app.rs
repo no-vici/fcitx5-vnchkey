@@ -1820,7 +1820,7 @@ impl SettingsApp {
 
             // Centered 80x80 Logo
             if let Some(tex) = &self.logo_texture {
-                ui.image(tex);
+                ui.add(egui::Image::new(tex).fit_to_exact_size(egui::vec2(80.0, 80.0)));
             } else {
                 // Fallback to Cờ Vàng Ba Sọc Đỏ icon representation
                 ui.label(

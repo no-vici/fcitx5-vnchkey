@@ -87,6 +87,9 @@ mod win_app {
     const ID_OPEN_DICT: usize = 1051;
     const ID_RELOAD_FILES: usize = 1052;
 
+    const ID_ABOUT: usize = 1070;
+    const ID_CHECK_UPDATE: usize = 1071;
+
     const ID_TRAY_EXIT: usize = 1099;
 
     /// Magic tag in `dwExtraInfo` so our hook ignores synthetic keystrokes injected by `VnCharKey`.
@@ -679,6 +682,130 @@ mod win_app {
 
     fn open_file_in_notepad(path: PathBuf) {
         let _ = Command::new("notepad.exe").arg(path).spawn();
+    }
+
+    /// Hiển thị hộp thoại About với thông tin chi tiết về phiên bản và dự án
+    unsafe fn show_about_dialog(hwnd: HWND) {
+        let cur_ver = env!("CARGO_PKG_VERSION");
+        let info = format!(
+            "vnchKey (VnCharKey) — Tự Do Edition\n\
+             Phiên bản: v{}\n\n\
+             • Bộ gõ Tiếng Việt hiệu năng cao cho Windows & Linux\n\
+             • Tinh thần Tự Do và Di sản Cờ Vàng Ba Sọc Đỏ\n\
+             • Hoàn toàn Offline, 100% An toàn, Không thu thập dữ liệu\n\
+             • Tự động khôi phục Tiếng Anh, Smart Casing, Hồi sinh từ\n\n\
+             Mã nguồn & Giấy phép:\n\
+             https://github.com/no-vici/fcitx5-vnchkey\n\
+             Giấy phép: GNU General Public License v3.0 (GPLv3)\n\n\
+             Bấm 'Yes' để mở trang GitHub phát hành chính thức.\n\
+             Bấm 'No' để đóng hộp thoại này.",
+            cur_ver
+        );
+        let title = format!("Thông tin vnchKey v{}", cur_ver);
+        let res = MessageBoxW(
+            hwnd,
+            to_wstring(&info).as_ptr(),
+            to_wstring(&title).as_ptr(),
+            MB_YESNO | MB_ICONINFORMATION,
+        );
+        if res == IDYES {
+            let _ = Command::new("cmd")
+                .args(&["/c", "start", "https://github.com/no-vici/fcitx5-vnchkey/releases"])
+                .spawn();
+        }
+    }
+
+    /// Kiểm tra phiên bản mới từ GitHub Releases và tự động tải/cập nhật
+    unsafe fn check_for_updates(hwnd: HWND, silent_if_latest: bool) {
+        std::thread::spawn(move || {
+            let cur_ver = env!("CARGO_PKG_VERSION");
+            // Sử dụng PowerShell để gọi GitHub Releases API và lấy tag mới nhất
+            let ps_script = r#"[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; $res = Invoke-RestMethod -Uri "https://api.github.com/repos/no-vici/fcitx5-vnchkey/releases/latest" -Headers @{"User-Agent"="vnchKey-AutoUpdater"}; Write-Output $res.tag_name"#;
+            let output = Command::new("powershell")
+                .args(&["-NoProfile", "-NonInteractive", "-Command", ps_script])
+                .output();
+
+            if let Ok(out) = output {
+                let latest_tag = String::from_utf8_lossy(&out.stdout).trim().to_string();
+                if latest_tag.is_empty() || latest_tag.to_lowercase().contains("error") {
+                    if !silent_if_latest {
+                        unsafe {
+                            MessageBoxW(
+                                hwnd,
+                                to_wstring("Không thể kiểm tra bản cập nhật lúc này. Vui lòng kiểm tra lại kết nối mạng hoặc thử lại sau.").as_ptr(),
+                                to_wstring("Kiểm tra cập nhật").as_ptr(),
+                                MB_OK | MB_ICONWARNING,
+                            );
+                        }
+                    }
+                    return;
+                }
+
+                let clean_latest = latest_tag.trim_start_matches('v').trim();
+                let clean_cur = cur_ver.trim_start_matches('v').trim();
+
+                if clean_latest > clean_cur {
+                    let msg = format!(
+                        "Đã có phiên bản mới: {}\n(Phiên bản hiện tại của bạn: v{})\n\nBạn có muốn tự động tải và cập nhật VnCharKey ngay bây giờ không?",
+                        latest_tag, cur_ver
+                    );
+                    let res = unsafe {
+                        MessageBoxW(
+                            hwnd,
+                            to_wstring(&msg).as_ptr(),
+                            to_wstring("Đã có bản cập nhật mới!").as_ptr(),
+                            MB_YESNO | MB_ICONQUESTION,
+                        )
+                    };
+
+                    if res == IDYES {
+                        // Chạy script PowerShell tự động tải VnCharKey.exe mới, thay thế và khởi động lại
+                        let update_ps = format!(
+                            r#"$ErrorActionPreference = 'Stop';
+[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12;
+$curExe = [System.Diagnostics.Process]::GetCurrentProcess().MainModule.FileName;
+$tmpExe = "$env:TEMP\VnCharKey_new.exe";
+$url = "https://github.com/no-vici/fcitx5-vnchkey/releases/download/{}/VnCharKey.exe";
+Invoke-WebRequest -Uri $url -OutFile $tmpExe -UserAgent "vnchKey-AutoUpdater";
+Start-Sleep -Seconds 1;
+$batch = "$env:TEMP\update_vncharkey.bat";
+$cmd = ":repeat`r`ntaskkill /f /im VnCharKey.exe >nul 2>&1`r`ntimeout /t 1 /nobreak >nul`r`nmove /y `"$tmpExe`" `"$curExe`" >nul 2>&1`r`nif errorlevel 1 goto repeat`r`nstart `"`" `"$curExe`"`r`ndel `"%~f0`"";
+Set-Content -Path $batch -Value $cmd -Encoding ASCII;
+Start-Process -FilePath $batch -WindowStyle Hidden;
+"#,
+                            latest_tag
+                        );
+
+                        let _ = Command::new("powershell")
+                            .args(&["-NoProfile", "-NonInteractive", "-Command", &update_ps])
+                            .spawn();
+                        std::process::exit(0);
+                    }
+                } else if !silent_if_latest {
+                    let msg = format!(
+                        "Bạn đang sử dụng phiên bản mới nhất: v{}!\nKhông có bản cập nhật nào mới hơn.",
+                        cur_ver
+                    );
+                    unsafe {
+                        MessageBoxW(
+                            hwnd,
+                            to_wstring(&msg).as_ptr(),
+                            to_wstring("Kiểm tra cập nhật").as_ptr(),
+                            MB_OK | MB_ICONINFORMATION,
+                        );
+                    }
+                }
+            } else if !silent_if_latest {
+                unsafe {
+                    MessageBoxW(
+                        hwnd,
+                        to_wstring("Không thể khởi chạy tiến trình kiểm tra cập nhật.").as_ptr(),
+                        to_wstring("Lỗi").as_ptr(),
+                        MB_OK | MB_ICONERROR,
+                    );
+                }
+            }
+        });
     }
 
     /// Sends an atomic batch of Backspaces and UTF-16 characters via `SendInput`.
@@ -1553,7 +1680,23 @@ mod win_app {
 
         AppendMenuW(menu, MF_SEPARATOR, 0, null_mut());
 
-        // 8. Exit
+        // 8. Thông tin & Cập nhật
+        AppendMenuW(
+            menu,
+            MF_STRING,
+            ID_CHECK_UPDATE,
+            to_wstring("Kiểm tra bản cập nhật mới...").as_ptr(),
+        );
+        AppendMenuW(
+            menu,
+            MF_STRING,
+            ID_ABOUT,
+            to_wstring("Thông tin VnCharKey (About)...").as_ptr(),
+        );
+
+        AppendMenuW(menu, MF_SEPARATOR, 0, null_mut());
+
+        // 9. Exit
         AppendMenuW(
             menu,
             MF_STRING,
@@ -1834,6 +1977,12 @@ mod win_app {
                         ID_TOGGLE_AUTORUN => {
                             let current = is_autorun_enabled();
                             set_autorun_enabled(!current);
+                        }
+                        ID_ABOUT => {
+                            show_about_dialog(hwnd);
+                        }
+                        ID_CHECK_UPDATE => {
+                            check_for_updates(hwnd, false);
                         }
                         ID_TRAY_EXIT => {
                             remove_tray_icon(hwnd);

@@ -437,6 +437,11 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
         menu.addItem(NSMenuItem(title: "Kiểm tra quyền Trợ năng (Accessibility)", action: #selector(checkPermissionAction), keyEquivalent: ""))
         menu.addItem(NSMenuItem.separator())
+
+        menu.addItem(NSMenuItem(title: "Kiểm tra bản cập nhật mới...", action: #selector(checkForUpdatesMenuAction), keyEquivalent: ""))
+        menu.addItem(NSMenuItem(title: "Thông tin vnchKey (About)...", action: #selector(showAboutWindow), keyEquivalent: ""))
+        menu.addItem(NSMenuItem.separator())
+
         menu.addItem(NSMenuItem(title: "Thoát vnchKey", action: #selector(quitApp), keyEquivalent: "q"))
 
         statusItem?.menu = menu
@@ -1534,6 +1539,145 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             }
         }
         self.ipcServer?.start()
+    }
+
+    @objc func showAboutWindow() {
+        NSApp.activate(ignoringOtherApps: true)
+        let alert = NSAlert()
+        alert.messageText = "vnchKey — Tự Do Edition"
+        let curVer = "0.3.3"
+        alert.informativeText = """
+        Phiên bản: v\(curVer) (Universal Binary: Apple Silicon & Intel)
+
+        • Bộ gõ Tiếng Việt hiệu năng cao cho macOS
+        • Tinh thần Tự Do và Di sản Cờ Vàng Ba Sọc Đỏ
+        • 100% Offline, Bảo mật tuyệt đối, Không gửi dữ liệu
+        • Tự động khôi phục Tiếng Anh, Smart Casing, Hồi sinh từ
+
+        Mã nguồn: https://github.com/no-vici/fcitx5-vnchkey
+        Giấy phép: GNU General Public License v3.0 (GPLv3)
+        """
+        if let iconPath = Bundle.main.path(forResource: "AppIcon", ofType: "png"),
+           let iconImg = NSImage(contentsOfFile: iconPath) {
+            alert.icon = iconImg
+        }
+        alert.addButton(withTitle: "Đóng")
+        alert.addButton(withTitle: "Kiểm tra bản mới...")
+        alert.addButton(withTitle: "Xem GitHub")
+
+        let resp = alert.runModal()
+        if resp == .alertSecondButtonReturn {
+            // Kiểm tra bản mới
+            checkForUpdates(silentIfLatest: false)
+        } else if resp == .alertThirdButtonReturn {
+            if let url = URL(string: "https://github.com/no-vici/fcitx5-vnchkey/releases") {
+                NSWorkspace.shared.open(url)
+            }
+        }
+    }
+
+    @objc func checkForUpdatesMenuAction() {
+        checkForUpdates(silentIfLatest: false)
+    }
+
+    func checkForUpdates(silentIfLatest: Bool) {
+        guard let url = URL(string: "https://api.github.com/repos/no-vici/fcitx5-vnchkey/releases/latest") else { return }
+        var request = URLRequest(url: url)
+        request.setValue("vnchKey-AutoUpdater", forHTTPHeaderField: "User-Agent")
+        request.timeoutInterval = 10.0
+
+        let curVer = "0.3.3"
+        let task = URLSession.shared.dataTask(with: request) { data, response, error in
+            DispatchQueue.main.async {
+                if let data = data,
+                   let json = try? JSONSerialization.jsonObject(with: data, options: []) as? [String: Any],
+                   let tagName = json["tag_name"] as? String {
+
+                    let cleanLatest = tagName.trimmingCharacters(in: CharacterSet(charactersIn: "vV "))
+                    let cleanCur = curVer.trimmingCharacters(in: CharacterSet(charactersIn: "vV "))
+
+                    if cleanLatest.compare(cleanCur, options: .numeric) == .orderedDescending {
+                        // Tìm link download DMG trong assets
+                        var dmgDownloadUrl: String? = nil
+                        if let assets = json["assets"] as? [[String: Any]] {
+                            for asset in assets {
+                                if let name = asset["name"] as? String, name.hasSuffix(".dmg"),
+                                   let dl = asset["browser_download_url"] as? String {
+                                    dmgDownloadUrl = dl
+                                    break
+                                }
+                            }
+                        }
+                        if dmgDownloadUrl == nil {
+                            dmgDownloadUrl = "https://github.com/no-vici/fcitx5-vnchkey/releases/download/\(tagName)/vnchKey-\(cleanLatest).dmg"
+                        }
+
+                        let alert = NSAlert()
+                        alert.messageText = "Đã có phiên bản mới: \(tagName)"
+                        alert.informativeText = "Phiên bản hiện tại của bạn là v\(curVer).\nBạn có muốn tự động tải về và mở bản cập nhật ngay bây giờ không?"
+                        alert.alertStyle = .informational
+                        alert.addButton(withTitle: "Cập nhật ngay")
+                        alert.addButton(withTitle: "Để sau")
+
+                        if alert.runModal() == .alertFirstButtonReturn, let dlStr = dmgDownloadUrl, let dlUrl = URL(string: dlStr) {
+                            self.downloadAndInstallUpdate(dmgUrl: dlUrl, tagName: tagName)
+                        }
+                    } else if !silentIfLatest {
+                        let alert = NSAlert()
+                        alert.messageText = "Bạn đang dùng bản mới nhất"
+                        alert.informativeText = "vnchKey v\(curVer) là phiên bản mới nhất hiện nay. Không có bản cập nhật nào mới hơn."
+                        alert.alertStyle = .informational
+                        alert.runModal()
+                    }
+                } else if !silentIfLatest {
+                    let alert = NSAlert()
+                    alert.messageText = "Không thể kiểm tra cập nhật"
+                    alert.informativeText = "Không thể kết nối đến máy chủ GitHub lúc này. Vui lòng kiểm tra lại kết nối mạng hoặc thử lại sau."
+                    alert.alertStyle = .warning
+                    alert.runModal()
+                }
+            }
+        }
+        task.resume()
+    }
+
+    private func downloadAndInstallUpdate(dmgUrl: URL, tagName: String) {
+        let tempDir = FileManager.default.temporaryDirectory
+        let destinationUrl = tempDir.appendingPathComponent("vnchKey_update.dmg")
+        try? FileManager.default.removeItem(at: destinationUrl)
+
+        var req = URLRequest(url: dmgUrl)
+        req.setValue("vnchKey-AutoUpdater", forHTTPHeaderField: "User-Agent")
+
+        let alert = NSAlert()
+        alert.messageText = "Đang tải bản cập nhật..."
+        alert.informativeText = "Đang tải \(tagName) từ GitHub. Ứng dụng sẽ tự động mở gói cài đặt DMG khi hoàn tất."
+        let downloadTask = URLSession.shared.downloadTask(with: req) { localUrl, resp, err in
+            DispatchQueue.main.async {
+                guard let localUrl = localUrl, err == nil else {
+                    let errAlert = NSAlert()
+                    errAlert.messageText = "Tải cập nhật thất bại"
+                    errAlert.informativeText = "Không thể tải file DMG cập nhật. Bạn có thể tải thủ công từ GitHub."
+                    errAlert.addButton(withTitle: "Mở GitHub")
+                    errAlert.addButton(withTitle: "Đóng")
+                    if errAlert.runModal() == .alertFirstButtonReturn {
+                        if let u = URL(string: "https://github.com/no-vici/fcitx5-vnchkey/releases") {
+                            NSWorkspace.shared.open(u)
+                        }
+                    }
+                    return
+                }
+
+                do {
+                    try FileManager.default.moveItem(at: localUrl, to: destinationUrl)
+                    // Mở file DMG vừa tải
+                    NSWorkspace.shared.open(destinationUrl)
+                } catch {
+                    NSWorkspace.shared.open(dmgUrl)
+                }
+            }
+        }
+        downloadTask.resume()
     }
 
     @objc func quitApp() {
