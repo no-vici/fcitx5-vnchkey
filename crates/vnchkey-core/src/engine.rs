@@ -1,7 +1,7 @@
 //! Syllable State Machine and Input Orchestrator.
 
 use crate::auto_restore::EnglishAutoRestore;
-use crate::casing::CaseTracker;
+use crate::casing::{auto_complete_unique_syllable, harmonize_syllable_case, CaseTracker};
 use crate::habit_learner::{CorrectionKind, HabitLearner};
 use crate::macros::MacroTable;
 pub use crate::telex::W2UType;
@@ -1201,11 +1201,31 @@ impl Engine {
             self.english_locked = true;
         }
 
-        // Developer-Aware: camelCase identifier detection (e.g. "parse" + 'S' -> "parseS")
-        // If an uppercase letter arrives after lowercase letters, restore raw prefix if it had diacritics
+        // Developer-Aware: camelCase identifier detection (e.g. "parse" + 'S' -> "parseS", "vnch" + 'K' -> "vnchKey")
+        // If an uppercase letter arrives after lowercase letters, and does not form a valid Vietnamese
+        // syllable continuation or diacritic transform, restore raw prefix if it had diacritics
         // and lock English mode for this identifier.
         let prev_has_lower = self.raw_strokes.chars().any(|c| c.is_ascii_lowercase());
-        if prev_has_lower && ch.is_ascii_uppercase() {
+        let can_transform_vietnamese = match self.config.method {
+            InputMethod::Telex | InputMethod::SimpleTelex => {
+                let (_, tr, _) = self.telex.apply_key(&self.current_word, ch, &self.raw_strokes);
+                tr
+            }
+            InputMethod::Vni => {
+                let (_, tr, _) = self.vni.apply_key(&self.current_word, ch);
+                tr
+            }
+            InputMethod::Auto => {
+                let (_, tr_t, _) = self.telex.apply_key(&self.current_word, ch, &self.raw_strokes);
+                let (_, tr_v, _) = self.vni.apply_key(&self.current_word, ch);
+                tr_t || tr_v
+            }
+        };
+
+        let test_chars: Vec<char> = format!("{}{}", self.current_word, ch.to_ascii_lowercase()).chars().collect();
+        let is_valid_viet_continuation = is_valid_in_progress_syllable(&test_chars);
+
+        if prev_has_lower && ch.is_ascii_uppercase() && !can_transform_vietnamese && !is_valid_viet_continuation {
             let old_word = self.current_word.clone();
             self.raw_strokes.push(ch);
             self.current_word = self.raw_strokes.clone();
@@ -1558,6 +1578,26 @@ impl Engine {
             new_word = format!("{}{}", self.current_word, ch);
         }
 
+        // Smart Casing & Initial Letter Case Anchor:
+        // Enforce consistent capitalization across Vietnamese syllables anchored to the initial letter:
+        // - 'ĐƯợc' / 'ĐƯỢc' -> 'Được'
+        // - 'đƯỢc' -> 'được'
+        // - 'ĐƯỢC' -> 'ĐƯỢC' (preserved)
+        // Does not mutate developer mixed-case identifiers when english_locked or auto_restored
+        if self.config.smart_casing && !new_word.is_empty() && !self.english_locked && !auto_restored {
+            new_word = harmonize_syllable_case(&new_word);
+        }
+
+        // Auto-complete unique Vietnamese syllables on boundary keystroke:
+        // - 'khong' -> 'không'
+        // - 'truong' -> 'trương'
+        // - 'nganh' -> 'ngành'
+        if !self.manual_undo && !auto_restored && !self.english_locked {
+            if let Some(completed) = auto_complete_unique_syllable(&new_word) {
+                new_word = completed;
+            }
+        }
+
         let (backspaces, commit_text) = compare_and_split_strings(&self.current_word, &new_word);
         self.current_word = new_word;
 
@@ -1706,19 +1746,19 @@ mod tests {
             ..EngineConfig::default()
         });
 
-        // Type k-h-o-n-g: none of these should consume or emit backspaces
-        for ch in ['k', 'h', 'o', 'n', 'g'] {
+        // Type t-o-a-n: none of these should consume or emit backspaces
+        for ch in ['t', 'o', 'a', 'n'] {
             let out = engine.process_key(ch, 0.0);
             assert!(!out.consumed);
             assert_eq!(out.backspaces, 0);
         }
 
-        // Now type 'o' -> transforms "khong" to "không":
-        // Common prefix is "kh", so only "ong" (3 chars) is deleted and "ông" is committed!
-        let out = engine.process_key('o', 0.0);
+        // Now type 's' -> transforms "toan" to "toán":
+        // Common prefix is "toa", so only "n" (1 char) is deleted and "án" is committed!
+        let out = engine.process_key('s', 0.0);
         assert!(out.consumed);
-        assert_eq!(out.backspaces, 3);
-        assert_eq!(out.commit_text, "ông");
+        assert_eq!(out.backspaces, 2);
+        assert_eq!(out.commit_text, "án");
     }
 
     #[test]
@@ -1748,6 +1788,56 @@ mod tests {
         // Valid Southern & Standard Vietnamese words pass Chánh Tả check
         assert_eq!(type_word(&mut engine, "chanhs "), "chánh ");
         assert_eq!(type_word(&mut engine, "tar "), "tả ");
+    }
+
+    #[test]
+    fn test_auto_complete_unique_syllables_and_initial_casing() {
+        let mut telex_engine = Engine::new(EngineConfig {
+            method: InputMethod::Telex,
+            ..EngineConfig::default()
+        });
+
+        // 1. "khong" -> "không" (and casing preservation)
+        assert_eq!(type_word(&mut telex_engine, "khong "), "không ");
+        assert_eq!(type_word(&mut telex_engine, "Khong "), "Không ");
+        assert_eq!(type_word(&mut telex_engine, "KHONG "), "KHÔNG ");
+
+        // 2. "truong" -> "trương", then add tone
+        assert_eq!(type_word(&mut telex_engine, "truong "), "trương ");
+        assert_eq!(type_word(&mut telex_engine, "Truong "), "Trương ");
+        assert_eq!(type_word(&mut telex_engine, "TRUONG "), "TRƯƠNG ");
+        assert_eq!(type_word(&mut telex_engine, "truongf "), "trường ");
+        assert_eq!(type_word(&mut telex_engine, "truongs "), "trướng ");
+        assert_eq!(type_word(&mut telex_engine, "truongr "), "trưởng ");
+        assert_eq!(type_word(&mut telex_engine, "truongj "), "trượng ");
+
+        // 3. Initial Letter Case Anchor: "ĐƯợc" / "ĐƯỢc" -> "Được", "đƯỢc" -> "được"
+        assert_eq!(type_word(&mut telex_engine, "DDUowcj "), "Được ");
+        assert_eq!(type_word(&mut telex_engine, "dduOWCJ "), "được ");
+        assert_eq!(type_word(&mut telex_engine, "DDUOWCJ "), "ĐƯỢC ");
+        assert_eq!(type_word(&mut telex_engine, "dduowcj "), "được ");
+
+        // 4. "nganh" -> "ngành"
+        assert_eq!(type_word(&mut telex_engine, "nganh "), "ngành ");
+        assert_eq!(type_word(&mut telex_engine, "Nganh "), "Ngành ");
+        assert_eq!(type_word(&mut telex_engine, "NGANH "), "NGÀNH ");
+        // If tone key is typed afterwards on "nganh", it switches seamlessly:
+        assert_eq!(type_word(&mut telex_engine, "nganhj "), "ngạnh ");
+
+        // Test with VNI engine as well
+        let mut vni_engine = Engine::new(EngineConfig {
+            method: InputMethod::Vni,
+            ..EngineConfig::default()
+        });
+
+        assert_eq!(type_word(&mut vni_engine, "khong "), "không ");
+        assert_eq!(type_word(&mut vni_engine, "truong "), "trương ");
+        assert_eq!(type_word(&mut vni_engine, "truong2 "), "trường ");
+        assert_eq!(type_word(&mut vni_engine, "truong1 "), "trướng ");
+        assert_eq!(type_word(&mut vni_engine, "truong3 "), "trưởng ");
+        assert_eq!(type_word(&mut vni_engine, "truong5 "), "trượng ");
+        assert_eq!(type_word(&mut vni_engine, "nganh "), "ngành ");
+        assert_eq!(type_word(&mut vni_engine, "nganh5 "), "ngạnh ");
     }
 
     #[test]
