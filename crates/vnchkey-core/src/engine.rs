@@ -1132,22 +1132,32 @@ impl Engine {
                 }
 
                 // 2. User Dictionary & Restore English + Chánh Tả check on word completion
-                // Never auto-restore VNI digit sequences (e.g. gio72, duoc975) because English words never contain digits.
+                // For words containing VNI digits: only restore if the word violates Vietnamese syllable structure
+                // (e.g. intermediate forms like 'duong2' -> 'duòng ' where the user hit Space before adding the 2nd accent).
+                // Valid Vietnamese words formed with digits (e.g. gio72 -> giờ, duoc975 -> được) are never restored.
                 let has_digits = self.raw_strokes.chars().any(|c| c.is_ascii_digit());
-                if !self.manual_undo && !has_digits && has_vietnamese_diacritic(&self.current_word) {
-                    let learned_restore = self.habit_learner.is_learned_word(&self.raw_strokes);
-                    let dict_restore = self.config.enable_dictionary
+                let is_invalid_syllable = !is_valid_vietnamese_syllable(&self.current_word);
+
+                if !self.manual_undo
+                    && (!has_digits || is_invalid_syllable)
+                    && has_vietnamese_diacritic(&self.current_word)
+                {
+                    let learned_restore = !has_digits && self.habit_learner.is_learned_word(&self.raw_strokes);
+                    let dict_restore = !has_digits
+                        && self.config.enable_dictionary
                         && self.auto_restore.should_restore(
                             &self.raw_strokes,
                             &self.current_word,
                             true,
                         );
-                    let english_or_spell_restore = self.config.auto_restore_english
-                        && (self.auto_restore.is_english_keyword(&self.raw_strokes)
-                            || !is_valid_vietnamese_syllable(&self.current_word)
-                            || has_phonology_violation(&self.current_word)
-                            || (self.config.spell_check
-                                && !is_in_vietnamese_dictionary(&self.current_word)));
+                    // Invalid intermediate syllables (duòng, tién, nuóc) MUST auto-restore on Space even if auto_restore_english is false.
+                    let english_or_spell_restore = is_invalid_syllable
+                        || (self.config.auto_restore_english
+                            && !has_digits
+                            && (self.auto_restore.is_english_keyword(&self.raw_strokes)
+                                || has_phonology_violation(&self.current_word)
+                                || (self.config.spell_check
+                                    && !is_in_vietnamese_dictionary(&self.current_word))));
 
                     if learned_restore || dict_restore || english_or_spell_restore {
                         let target = format!("{}{}", self.raw_strokes, ch);
@@ -2410,5 +2420,72 @@ mod tests {
         assert!(engine.initial_case_anchor());
         let out_on = type_word(&mut engine, "dduOWCJ ");
         assert_eq!(out_on, "được ");
+    }
+
+    #[test]
+    fn test_intermediate_two_stroke_accent_and_space_restore() {
+        // Test VNI: intermediate state 'duong2' -> 'duòng', 'duong27' -> 'dường', 'duong2 ' -> 'duong2 '
+        let mut vni_engine = Engine::new(EngineConfig {
+            method: InputMethod::Vni,
+            auto_restore_english: false, // Must restore even when auto_restore_english is false!
+            ..EngineConfig::default()
+        });
+
+        // 1. In-progress typing shows intermediate state
+        let out_duong2 = type_word(&mut vni_engine, "duong2");
+        assert_eq!(out_duong2, "duòng");
+
+        // 2. Typing second accent resolves to proper Vietnamese word
+        vni_engine.reset();
+        let out_dường = type_word(&mut vni_engine, "duong27 ");
+        assert_eq!(out_dường, "dường ");
+
+        // 3. Typing Space while in intermediate state restores to raw text
+        vni_engine.reset();
+        let out_space = type_word(&mut vni_engine, "duong2 ");
+        assert_eq!(out_space, "duong2 ");
+
+        vni_engine.reset();
+        let out_nuoc1 = type_word(&mut vni_engine, "nuoc1 ");
+        assert_eq!(out_nuoc1, "nuoc1 ");
+
+        vni_engine.reset();
+        let out_tien1 = type_word(&mut vni_engine, "tien1 ");
+        assert_eq!(out_tien1, "tien1 ");
+
+        // 4. Genuine complete words with numbers (gio72 -> giờ, duoc975 -> được) MUST NOT restore
+        vni_engine.reset();
+        let out_gio = type_word(&mut vni_engine, "gio72 ");
+        assert_eq!(out_gio, "giờ ");
+
+        vni_engine.reset();
+        let out_duoc = type_word(&mut vni_engine, "duoc975 ");
+        assert_eq!(out_duoc, "được ");
+
+        // Test Telex: intermediate state 'duongf' -> 'duòng', 'duongfw' -> 'dường', 'duongf ' -> 'duongf '
+        let mut telex_engine = Engine::new(EngineConfig {
+            method: InputMethod::Telex,
+            auto_restore_english: false,
+            ..EngineConfig::default()
+        });
+
+        let out_tf = type_word(&mut telex_engine, "duongf");
+        assert_eq!(out_tf, "duòng");
+
+        telex_engine.reset();
+        let out_tfw = type_word(&mut telex_engine, "duongfw ");
+        assert_eq!(out_tfw, "dường ");
+
+        telex_engine.reset();
+        let out_tf_space = type_word(&mut telex_engine, "duongf ");
+        assert_eq!(out_tf_space, "duongf ");
+
+        telex_engine.reset();
+        let out_ts_space = type_word(&mut telex_engine, "tiens ");
+        assert_eq!(out_ts_space, "tiens ");
+
+        telex_engine.reset();
+        let out_tse = type_word(&mut telex_engine, "tiense ");
+        assert_eq!(out_tse, "tiến ");
     }
 }

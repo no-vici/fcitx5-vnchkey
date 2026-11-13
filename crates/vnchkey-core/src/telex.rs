@@ -205,7 +205,7 @@ impl TelexEngine {
                         let word_str: String = test_letters.iter().collect();
                         if let Some(parsed) = crate::syllable_parser::parse_syllable(&word_str) {
                             let new_tone = crate::syllable_parser::ToneMark::from_index(tone);
-                            if !parsed.with_tone(new_tone).is_valid() {
+                            if !parsed.with_tone(new_tone).is_valid_in_progress() {
                                 // Phonetic violation (e.g. stop coda -c, -ch, -p, -t taking huyền, hỏi, ngã)
                                 letters.push(ch);
                                 return (letters.into_iter().collect(), false, false);
@@ -863,6 +863,14 @@ pub fn is_valid_vietnamese_syllable(word: &str) -> bool {
         }
     }
 
+    // Natural Vietnamese Orthography: Plain 'uo' or 'ie' with a coda can NEVER take a tone mark
+    // in a completed syllable (e.g. 'duòng', 'duóng', 'tién', 'nuóc' are incomplete intermediate forms).
+    if let Some(parsed) = crate::syllable_parser::parse_syllable(word) {
+        if !parsed.is_valid() {
+            return false;
+        }
+    }
+
     true
 }
 
@@ -1294,17 +1302,28 @@ mod tests {
         assert_eq!(telex.feed("dad").0, "đa");
         assert_eq!(telex.feed("dend").0, "đen");
 
-        // Natural Vietnamese Phonology: Plain 'uo' and 'ie' without diacritics before coda cannot take tone
-        assert_eq!(telex.feed("duongf").0, "duongf");
-        assert_eq!(telex.feed("tuongf").0, "tuongf");
-        assert_eq!(telex.feed("buongf").0, "buongf");
-        assert_eq!(telex.feed("nuocs").0, "nuocs");
-        assert_eq!(telex.feed("cuocs").0, "cuocs");
-        assert_eq!(telex.feed("muons").0, "muons");
-        assert_eq!(telex.feed("luots").0, "luots");
-        assert_eq!(telex.feed("tiens").0, "tiens");
-        assert_eq!(telex.feed("tiengs").0, "tiengs");
-        assert_eq!(telex.feed("biets").0, "biets");
+        // Intermediate states: 2-accent words allow intermediate tone placement (duòng, tién, nuóc)
+        // while in progress, and resolve to complete words when the shape modifier is added:
+        assert_eq!(telex.feed("duongf").0, "duòng");
+        assert_eq!(telex.feed("duongfw").0, "dường");
+        assert_eq!(telex.feed("tuongf").0, "tuòng");
+        assert_eq!(telex.feed("tuongfw").0, "tường");
+        assert_eq!(telex.feed("buongf").0, "buòng");
+        assert_eq!(telex.feed("buongfo").0, "buồng");
+        assert_eq!(telex.feed("nuocs").0, "nuóc");
+        assert_eq!(telex.feed("nuocsw").0, "nước");
+        assert_eq!(telex.feed("cuocs").0, "cuóc");
+        assert_eq!(telex.feed("cuocso").0, "cuốc");
+        assert_eq!(telex.feed("muons").0, "muón");
+        assert_eq!(telex.feed("muonso").0, "muốn");
+        assert_eq!(telex.feed("luots").0, "luót");
+        assert_eq!(telex.feed("luotsw").0, "lướt");
+        assert_eq!(telex.feed("tiens").0, "tién");
+        assert_eq!(telex.feed("tiense").0, "tiến");
+        assert_eq!(telex.feed("tiengs").0, "tiéng");
+        assert_eq!(telex.feed("tiengse").0, "tiếng");
+        assert_eq!(telex.feed("biets").0, "biét");
+        assert_eq!(telex.feed("bietse").0, "biết");
 
         // Valid horned/circumflexed inputs
         assert_eq!(telex.feed("duowngf").0, "dường");

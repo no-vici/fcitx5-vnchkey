@@ -115,6 +115,12 @@ fn test_vietc_auto_restore_cases() {
         ("hello ", "hello "),
         ("the ", "the "),
         ("and ", "and "),
+        // Intermediate syllables without the second accent (duòng, tién, nuóc) must restore to raw text on Space
+        ("duongf ", "duongf "),
+        ("tiens ", "tiens "),
+        ("nuocs ", "nuocs "),
+        ("tuongf ", "tuongf "),
+        ("buongf ", "buongf "),
     ];
 
     for (input, expected) in english_cases {
@@ -136,6 +142,11 @@ fn test_vietc_auto_restore_cases() {
         ("tooi ", "tôi "),
         ("banhf ", "bành "),
         ("ddi ", "đi "),
+        // Two-accent completed words typed in reverse order (tone first then shape)
+        ("duongfw ", "dường "),
+        ("tiense ", "tiến "),
+        ("nuocsw ", "nước "),
+        ("buongfo ", "buồng "),
     ];
 
     for (input, expected) in vn_cases {

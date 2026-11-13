@@ -180,6 +180,44 @@ impl ParsedSyllable {
         true
     }
 
+    /// Validates whether the syllable conforms to in-progress Vietnamese typing rules.
+    /// Unlike completed syllables (`is_valid()`), in-progress typing allows intermediate states
+    /// such as `duòng`, `duóng`, `nuóc`, `tién` (where tone is placed before the horn 'ươ' or circumflex 'uô'/'iê'
+    /// modifier is typed) as long as stop coda rules and other hard phonetic invariants are not violated.
+    pub fn is_valid_in_progress(&self) -> bool {
+        let lower_nucleus = self.nucleus.to_lowercase();
+        let lower_coda = self.coda.to_lowercase();
+        let lower_onset = self.onset.to_lowercase();
+
+        // 1. Must contain at least one vowel in nucleus
+        if lower_nucleus.is_empty() {
+            return false;
+        }
+
+        // 2. Stop codas (c, ch, p, t, k) can ONLY take Ngang (0 / untoned), Sắc (1), or Nặng (5)
+        if matches!(lower_coda.as_str(), "c" | "ch" | "p" | "t" | "k")
+            && matches!(self.tone, ToneMark::Grave | ToneMark::HookAbove | ToneMark::Tilde)
+        {
+            return false;
+        }
+
+        // 3. Open diphthongs (ia, ua, ưa) cannot take a consonant coda
+        if matches!(lower_nucleus.as_str(), "ia" | "ua" | "ưa") && !lower_coda.is_empty() {
+            return false;
+        }
+
+        // 4. Spelling rules: 'gh', 'ngh' must precede 'i', 'e', 'ê' (or glide 'u' + 'y'/'ê')
+        if matches!(lower_onset.as_str(), "gh" | "ngh") {
+            if let Some(first_v) = lower_nucleus.chars().next() {
+                if !matches!(first_v, 'i' | 'e' | 'ê') {
+                    return false;
+                }
+            }
+        }
+
+        true
+    }
+
     /// Reconstructs the syllable into a standard Vietnamese UTF-8 string according
     /// to the requested tone style (Modern vs Classic).
     pub fn reconstruct(&self, tone_style: ToneStyle) -> String {
