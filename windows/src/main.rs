@@ -717,7 +717,9 @@ mod win_app {
 
     /// Kiểm tra phiên bản mới từ GitHub Releases và tự động tải/cập nhật
     unsafe fn check_for_updates(hwnd: HWND, silent_if_latest: bool) {
+        let hwnd_raw = hwnd as usize;
         std::thread::spawn(move || {
+            let hwnd = hwnd_raw as HWND;
             let cur_ver = env!("CARGO_PKG_VERSION");
             // Sử dụng PowerShell để gọi GitHub Releases API và lấy tag mới nhất
             let ps_script = r#"[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; $res = Invoke-RestMethod -Uri "https://api.github.com/repos/no-vici/fcitx5-vnchkey/releases/latest" -Headers @{"User-Agent"="vnchKey-AutoUpdater"}; Write-Output $res.tag_name"#;
