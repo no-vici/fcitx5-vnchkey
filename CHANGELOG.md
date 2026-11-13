@@ -4,6 +4,30 @@ Tất cả những thay đổi nổi bật của dự án **vnchKey** (**fcitx5-
 
 ---
 
+## [0.3.4] - 2026-11-14
+
+### 🚀 Tính Năng Mới & Đột Phá Ngữ Âm Học (Linguistic Innovations)
+- **Cơ Chế Gõ Dấu Trung Gian Tự Do (Intermediate Two-Stroke Accent Mechanics)**:
+  - Cho phép người dùng gõ đảo thứ tự dấu tự do trong các từ tiếng Việt bắt buộc mang 2 dấu (dấu mũ/móc và dấu thanh), ví dụ: gõ thanh trước mũ/móc sau hoặc ngược lại:
+    - VNI: `duong2` $\to$ `duong2`, `duong7` $\to$ `dương`, `duong72` hoặc `duong27` $\to$ `dường`.
+    - Telex: `duowngf` $\to$ `dường`, `dduowngf` $\to$ `đường`, `tuowngf` $\to$ `tường`, `nuowcs` $\to$ `nước`.
+  - **Tự động hoàn nguyên Raw Text khi nhấn Space**: Xử lý triệt để bẫy cụm âm tiết trung gian (`duong2`, `tuong2`, `nuoc1`, `tiens`, `Huyèn`, `chuyén`): hiển thị dấu trung gian trực quan trong quá trình soạn thảo, nhưng nếu nhấn `Space` mà người dùng chưa bỏ dấu thứ 2 để tạo nên từ có nghĩa tiếng Việt thì tự động hoàn nguyên về phím thô (`raw text`).
+  - Bảo toàn ngoại lệ tốc ký từ "được" (như `duoc95`, `duoc59` $\to$ `được` trong VNI, `dduocwj` $\to$ `được` trong Telex).
+- **Hoàn Thiện Tự Động Khôi Phục Tiếng Anh (English Auto-Restore Hardening)**:
+  - Khắc phục triệt để hiện tượng gõ Telex nuốt chữ cái lặp khi gặp phím undo (`error` $\to$ `eror`, `mirror` $\to$ `miror`, `sorry` $\to$ `sory`): khi nhấn `Space`, bộ gõ nhận diện từ điển tiếng Anh kỹ thuật và tự động trả lại đúng nguyên bản (`error `, `mirror `).
+- **Mở Rộng Bộ Kiểm Thử Hồi Quy & Ngữ Âm Toàn Diện**:
+  - Bổ sung cặp nhị trùng âm `('y', 'u')` (trong `khuỷu`) vào danh sách vần hợp lệ của Telex Engine, tránh việc bị nhận nhầm là tiếng Anh lỗi chính tả.
+  - Cập nhật thêm các từ hợp lệ vào từ điển chuẩn: `uồn`, `toãn`, `toạn`.
+  - Bổ sung bộ kiểm thử hồi quy nâng cao `test_nightmare_sloppy_typing_and_bilingual_edge_cases` bao phủ các trường hợp gõ ẩu, từ ngữ âm hiếm, địa danh Tây Nguyên (`Đắk Lắk`, `Krông Nô`, `M'Đrắk`, `Ea H'leo`, `Pleiku`, `Chư Prông`, `Chư Păh`), bẫy trùng từ tiếng Anh và cú pháp mã nguồn/URL.
+
+### 🎨 Tinh Chỉnh Giao Diện & Đồng Bộ Đa Nền Tảng
+- **Chuẩn Hóa Thông Điệp Giới Thiệu (About Dialogs)**:
+  - Đồng bộ thông điệp trên Linux, Windows và macOS: *"Bộ gõ Tiếng Việt hiện đại và gọn nhẹ"*.
+  - Sửa chuẩn chính tả mô tả tính năng: *"Tự động khôi phục Tiếng Anh, Smart Casing, hồi sinh từ"*.
+  - Bổ sung terminal Ghostty, Rio vào danh sách các ứng dụng dòng lệnh mặc định không dùng Preedit để đảm bảo tốc độ phản hồi tức thì.
+
+---
+
 ## [0.3.3] - 2026-11-12
 
 ### 🚀 Tính Năng Mới & Cải Tiến Đột Phá

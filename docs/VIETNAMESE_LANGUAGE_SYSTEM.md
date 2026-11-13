@@ -123,6 +123,12 @@ Trong tiếng Việt, vần `uo` đi với phím râu thông thường sẽ bi�
   - Trọng âm ngữ âm tập trung toàn bộ vào hạt nhân mang mũ/móc.
   - Do đó, dấu thanh **luôn luôn rơi vào hạt nhân** mang mũ/móc: `thue61` $\to$ `thuế`, `hue61` $\to$ `huế` *(tuyệt đối không bị lỗi rớt dấu lên âm đệm thành `thúê`, `húê`)*.
 
+### 6.7. Cơ Chế Gõ Dấu Trung Gian Tự Do & Khôi Phục Raw Text Khi Nhấn Space
+- **Quy tắc ngữ âm chuẩn cho nguyên âm đôi khép kín (`uo`, `ie`, `ye`)**:
+  - Khi đứng trước phụ âm cuối, các nguyên âm đôi `uo`, `ie`, `ye` chưa có dấu mũ/móc (`ươ`, `uô`, `iê`, `yê`) **không thể mang dấu thanh** trong ngữ âm tiếng Việt chuẩn.
+  - Tuy nhiên, để tối ưu trải nghiệm gõ phím linh hoạt, vnchKey cho phép người dùng **gõ dấu nào trước cũng được** (ví dụ: gõ phím thanh trước phím mũ/móc: `duong` $\to$ `duong2` $\to$ `duong27` $\to$ `dường`, hoặc `Huyen` $\to$ `Huyèn` $\to$ `Huyền`).
+  - **Cơ chế khôi phục Raw Text**: Nếu người dùng nhấn phím `Space` khi từ vẫn đang ở trạng thái trung gian chưa hoàn tất (chưa có dấu thứ 2 để tạo thành từ có nghĩa tiếng Việt như `duong2`, `tuongf`, `nuoc1`, `tiens`, `Huyèn`), engine sẽ **tự động hoàn nguyên về raw strokes** (`duong2 `, `tuongf `, `Huyen2 `), ngăn chặn tuyệt đối lỗi nuốt số trong tài khoản/tên biến hoặc xuất từ vô nghĩa.
+
 ---
 
 > [!TIP]

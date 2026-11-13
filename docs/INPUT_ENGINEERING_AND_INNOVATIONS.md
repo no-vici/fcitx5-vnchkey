@@ -201,6 +201,17 @@ Kế thừa phát kiến xuất sắc của bộ gõ Ngó Sen (`fcitx5-ngosen`),
   - Định dạng Ngó Sen (`k=v` hoặc `k:v`)
 - Người dùng có thể trực tiếp sao chép các tệp `ukmacro.txt` từ Windows hoặc các bộ gõ khác vào vnchKey mà không cần bất kỳ bước chuyển đổi định dạng thủ công nào.
 
+---
+
+## 12. Cơ Chế Khôi Phục Tiếng Anh Thông Minh Khi Trùng Phím Undo (Double-Tap Trap)
+
+- **Vấn đề thực tế**: Trong kiểu gõ Telex, các phím lặp như `rr`, `ss`, `ff`, `xx`, `jj` đóng vai trò là phím hủy dấu (Undo). Khi gõ các từ tiếng Anh kỹ thuật chứa ký tự lặp (`error`, `mirror`, `sorry`), ký tự lặp thứ hai kích hoạt hoàn tác dấu khiến một chữ cái bị nuốt mất trên màn hình (`error` $\to$ `eror`). Vì `eror` không còn mang dấu tiếng Việt, các bộ gõ truyền thống không nhận diện được để hoàn tác.
+- **Giải pháp của vnchKey**:
+  - Engine theo dõi chuỗi phím thô (`raw_strokes`).
+  - Khi nhấn phím `Space`, engine đối chiếu `raw_strokes` với kho từ khóa tiếng Anh kỹ thuật và lập trình (`is_english_keyword`).
+  - Nếu `raw_strokes` là một từ tiếng Anh hợp lệ, engine lập tức tự động hoàn nguyên về nguyên bản (`error `, `mirror `), đảm bảo lập trình viên gõ code và lệnh console mượt mà không bị ngắt quãng.
+
+
 
 
 
