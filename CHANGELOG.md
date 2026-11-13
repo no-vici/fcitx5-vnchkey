@@ -7,6 +7,15 @@ Tất cả những thay đổi nổi bật của dự án **vnchKey** (**fcitx5-
 ## [0.3.3] - 2026-11-12
 
 ### 🚀 Tính Năng Mới & Cải Tiến Đột Phá
+- **Trao Quyền Tự Do Tuyệt Đối Cho Người Dùng (User-Driven Autonomy & Pure Core)**:
+  - **Dọn dẹp Core Engine tinh gọn**: Loại bỏ các cơ chế tự đoán từ kiểu áp đặt (opinionated feature creep như tự động đổi `khong` $\to$ `không`, `truong` $\to$ `trương`, `nganh` $\to$ `ngành`), giữ Core chuẩn xác, trung lập và tốc độ tối đa.
+  - **Tùy chọn Đồng Nhất Chữ Hoa Đầu Từ (Initial Case Anchor: `ĐƯợc`/`ĐƯỢc` ➔ `Được`, `đƯỢc` ➔ `được`)**:
+    - Chuyển thành cờ cấu hình tùy chọn người dùng trên cả 3 nền tảng (Linux Settings GUI, Windows Menu, macOS Menu & Dashboard).
+    - **Mặc định TẮT (`false`)** để tôn trọng 100% cách gõ của người dùng và các token lập trình (`iOS`, `eBay`, `parseS`). Người dùng có thể bật lên bất cứ lúc nào nếu muốn tự động hóa giải hiện tượng nhả phím Shift chậm trên bàn phím cơ.
+  - **Nâng Cấp Toàn Diện Bộ Học Thói Quen (Adaptive Habit Learner)**:
+    - Bổ sung công tắc **Bật/Tắt** toàn quyền cho tính năng tự học thói quen gõ phím.
+    - Cho phép người dùng **tự cấu hình số lần xóa/sửa sai (Promotion Threshold)** từ 2 đến 10 lần (mặc định nâng lên **4 lần** để tránh tai nạn gõ nhầm).
+    - Đồng bộ xóa hai chiều tức thì (**Instant Unlearn**): các từ tự học được đưa vào Từ Điển Cá Nhân, khi người dùng xóa từ khỏi từ điển thì bộ gõ lập tức hủy học và khôi phục khả năng gõ dấu tiếng Việt bình thường ngay tức thì.
 - **Nhập Ký Tự Toán Học & Emoji Nhanh Qua Tiền Tố (Inline Symbol & Emoji Picker)**:
   - Hỗ trợ gõ shortcode bắt đầu bằng dấu hai chấm (ví dụ: `:smile:` ➔ 😄, `:arrow:` ➔ ➔, `:alpha:` ➔ α, `:pi:` ➔ π, `:check:` ➔ ✓, `:sum:` ➔ ∑).
   - Tự động thay thế trực tiếp ngay khi kết thúc bằng dấu `:` hoặc phím cách (Space).

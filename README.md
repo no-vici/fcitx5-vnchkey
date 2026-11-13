@@ -184,11 +184,17 @@ Kế thừa thuật toán từ điển tĩnh từ **GoNhanh**:
 
 ---
 
-### 3.7. Bảo Toàn Chữ Hoa Thông Minh (Smart Casing)
+### 3.7. Bảo Toàn Chữ Hoa Thông Minh (Smart Casing) & Tùy Chọn Đồng Nhất Chữ Hoa Đầu Từ
 - Khi gõ toàn bộ chữ hoa: `VIET` $\to$ `VIỆT` (không bị lỗi `VIệt` hoặc `ViỆt`).
 - Khi gõ hoa đầu từ: `Viet` $\to$ `Việt`.
 - Khi gõ hoa cụm từ: `CONG HOA` $\to$ `CỘNG HÒA`.
 - Khi mở rộng macro: `vn` $\to$ `Việt Nam`, nhưng nếu gõ `VN` $\to$ tự động mở rộng thành `VIỆT NAM`.
+- **Tùy chọn Đồng Nhất Chữ Hoa Theo Ký Tự Đầu (Initial Case Anchor — Mặc Định TẮT)**:
+  - Tôn trọng quyền tự do của người dùng và môi trường lập trình viên: mặc định tắt để không tự ý can thiệp vào cách gõ hoặc các biến mã nguồn (`iOS`, `eBay`, `parseS`, `mDNS`).
+  - Khi người dùng chủ động **Bật** tùy chọn này trong menu/cài đặt (Linux, Windows, macOS), bộ gõ sẽ tự động sửa lỗi nhả phím Shift chậm trên bàn phím cơ/laptop:
+    - Nếu ký tự đầu là chữ hoa $\to$ toàn bộ các ký tự sau được chuẩn hóa về chữ thường (`ĐƯợc` / `ĐƯỢc` $\to$ `Được`).
+    - Nếu ký tự đầu là chữ thường $\to$ toàn bộ từ được chuẩn hóa về chữ thường (`đƯỢc` $\to$ `được`).
+    - Giữ nguyên vẹn 100% nếu từ được gõ ALL-CAPS (`ĐƯỢC`).
 
 ---
 
