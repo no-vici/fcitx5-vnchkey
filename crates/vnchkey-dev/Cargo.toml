@@ -1,0 +1,13 @@
+[package]
+name = "vnchkey-dev"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Internal developer tooling and version bumper for vnchKey"
+
+[[bin]]
+name = "set-version"
+path = "src/main.rs"
+
+[dependencies]
