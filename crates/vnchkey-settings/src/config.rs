@@ -42,6 +42,7 @@ pub struct VnchkeyConfig {
     pub show_indicator_badge: bool,
     pub learn_typing_habits: bool,
     pub habit_promote_threshold: u32,
+    pub initial_case_anchor: bool,
 }
 
 impl Default for VnchkeyConfig {
@@ -80,6 +81,7 @@ impl Default for VnchkeyConfig {
             show_indicator_badge: true,
             learn_typing_habits: true,
             habit_promote_threshold: 4,
+            initial_case_anchor: false,
         }
     }
 }
@@ -201,6 +203,7 @@ impl ConfigManager {
             if let Some(v) = map.get("ShowIndicatorBadge") { cfg.show_indicator_badge = v.eq_ignore_ascii_case("true"); }
             if let Some(v) = map.get("LearnTypingHabits") { cfg.learn_typing_habits = v.eq_ignore_ascii_case("true"); }
             if let Some(v) = map.get("HabitPromoteThreshold") { cfg.habit_promote_threshold = v.parse().unwrap_or(4).max(1); }
+            if let Some(v) = map.get("InitialCaseAnchor") { cfg.initial_case_anchor = v.eq_ignore_ascii_case("true"); }
         }
 
         cfg
@@ -233,6 +236,7 @@ impl ConfigManager {
         lines.push(format!("AutoRestoreEnglish={}", if cfg.auto_restore_english { "True" } else { "False" }));
         lines.push(format!("EnableDictionary={}", if cfg.enable_dictionary { "True" } else { "False" }));
         lines.push(format!("SmartCasing={}", if cfg.smart_casing { "True" } else { "False" }));
+        lines.push(format!("InitialCaseAnchor={}", if cfg.initial_case_anchor { "True" } else { "False" }));
         lines.push(format!("FreeMarking={}", if cfg.free_marking { "True" } else { "False" }));
         lines.push(format!("FastConsonantDoubling={}", if cfg.fast_consonant_doubling { "True" } else { "False" }));
         lines.push(format!("QuickTelex={}", if cfg.fast_consonant_doubling { "True" } else { "False" }));

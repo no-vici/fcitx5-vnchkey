@@ -25,6 +25,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     private var dashRestoreCheckbox: NSButton?
     private var dashEscCheckbox: NSButton?
     private var dashBracketCheckbox: NSButton?
+    private var dashCaseAnchorCheckbox: NSButton?
     private var dashW2UPopup: NSPopUpButton?
     private var dashTimeoutSlider: NSSlider?
     private var dashTimeoutValueLabel: NSTextField?
@@ -121,6 +122,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             defaults.set(1, forKey: "vnchkey.toneStyle")      // Dấu cũ (hòa, ủy)
             defaults.set(0, forKey: "vnchkey.charset")        // Unicode dựng sẵn NFC
             defaults.set(false, forKey: "vnchkey.bracket")    // Gõ [ ] thành ơ ư
+            defaults.set(false, forKey: "vnchkey.caseAnchor") // Đồng nhất chữ hoa theo chữ cái đầu
             defaults.set(0, forKey: "vnchkey.w2u")            // W -> ư (Không ở đầu từ)
             defaults.set(0, forKey: "vnchkey.idleTimeout")  // Mặc định tắt (0ms) để không ngắt gõ dấu VNI / flip word khi dừng tay
             defaults.set(true, forKey: "vnchkey.perApp")     // Mặc định nhớ trạng thái theo từng ứng dụng
@@ -152,6 +154,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         km.setToneStyle(toneStyleVal)
         km.setCharset(UInt32(defaults.integer(forKey: "vnchkey.charset")))
         km.setBracketTransform(defaults.bool(forKey: "vnchkey.bracket"))
+        km.setInitialCaseAnchor(defaults.bool(forKey: "vnchkey.caseAnchor"))
         km.setW2U(UInt32(defaults.integer(forKey: "vnchkey.w2u")))
         km.setIdleTimeout(UInt64(defaults.integer(forKey: "vnchkey.idleTimeout")))
         km.setQuickTelex(defaults.bool(forKey: "vnchkey.quick_telex"))
@@ -305,6 +308,10 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         let bracketItem = NSMenuItem(title: "Gõ [ ] thành ơ ư", action: #selector(toggleBracket(_:)), keyEquivalent: "")
         bracketItem.state = defaults.bool(forKey: "vnchkey.bracket") ? .on : .off
         menu.addItem(bracketItem)
+
+        let caseAnchorItem = NSMenuItem(title: "Đồng nhất chữ hoa theo chữ cái đầu (Được, được)", action: #selector(toggleCaseAnchor(_:)), keyEquivalent: "")
+        caseAnchorItem.state = defaults.bool(forKey: "vnchkey.caseAnchor") ? .on : .off
+        menu.addItem(caseAnchorItem)
 
         // Menu con: Tùy chọn Tốc ký (Quick Consonants)
         let quickMenu = NSMenu()
@@ -555,6 +562,14 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         let next = !defaults.bool(forKey: "vnchkey.bracket")
         defaults.set(next, forKey: "vnchkey.bracket")
         keyManager?.setBracketTransform(next)
+        rebuildMenu()
+        syncDashboardControls()
+    }
+
+    @objc func toggleCaseAnchor(_ sender: NSMenuItem) {
+        let next = !defaults.bool(forKey: "vnchkey.caseAnchor")
+        defaults.set(next, forKey: "vnchkey.caseAnchor")
+        keyManager?.setInitialCaseAnchor(next)
         rebuildMenu()
         syncDashboardControls()
     }
@@ -868,6 +883,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         dashRestoreCheckbox?.state = km.getAutoRestore() ? .on : .off
         dashEscCheckbox?.state = km.escRestoreEnabled ? .on : .off
         dashBracketCheckbox?.state = defaults.bool(forKey: "vnchkey.bracket") ? .on : .off
+        dashCaseAnchorCheckbox?.state = defaults.bool(forKey: "vnchkey.caseAnchor") ? .on : .off
         dashW2UPopup?.selectItem(at: defaults.integer(forKey: "vnchkey.w2u"))
 
         let timeout = defaults.integer(forKey: "vnchkey.idleTimeout")

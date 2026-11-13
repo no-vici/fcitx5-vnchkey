@@ -556,6 +556,24 @@ pub unsafe extern "C" fn fcitx5_vnchkey_unlearn_word(ctx: *mut Fcitx5VnchkeyCont
     }
 }
 
+/// Enables or disables Initial Case Anchor (ĐƯợc/ĐƯỢc -> Được, đƯỢc -> được).
+#[no_mangle]
+pub unsafe extern "C" fn fcitx5_vnchkey_set_initial_case_anchor(ctx: *mut Fcitx5VnchkeyContext, enabled: bool) {
+    if !ctx.is_null() {
+        (*ctx).engine.set_initial_case_anchor(enabled);
+    }
+}
+
+/// Returns whether Initial Case Anchor is enabled.
+#[no_mangle]
+pub unsafe extern "C" fn fcitx5_vnchkey_get_initial_case_anchor(ctx: *mut Fcitx5VnchkeyContext) -> bool {
+    if !ctx.is_null() {
+        (*ctx).engine.initial_case_anchor()
+    } else {
+        false
+    }
+}
+
 /// Returns tone style (0 = Modern: oà, uý; 1 = Classic: hòa, ủy).
 #[no_mangle]
 pub unsafe extern "C" fn fcitx5_vnchkey_get_tone_style(ctx: *mut Fcitx5VnchkeyContext) -> u32 {

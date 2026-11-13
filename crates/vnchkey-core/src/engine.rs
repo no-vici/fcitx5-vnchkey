@@ -80,6 +80,8 @@ pub struct EngineConfig {
     pub habit_learning_enabled: bool,
     /// Number of corrections required before auto-promoting to whitelist (default: 4)
     pub habit_promote_threshold: u32,
+    /// Harmonize syllable casing based on initial character (ĐƯợc/ĐƯỢc -> Được, đƯỢc -> được). Defaults to false.
+    pub initial_case_anchor: bool,
 }
 
 impl Default for EngineConfig {
@@ -102,6 +104,7 @@ impl Default for EngineConfig {
             quick_end_consonant: false,
             habit_learning_enabled: true,
             habit_promote_threshold: 4,
+            initial_case_anchor: false,
         }
     }
 }
@@ -515,6 +518,16 @@ impl Engine {
     /// Returns whether smart casing is enabled.
     pub fn smart_casing(&self) -> bool {
         self.config.smart_casing
+    }
+
+    /// Enables or disables Initial Case Anchor (ĐƯợc/ĐƯỢc -> Được, đƯỢc -> được).
+    pub fn set_initial_case_anchor(&mut self, enabled: bool) {
+        self.config.initial_case_anchor = enabled;
+    }
+
+    /// Returns whether Initial Case Anchor is enabled.
+    pub fn initial_case_anchor(&self) -> bool {
+        self.config.initial_case_anchor
     }
 
     /// Enables or disables macro expansion.
@@ -1607,6 +1620,12 @@ impl Engine {
             new_word = format!("{}{}", self.current_word, ch);
         }
 
+        // Optional Initial Case Anchor (user configurable, default: false)
+        // When enabled by user: ĐƯợc/ĐƯỢc -> Được, đƯỢc -> được.
+        if self.config.initial_case_anchor && !new_word.is_empty() && !self.english_locked && !auto_restored {
+            new_word = crate::casing::harmonize_syllable_case(&new_word);
+        }
+
         let (backspaces, commit_text) = compare_and_split_strings(&self.current_word, &new_word);
         self.current_word = new_word;
 
@@ -2371,5 +2390,24 @@ mod tests {
         engine.unlearn_word("kas");
         assert!(!engine.habit_learner().is_learned_word("kas"));
         assert_eq!(type_word(&mut engine, "kas "), "ká ");
+    }
+
+    #[test]
+    fn test_initial_case_anchor_toggle() {
+        let mut engine = Engine::new(EngineConfig {
+            method: InputMethod::Telex,
+            initial_case_anchor: false, // Default is OFF
+            ..EngineConfig::default()
+        });
+
+        // When OFF: typing "dduOWCJ " preserves mixed case ("đượC ")
+        let out_off = type_word(&mut engine, "dduOWCJ ");
+        assert_eq!(out_off, "đượC ");
+
+        // Turn ON: typing "dduOWCJ " harmonizes to lowercase based on initial 'đ' ("được ")
+        engine.set_initial_case_anchor(true);
+        assert!(engine.initial_case_anchor());
+        let out_on = type_word(&mut engine, "dduOWCJ ");
+        assert_eq!(out_on, "được ");
     }
 }

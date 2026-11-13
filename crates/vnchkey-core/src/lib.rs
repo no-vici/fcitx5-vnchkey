@@ -20,7 +20,7 @@ pub mod vietnamese_dict;
 pub mod vni;
 
 pub use auto_restore::{EnglishAutoRestore, DEFAULT_ENGLISH_WORDS};
-pub use casing::{CaseTracker, CasingStyle};
+pub use casing::{harmonize_syllable_case, CaseTracker, CasingStyle};
 pub use engine::{
     to_composite_unicode, Charset, Engine, EngineConfig, EngineOutput, InputMethod, ToneStyle,
     W2UType,

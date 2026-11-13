@@ -731,6 +731,12 @@ impl SettingsApp {
         ui.add_space(6.0);
 
         ui.checkbox(
+            &mut self.config.initial_case_anchor,
+            "Đồng nhất chữ hoa theo ký tự đầu (Initial Case Anchor: ĐƯợc -> Được, đƯỢc -> được)",
+        );
+        ui.add_space(6.0);
+
+        ui.checkbox(
             &mut self.config.free_marking,
             "Cho phép bỏ dấu tự do trên bất kỳ nguyên âm nào",
         );

@@ -53,6 +53,7 @@ mod win_app {
     const ID_TOGGLE_AUTORESTORE: usize = 1031;
     const ID_TOGGLE_ESCRESTORE: usize = 1032;
     const ID_TOGGLE_BRACKET: usize = 1033;
+    const ID_TOGGLE_CASE_ANCHOR: usize = 1065;
     const ID_TOGGLE_MACRO: usize = 1034;
     const ID_TOGGLE_DICT: usize = 1035;
     const ID_TOGGLE_HABIT_LEARNING: usize = 1053;
@@ -482,6 +483,10 @@ mod win_app {
                             let val = v.parse::<u32>().unwrap_or(4).max(1);
                             st.engine.set_habit_promote_threshold(val);
                         }
+                        "initial_case_anchor" => {
+                            let val = v == "true" || v == "1";
+                            st.engine.set_initial_case_anchor(val);
+                        }
                         "per_app" => {
                             st.per_app = v == "true" || v == "1";
                         }
@@ -525,6 +530,7 @@ mod win_app {
              dict_enabled={}\n\
              learn_habits={}\n\
              habit_threshold={}\n\
+             initial_case_anchor={}\n\
              per_app={}\n\
              ctrl={}\n\
              shift={}\n\
@@ -550,6 +556,7 @@ mod win_app {
             st.dict_enabled,
             st.engine.habit_learning_enabled(),
             st.engine.habit_promote_threshold(),
+            st.engine.initial_case_anchor(),
             st.per_app,
             st.shortcut.ctrl, st.shortcut.shift, st.shortcut.alt, st.shortcut.win, st.shortcut.key_code,
             st.flip_shortcut.ctrl, st.flip_shortcut.shift, st.flip_shortcut.alt, st.flip_shortcut.win, st.flip_shortcut.key_code
@@ -1144,6 +1151,7 @@ mod win_app {
             per_app,
             habit_en,
             habit_threshold,
+            case_anchor,
             shortcut,
             flip_shortcut,
         )) = STATE.with(|s| {
@@ -1161,6 +1169,7 @@ mod win_app {
                 st.per_app,
                 st.engine.habit_learning_enabled(),
                 st.engine.habit_promote_threshold(),
+                st.engine.initial_case_anchor(),
                 st.shortcut.clone(),
                 st.flip_shortcut.clone(),
             ))
@@ -1408,6 +1417,12 @@ mod win_app {
             MF_STRING | if bracket { MF_CHECKED } else { 0 },
             ID_TOGGLE_BRACKET,
             to_wstring("Gõ [ ] thành ơ ư").as_ptr(),
+        );
+        AppendMenuW(
+            menu,
+            MF_STRING | if case_anchor { MF_CHECKED } else { 0 },
+            ID_TOGGLE_CASE_ANCHOR,
+            to_wstring("Đồng nhất chữ hoa theo chữ cái đầu (Được, được)").as_ptr(),
         );
 
         // Tùy chọn Tốc ký
@@ -1744,6 +1759,11 @@ mod win_app {
                             let val = !st.bracket_transform;
                             st.bracket_transform = val;
                             st.engine.set_bracket_transform(val);
+                            save_app_config(&st);
+                        }
+                        ID_TOGGLE_CASE_ANCHOR => {
+                            let val = !st.engine.initial_case_anchor();
+                            st.engine.set_initial_case_anchor(val);
                             save_app_config(&st);
                         }
                         ID_TOGGLE_QUICK_TELEX => {

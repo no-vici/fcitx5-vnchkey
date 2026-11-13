@@ -17,6 +17,52 @@ pub enum CasingStyle {
     Mixed,
 }
 
+/// Harmonizes capitalization across a Vietnamese syllable based on its initial character.
+/// - If all alphabetic characters are uppercase (ALL CAPS), preserves uppercase (`ĐƯỢC` -> `ĐƯỢC`).
+/// - If the first character is uppercase, enforces TitleCase (`ĐƯợc`, `ĐƯỢc` -> `Được`).
+/// - If the first character is lowercase, enforces lowercase across the entire word (`đƯỢc` -> `được`).
+pub fn harmonize_syllable_case(word: &str) -> String {
+    let chars: Vec<char> = word.chars().collect();
+    if chars.len() <= 1 {
+        return word.to_string();
+    }
+
+    let alpha_chars: Vec<char> = chars.iter().copied().filter(|c| c.is_alphabetic()).collect();
+    if alpha_chars.is_empty() {
+        return word.to_string();
+    }
+
+    // If entire word is uppercase (ALL CAPS), keep it intact (e.g. "ĐƯỢC", "VIỆT NAM")
+    if alpha_chars.iter().all(|c| c.is_uppercase()) {
+        return word.to_string();
+    }
+
+    // Anchor to the very first alphabetic character
+    let first_is_upper = alpha_chars[0].is_uppercase();
+
+    if first_is_upper {
+        // TitleCase: First letter uppercase, every subsequent letter MUST be lowercase
+        let mut seen_first = false;
+        let mut out = String::with_capacity(word.len());
+        for c in chars {
+            if c.is_alphabetic() {
+                if !seen_first {
+                    out.extend(c.to_uppercase());
+                    seen_first = true;
+                } else {
+                    out.extend(c.to_lowercase());
+                }
+            } else {
+                out.push(c);
+            }
+        }
+        out
+    } else {
+        // LowerCase: First letter lowercase, entire word MUST be lowercase
+        word.to_lowercase()
+    }
+}
+
 /// Tracks character-level capitalization vectors.
 #[derive(Debug, Clone, Default)]
 pub struct CaseTracker {
