@@ -1816,6 +1816,7 @@ mod tests {
         // Valid Southern & Standard Vietnamese words pass Chánh Tả check
         assert_eq!(type_word(&mut engine, "chanhs "), "chánh ");
         assert_eq!(type_word(&mut engine, "tar "), "tả ");
+        assert_eq!(type_word(&mut engine, "khuyur "), "khuỷu ");
     }
 
     #[test]

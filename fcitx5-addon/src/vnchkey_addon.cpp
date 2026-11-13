@@ -795,6 +795,9 @@ std::string VnchkeyEngine::getOutputModeForContext(fcitx::InputContext* ic) {
             }
             if (lower_prog.find("alacritty") != std::string::npos ||
                 lower_prog.find("kitty") != std::string::npos ||
+                lower_prog.find("ghostty") != std::string::npos ||
+                lower_prog.find("rio") != std::string::npos ||
+                lower_prog.find("foot") != std::string::npos ||
                 lower_prog.find("wezterm") != std::string::npos ||
                 lower_prog.find("terminal") != std::string::npos ||
                 lower_prog.find("code") != std::string::npos ||

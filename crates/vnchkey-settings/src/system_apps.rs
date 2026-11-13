@@ -36,6 +36,8 @@ impl SystemAppEntry {
             || text.contains("console")
             || text.contains("alacritty")
             || text.contains("kitty")
+            || text.contains("ghostty")
+            || text.contains("rio")
             || text.contains("wezterm")
             || text.contains("foot")
             || text.contains("tmux")
@@ -291,6 +293,8 @@ pub fn scan_system_applications() -> Vec<SystemAppEntry> {
         ("WezTerm", "wezterm", "💻"),
         ("Alacritty", "alacritty", "💻"),
         ("Kitty", "kitty", "💻"),
+        ("Ghostty", "ghostty", "💻"),
+        ("Rio Terminal", "rio", "💻"),
         ("Foot", "foot", "💻"),
         ("Tmux", "tmux", "💻"),
         ("Helix Editor", "hx", "📝"),

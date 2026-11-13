@@ -929,7 +929,7 @@ pub fn is_valid_in_progress_syllable(letters: &[char]) -> bool {
                     | ('i', 'a' | 'e' | 'u')
                     | ('o', 'a' | 'e' | 'i' | 'o')
                     | ('u', 'a' | 'e' | 'i' | 'o' | 'u' | 'y')
-                    | ('y', 'e')
+                    | ('y', 'e' | 'u')
             );
             if !valid_diphthong {
                 return false;
