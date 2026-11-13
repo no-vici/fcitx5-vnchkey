@@ -71,8 +71,6 @@ pub const RARE_WORDS: &[&str] = &[
     // Southern & Saigon classical vocabulary ("Gom góp từ ngữ của miền Nam và Saigon xưa")
     "chớn", "dzách", "dách", "quỉ", "quởn", "quỡn", "quơn", "quớt", "tỏn", "xề",
     "nhổng", "cháng", "chác", "cháo", "lữa", "nư", "hum", "mụi", "lét", "đéc",
-    // Valid tone extensions for unique auto-completed syllables
-    "khồng", "khỗng", "khộng", "ngánh", "ngãnh",
 ];
 
 static VIETNAMESE_WORD_SET: OnceLock<HashSet<String>> = OnceLock::new();

@@ -261,15 +261,7 @@ impl TelexEngine {
                     };
 
                     if base == hat_base {
-                        // If the circumflex was added automatically (e.g. 'khong' -> 'không')
-                        // and raw_strokes does not yet contain two circumflex modifier keys,
-                        // this key press merely confirms the circumflex rather than undoing it.
-                        let modifier_count = raw_strokes.chars().filter(|&c| c.to_ascii_lowercase() == lower).count();
-                        if modifier_count <= 1 {
-                            return (letters.into_iter().collect(), true, false);
-                        }
-
-                        // Already explicitly circumflexed -> revert to plain vowel and append literal key (e.g. không + o -> khongo)
+                        // Already circumflexed -> revert to plain vowel and append literal key (e.g. không + o -> khongo)
                         letters[idx] = compose_vowel(lower, 0, is_up);
                         letters.push(ch);
                         rebalance_tone(&mut letters, current_tone, self.tone_style);
