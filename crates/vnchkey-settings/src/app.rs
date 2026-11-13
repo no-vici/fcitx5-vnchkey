@@ -1856,8 +1856,8 @@ impl SettingsApp {
             // Description
             ui.label(
                 egui::RichText::new(
-                    "Next-Gen Native Wayland Vietnamese IME for Linux.\n\
-                     Powered by 100% Safe Rust & Sentinel Barrier."
+                    "Bộ gõ Tiếng Việt hiện đại, gọn nhẹ và chuẩn mực cho Linux (Fcitx5 / Wayland / X11).\n\
+                     Phát triển hoàn toàn bằng 100% Safe Rust & Micro-diff Engine."
                 )
                 .size(13.0)
                 .color(egui::Color32::from_rgb(0xa6, 0xad, 0xc8)),
