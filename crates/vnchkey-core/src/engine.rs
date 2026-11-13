@@ -1137,10 +1137,15 @@ impl Engine {
                 // Valid Vietnamese words formed with digits (e.g. gio72 -> giờ, duoc975 -> được) are never restored.
                 let has_digits = self.raw_strokes.chars().any(|c| c.is_ascii_digit());
                 let is_invalid_syllable = !is_valid_vietnamese_syllable(&self.current_word);
+                let is_known_english = self.config.auto_restore_english
+                    && !has_digits
+                    && self.current_word != self.raw_strokes
+                    && self.auto_restore.is_english_keyword(&self.raw_strokes);
 
-                if !self.manual_undo
-                    && (!has_digits || is_invalid_syllable)
-                    && has_vietnamese_diacritic(&self.current_word)
+                if is_known_english
+                    || (!self.manual_undo
+                        && (!has_digits || is_invalid_syllable)
+                        && has_vietnamese_diacritic(&self.current_word))
                 {
                     let learned_restore = !has_digits && self.habit_learner.is_learned_word(&self.raw_strokes);
                     let dict_restore = !has_digits
@@ -1151,11 +1156,11 @@ impl Engine {
                             true,
                         );
                     // Invalid intermediate syllables (duòng, tién, nuóc) MUST auto-restore on Space even if auto_restore_english is false.
-                    let english_or_spell_restore = is_invalid_syllable
+                    let english_or_spell_restore = is_known_english
+                        || is_invalid_syllable
                         || (self.config.auto_restore_english
                             && !has_digits
-                            && (self.auto_restore.is_english_keyword(&self.raw_strokes)
-                                || has_phonology_violation(&self.current_word)
+                            && (has_phonology_violation(&self.current_word)
                                 || (self.config.spell_check
                                     && !is_in_vietnamese_dictionary(&self.current_word))));
 

@@ -112,6 +112,27 @@ fn test_vietc_auto_restore_cases() {
         ("sweet ", "sweet "),
         ("type ", "type "),
         ("code ", "code "),
+        ("error ", "error "),
+        ("mirror ", "mirror "),
+        ("server ", "server "),
+        ("user ", "user "),
+        ("render ", "render "),
+        ("filter ", "filter "),
+        ("docker ", "docker "),
+        ("order ", "order "),
+        ("cursor ", "cursor "),
+        ("browser ", "browser "),
+        ("diff ", "diff "),
+        ("off ", "off "),
+        ("linux ", "linux "),
+        ("unix ", "unix "),
+        ("nginx ", "nginx "),
+        ("matrix ", "matrix "),
+        ("index ", "index "),
+        ("context ", "context "),
+        ("firefox ", "firefox "),
+        ("window ", "window "),
+        ("view ", "view "),
         ("hello ", "hello "),
         ("the ", "the "),
         ("and ", "and "),
@@ -123,6 +144,7 @@ fn test_vietc_auto_restore_cases() {
         ("buongf ", "buongf "),
     ];
 
+    
     for (input, expected) in english_cases {
         engine.reset();
         let out = type_word(&mut engine, input);
@@ -354,4 +376,163 @@ fn test_property_based_phonotactic_invariants() {
         assert!(out.commit_text.chars().count() <= 64);
     }
 }
+
+#[test]
+fn test_nightmare_sloppy_typing_and_bilingual_edge_cases() {
+    let mut engine = Engine::new(EngineConfig {
+        method: InputMethod::Auto,
+        tone_style: ToneStyle::Classic,
+        auto_restore_english: true,
+        spell_check: true,
+        enable_dictionary: true,
+        ..EngineConfig::default()
+    });
+
+    // 1. Gõ ẩu / đảo thứ tự phím dấu hợp lý trong thực tế
+    let sloppy_cases = [
+        ("toasn ", "toán "),
+        ("nguowif ", "người "),
+        ("nguoifw ", "người "),
+        ("tuyeesn ", "tuyến "),
+        ("nghieeng ", "nghiêng "),
+        ("khuyeesn ", "khuyến "),
+        ("khuysn ", "khuysn "), // Missing 'e', correctly restores to raw text on Space!
+        ("duocwj ", "dược "),
+        ("dduocwj ", "được "),
+        ("duocwdj ", "được "),
+        ("duocwjd ", "được "),
+        ("duoc975 ", "được "),
+        ("duoc795 ", "được "),
+        ("duoc59 ", "được "),
+        ("nguoi72 ", "người "),
+        ("nguoi27 ", "người "),
+        ("dod ", "đo "),
+        ("dand ", "đan "),
+        ("dinhd ", "đinh "),
+        // Sửa dấu liên tục ở cuối từ
+        ("toansf ", "toàn "),
+        ("toansfr ", "toản "),
+        ("toansfz ", "toan "),
+    ];
+
+    for (raw, expected) in sloppy_cases {
+        engine.reset();
+        let actual = type_word(&mut engine, raw);
+        assert_eq!(
+            actual, expected,
+            "Sloppy typing failed for '{raw}': got '{actual}', expected '{expected}'"
+        );
+    }
+
+    // 2. Từ tiếng Việt hiếm & bẫy vần
+    let linguistic_cases = [
+        ("khuyur ", "khuỷu "),
+        ("khuayas ", "khuấy "),
+        ("khueechs ", "khuếch "),
+        ("uoorng ", "uổng "),
+        ("uoonf ", "uồn "),
+        ("huouw ", "hươu "),
+        ("ruowuj ", "rượu "),
+        ("buouws ", "bướu "),
+        ("khuouws ", "khướu "),
+        ("thuowr ", "thuở "),
+        ("quonwr ", "quởn "),
+        ("quonwx ", "quỡn "),
+        ("quow ", "quơ "),
+        ("huow ", "huơ "),
+        ("gieengs ", "giếng "),
+        ("giuowngf ", "giường "),
+        ("gieeux ", "giễu "),
+        ("giawcj ", "giặc "),
+        ("giawtj ", "giặt "),
+        ("giaays ", "giấy "),
+        ("giayf ", "giày "),
+        ("gif ", "gì "),
+        ("ginf ", "gìn "),
+        ("gir ", "gỉ "),
+        ("quys ", "quý "),
+        ("quyr ", "quỷ "),
+        ("quyx ", "quỹ "),
+        ("quyj ", "quỵ "),
+        ("quoocs ", "quốc "),
+        ("quaanr ", "quẩn "),
+        ("quetj ", "quẹt "),
+        ("dziaf ", "dzìa "),
+        ("dzoo ", "dzô "),
+        ("dzis ", "dzí "),
+        ("dzaayj ", "dzậy "),
+        ("dzachs ", "dzách "),
+        ("Ddawsk Lawsk ", "Đắk Lắk "),
+        ("Kroong Noo ", "Krông Nô "),
+        ("M'Ddrawsk ", "M'Đrắk "),
+        ("Ea H'leo ", "Ea H'leo "),
+        ("Pleiku ", "Pleiku "),
+        ("Ia Grai ", "Ia Grai "),
+        ("Chuw Proong ", "Chư Prông "),
+        ("Chuw Pawh ", "Chư Păh "),
+    ];
+
+    for (raw, expected) in linguistic_cases {
+        engine.reset();
+        let actual = type_word(&mut engine, raw);
+        assert_eq!(
+            actual, expected,
+            "Linguistic trap failed for '{raw}': got '{actual}', expected '{expected}'"
+        );
+    }
+
+    // 3. Bảo vệ từ tiếng Việt khi trùng từ tiếng Anh
+    let collision_cases = [
+        ("this ", "thí "),
+        ("these ", "thế "),
+        ("there ", "thể "),
+        ("its ", "ít "),
+        ("chaos ", "cháo "),
+        ("bus ", "bú "),
+        ("has ", "há "),
+        ("see ", "sê "),
+        ("reset ", "rết "),
+    ];
+
+    for (raw, expected) in collision_cases {
+        engine.reset();
+        let actual = type_word(&mut engine, raw);
+        assert_eq!(
+            actual, expected,
+            "Collision protection failed for '{raw}': got '{actual}', expected '{expected}'"
+        );
+    }
+
+    // 4. Cú pháp lập trình, URL, CLI flags, timestamps & shortcodes
+    let code_cases = [
+        ("useState ", "useState "),
+        ("parseSyllable ", "parseSyllable "),
+        ("user_id ", "user_id "),
+        ("_variable ", "_variable "),
+        ("init ", "init "),
+        ("db.collection.findOne ", "db.collection.findOne "),
+        ("https://github.com/no-vici/fcitx5-vnchkey ", "https://github.com/no-vici/fcitx5-vnchkey "),
+        ("user@domain.com ", "user@domain.com "),
+        ("./src/engine.rs ", "./src/engine.rs "),
+        ("--enable-wayland-ime ", "--enable-wayland-ime "),
+        ("10:30 ", "10:30 "),
+        ("14:00 ", "14:00 "),
+        (":in ", ":in "),
+        (":pi ", ":pi "),
+        (":in: ", "∈ "),
+        (":pi: ", "π "),
+        (":smile: ", "😄 "),
+        (":smile ", "😄 "),
+    ];
+
+    for (raw, expected) in code_cases {
+        engine.reset();
+        let actual = type_word(&mut engine, raw);
+        assert_eq!(
+            actual, expected,
+            "Code/URL test failed for '{raw}': got '{actual}', expected '{expected}'"
+        );
+    }
+}
+
 
