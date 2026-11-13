@@ -184,15 +184,35 @@ Kế thừa thuật toán từ điển tĩnh từ **GoNhanh**:
 
 ---
 
-### 3.7. Bảo Toàn Chữ Hoa Thông Minh (Smart Casing)
+### 3.7. Bảo Toàn Chữ Hoa Thông Minh (Smart Casing) & Neo Chữ Cái Đầu (Initial Case Anchor)
 - Khi gõ toàn bộ chữ hoa: `VIET` $\to$ `VIỆT` (không bị lỗi `VIệt` hoặc `ViỆt`).
 - Khi gõ hoa đầu từ: `Viet` $\to$ `Việt`.
 - Khi gõ hoa cụm từ: `CONG HOA` $\to$ `CỘNG HÒA`.
+- **Neo chữ cái đầu (Initial Letter Case Anchor)**:
+  - Tự động đồng nhất kiểu chữ hoa / thường theo đúng chữ cái đầu tiên:
+    - Khi chữ cái đầu là chữ hoa: `ĐƯợc` hoặc `ĐƯỢc` $\to$ tự động chuẩn hóa thành TitleCase **`Được`**.
+    - Khi chữ cái đầu là chữ thường: `đƯỢc` hoặc bất kỳ âm nào bị dính phím hoa $\to$ tự động chuẩn hóa thành chữ thường **`được`**.
+    - Khi toàn bộ âm tiết là chữ hoa: `ĐƯỢC` $\to$ bảo lưu trọn vẹn toàn bộ chữ hoa **`ĐƯỢC`**.
 - Khi mở rộng macro: `vn` $\to$ `Việt Nam`, nhưng nếu gõ `VN` $\to$ tự động mở rộng thành `VIỆT NAM`.
 
 ---
 
-### 3.8. Bảng Gõ Tắt Mở Rộng Tức Thì, Hoàn Tác 2 Bước & Hút Dấu Câu Thông Minh
+### 3.8. Tự Động Bỏ Dấu Đơn Trị & Gõ Dấu Thanh Tiếp Diễn (Unique Syllables Auto-Completion)
+- **Tự động bỏ dấu thanh/mũ cho các từ đơn trị**:
+  - Khi gõ `khong` $\to$ tự động biến thành **`không`** (bảo toàn định dạng chữ hoa: `Khong` $\to$ `Không`, `KHONG` $\to$ `KHÔNG`).
+  - Khi gõ `truong` $\to$ tự động biến thành **`trương`** (`Truong` $\to$ `Trương`, `TRUONG` $\to$ `TRƯƠNG`).
+  - Khi gõ `nganh` $\to$ tự động biến thành **`ngành`** (`Nganh` $\to$ `Ngành`, `NGANH` $\to$ `NGÀNH`).
+- **Tự do thêm/đổi dấu thanh tiếp nối**:
+  - Sau khi `khong` đã tự động thành `không`, người dùng hoàn toàn có thể gõ tiếp phím dấu thanh để chuyển đổi tự nhiên:
+    - Trong Telex: gõ thêm `s` $\to$ **`khống`**, `f` $\to$ **`khồng`**, `r` $\to$ **`khổng`**, `x` $\to$ **`khỗng`**, `j` $\to$ **`khộng`**.
+    - Trong VNI: gõ thêm `1` $\to$ **`khống`**, `2` $\to$ **`khồng`**, `3` $\to$ **`khổng`**, `4` $\to$ **`khỗng`**, `5` $\to$ **`khộng`**.
+    - Tương tự với `truong`: gõ tiếp `f`/`2` $\to$ **`trường`**, `s`/`1` $\to$ **`trướng`**, `r`/`3` $\to$ **`trưởng`**, `j`/`5` $\to$ **`trượng`**.
+    - Tương tự với `nganh`: gõ tiếp `j`/`5` $\to$ **`ngạnh`**, `r`/`3` $\to$ **`ngảnh`**.
+  - Không bị tính năng khôi phục tiếng Anh (Restore English) hay bộ kiểm tra chánh tả chặn hoặc xóa nhầm.
+
+---
+
+### 3.9. Bảng Gõ Tắt Mở Rộng Tức Thì, Hoàn Tác 2 Bước & Hút Dấu Câu Thông Minh
 - Tự động mở rộng từ viết tắt khi gõ phím phân cách (Space, dấu câu): ví dụ `vn` + phím cách $\to$ `Việt Nam `.
 - **Hoàn tác Macro 2 bước thông minh bằng `Backspace` (2-Step Macro Undo)**:
   - **Nhấn `Backspace` lần 1**: Chỉ xóa khoảng trắng thừa ở cuối (`Việt Nam ` $\to$ `Việt Nam`), giữ nguyên cụm từ đã bung để bạn đặt dấu câu hoặc gõ nối tiếp mà không cần dùng phím mũi tên trái.
