@@ -690,7 +690,7 @@ mod win_app {
         let info = format!(
             "VnCharKey — Bộ Gõ Tiếng Việt\n\
              Phiên bản: v{}\n\n\
-             • Bộ gõ Tiếng Việt hiện đại, gọn nhẹ và chuẩn mực cho Windows\n\
+             • Bộ gõ Tiếng Việt hiện đại và gọn nhẹ cho Windows\n\
              • 100% Offline, bảo mật cao và không gởi bất kỳ dữ liệu nào ra khỏi máy người dùng\n\
              • Tự Động khôi phục Tiếng Anh, Smart Casing, hồi sinh từ\n\
              • Hoạt động độc lập, không cần cài đặt (Portable Mode)\n\n\

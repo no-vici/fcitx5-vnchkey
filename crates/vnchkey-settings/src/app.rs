@@ -1856,7 +1856,7 @@ impl SettingsApp {
             // Description
             ui.label(
                 egui::RichText::new(
-                    "Bộ gõ Tiếng Việt hiện đại, gọn nhẹ và chuẩn mực cho Linux (Fcitx5 / Wayland / X11).\n\
+                    "Bộ gõ Tiếng Việt hiện đại và gọn nhẹ cho Linux (Fcitx5 / Wayland / X11).\n\
                      Phát triển hoàn toàn bằng 100% Safe Rust & Micro-diff Engine."
                 )
                 .size(13.0)
