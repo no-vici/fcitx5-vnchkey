@@ -1797,10 +1797,17 @@ mod tests {
             ..EngineConfig::default()
         });
 
-        // 1. "khong" -> "không" (and casing preservation)
+        // 1. "khong" -> "không" (and casing preservation, and subsequent tone additions)
         assert_eq!(type_word(&mut telex_engine, "khong "), "không ");
         assert_eq!(type_word(&mut telex_engine, "Khong "), "Không ");
         assert_eq!(type_word(&mut telex_engine, "KHONG "), "KHÔNG ");
+        assert_eq!(type_word(&mut telex_engine, "khongs "), "khống ");
+        assert_eq!(type_word(&mut telex_engine, "khongf "), "khồng ");
+        assert_eq!(type_word(&mut telex_engine, "khongr "), "khổng ");
+        assert_eq!(type_word(&mut telex_engine, "khongx "), "khỗng ");
+        assert_eq!(type_word(&mut telex_engine, "khongj "), "khộng ");
+        assert_eq!(type_word(&mut telex_engine, "Khongs "), "Khống ");
+        assert_eq!(type_word(&mut telex_engine, "KHONGS "), "KHỐNG ");
 
         // 2. "truong" -> "trương", then add tone
         assert_eq!(type_word(&mut telex_engine, "truong "), "trương ");
@@ -1831,6 +1838,8 @@ mod tests {
         });
 
         assert_eq!(type_word(&mut vni_engine, "khong "), "không ");
+        assert_eq!(type_word(&mut vni_engine, "khong1 "), "khống ");
+        assert_eq!(type_word(&mut vni_engine, "khong2 "), "khồng ");
         assert_eq!(type_word(&mut vni_engine, "truong "), "trương ");
         assert_eq!(type_word(&mut vni_engine, "truong2 "), "trường ");
         assert_eq!(type_word(&mut vni_engine, "truong1 "), "trướng ");
