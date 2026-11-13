@@ -154,16 +154,16 @@ impl ParsedSyllable {
             return false;
         }
 
-        // 3. Open diphthongs (ia, ua, ưa) cannot take a consonant coda
-        if matches!(lower_nucleus.as_str(), "ia" | "ua" | "ưa") && !lower_coda.is_empty() {
+        // 3. Open diphthongs (ia, ya, ua, ưa) cannot take a consonant coda
+        if matches!(lower_nucleus.as_str(), "ia" | "ya" | "ua" | "ưa") && !lower_coda.is_empty() {
             return false;
         }
 
-        // 4. Closed diphthongs (uo, ie): plain 'uo' or 'ie' with a coda can NEVER take a tone mark
-        // in Vietnamese orthography unless explicitly horned ('ươ') or circumflexed ('uô', 'iê').
+        // 4. Closed diphthongs (uo, ie, ye): plain 'uo', 'ie', 'ye' with a coda can NEVER take a tone mark
+        // in Vietnamese orthography unless explicitly horned ('ươ') or circumflexed ('uô', 'iê', 'yê').
         if self.tone != ToneMark::None
             && !lower_coda.is_empty()
-            && matches!(lower_nucleus.as_str(), "uo" | "ie")
+            && matches!(lower_nucleus.as_str(), "uo" | "ie" | "ye")
         {
             return false;
         }
@@ -201,8 +201,8 @@ impl ParsedSyllable {
             return false;
         }
 
-        // 3. Open diphthongs (ia, ua, ưa) cannot take a consonant coda
-        if matches!(lower_nucleus.as_str(), "ia" | "ua" | "ưa") && !lower_coda.is_empty() {
+        // 3. Open diphthongs (ia, ya, ua, ưa) cannot take a consonant coda
+        if matches!(lower_nucleus.as_str(), "ia" | "ya" | "ua" | "ưa") && !lower_coda.is_empty() {
             return false;
         }
 
@@ -290,8 +290,14 @@ impl ParsedSyllable {
                         // Open syllable with glide (hòa, hóa, thủy, khỏe): tone on glide
                         glide_char = Some(apply_tone(g, tone_idx));
                     } else {
-                        // Closed syllable with glide (toán, hoàn, luận, khuấy): tone on nucleus
-                        nuc_chars[0] = apply_tone(nuc_chars[0], tone_idx);
+                        // Closed syllable with glide:
+                        // For 2-letter nucleus like 'ye' (huyên, chuyên), tone ALWAYS belongs on second vowel 'e' / 'ê'!
+                        // For single-letter nucleus (toán, hoàn, luận, khuấy), tone on the vowel.
+                        if nuc_chars.len() >= 2 {
+                            nuc_chars[1] = apply_tone(nuc_chars[1], tone_idx);
+                        } else {
+                            nuc_chars[0] = apply_tone(nuc_chars[0], tone_idx);
+                        }
                     }
                 }
             }
@@ -562,7 +568,7 @@ fn parse_vowels_and_coda(
     if rem_lower.len() >= 2 {
         let pair = (rem_lower[0], rem_lower[1]);
         let is_diphthong = match pair {
-            ('i', 'a') | ('i', 'e') | ('i', 'ê') | ('u', 'a') | ('u', 'o') | ('u', 'ô') | ('u', 'ơ') | ('ư', 'a') | ('ư', 'ơ') | ('y', 'a') | ('y', 'ê') | ('o', 'o') => {
+            ('i', 'a') | ('i', 'e') | ('i', 'ê') | ('u', 'a') | ('u', 'o') | ('u', 'ô') | ('u', 'ơ') | ('ư', 'a') | ('ư', 'ơ') | ('y', 'a') | ('y', 'e') | ('y', 'ê') | ('o', 'o') => {
                 // 'ua' after 'q' is not a diphthong: in 'quang', 'u' is glide, 'a' is nucleus
                 if after_qu && pair == ('u', 'a') {
                     false

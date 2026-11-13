@@ -2484,6 +2484,21 @@ mod tests {
         let out_ts_space = type_word(&mut telex_engine, "tiens ");
         assert_eq!(out_ts_space, "tiens ");
 
+        // Intermediate forms with 'uye' (Huyèn, chuyén) and Space restore
+        vni_engine.reset();
+        assert_eq!(type_word(&mut vni_engine, "Huyen2"), "Huyèn");
+        vni_engine.reset();
+        assert_eq!(type_word(&mut vni_engine, "Huyen26 "), "Huyền ");
+        vni_engine.reset();
+        assert_eq!(type_word(&mut vni_engine, "Huyen2 "), "Huyen2 ");
+
+        telex_engine.reset();
+        assert_eq!(type_word(&mut telex_engine, "Huyenf"), "Huyèn");
+        telex_engine.reset();
+        assert_eq!(type_word(&mut telex_engine, "Huyenfe "), "Huyền ");
+        telex_engine.reset();
+        assert_eq!(type_word(&mut telex_engine, "Huyenf "), "Huyenf ");
+
         telex_engine.reset();
         let out_tse = type_word(&mut telex_engine, "tiense ");
         assert_eq!(out_tse, "tiến ");

@@ -409,8 +409,12 @@ mod tests {
         assert_eq!(vni.feed("DUong972").0, "Đường");
         assert_eq!(vni.feed("DUONG972").0, "ĐƯỜNG");
 
-        // Intermediate states: 2-accent words allow intermediate tone placement (duòng, tién, nuóc)
+        // Intermediate states: 2-accent words allow intermediate tone placement (duòng, tién, nuóc, Huyèn)
         // while in progress, and resolve to complete words when the shape modifier is added:
+        assert_eq!(vni.feed("Huyen2").0, "Huyèn");
+        assert_eq!(vni.feed("Huyen26").0, "Huyền");
+        assert_eq!(vni.feed("khuyu3").0, "khuỷu");
+        assert!(crate::telex::is_valid_vietnamese_syllable("khuỷu"));
         assert_eq!(vni.feed("duong2").0, "duòng");
         assert_eq!(vni.feed("duong27").0, "dường");
         assert_eq!(vni.feed("tuong2").0, "tuòng");

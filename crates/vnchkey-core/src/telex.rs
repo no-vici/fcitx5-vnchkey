@@ -699,8 +699,19 @@ pub fn place_tone(letters: &mut [char], tone: usize, tone_style: ToneStyle) {
             idx0
         }
     } else {
-        // Triphthongs (oai, uay, oeo, uoi, yeu...): middle vowel
-        effective_vowels[1]
+        // Triphthongs and glide + diphthong combinations
+        let b0 = decompose_vowel(letters[effective_vowels[0]]).unwrap().0;
+        let b1 = decompose_vowel(letters[effective_vowels[1]]).unwrap().0;
+        let b2 = decompose_vowel(letters[effective_vowels[2]]).unwrap().0;
+
+        if vowel_family(b0) == 'u' && vowel_family(b1) == 'y' && vowel_family(b2) == 'e' {
+            // 'uye' cluster (huyên, khuyên, chuyên, nguyên, tuyết...):
+            // 'u' is on-glide, 'ye'/'yê' is nucleus. Tone ALWAYS belongs on 'e' / 'ê'!
+            effective_vowels[2]
+        } else {
+            // Triphthongs (oai, uay, oeo, uoi, yeu...): middle vowel
+            effective_vowels[1]
+        }
     };
 
     if let Some((base, _, is_up)) = decompose_vowel(letters[target_idx]) {
@@ -1324,6 +1335,10 @@ mod tests {
         assert_eq!(telex.feed("tiengse").0, "tiếng");
         assert_eq!(telex.feed("biets").0, "biét");
         assert_eq!(telex.feed("bietse").0, "biết");
+        assert_eq!(telex.feed("Huyenf").0, "Huyèn");
+        assert_eq!(telex.feed("Huyenfe").0, "Huyền");
+        assert_eq!(telex.feed("chuyens").0, "chuyén");
+        assert_eq!(telex.feed("chuyense").0, "chuyến");
 
         // Valid horned/circumflexed inputs
         assert_eq!(telex.feed("duowngf").0, "dường");
