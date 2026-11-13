@@ -348,7 +348,7 @@ mod tests {
         assert_eq!(vni.feed("dau61").0, "dấu");
         assert_eq!(vni.feed("duoc975").0, "được");
         assert_eq!(vni.feed("duoc95").0, "được");
-        assert_eq!(vni.feed("nuoc1").0, "nước");
+        assert_eq!(vni.feed("nuoc71").0, "nước");
         assert_eq!(vni.feed("viet65").0, "việt");
         assert_eq!(vni.feed("khong6").0, "không");
         assert_eq!(vni.feed("dzia2").0, "dzìa");
@@ -404,9 +404,27 @@ mod tests {
         assert_eq!(vni.feed("huo7").0, "huơ");
 
         // Capitalization and Shift-bleed preservation in VNI
-        assert_eq!(vni.feed("duong92").0, "đường");
-        assert_eq!(vni.feed("Duong92").0, "Đường");
-        assert_eq!(vni.feed("DUong92").0, "Đường");
-        assert_eq!(vni.feed("DUONG92").0, "ĐƯỜNG");
+        assert_eq!(vni.feed("duong972").0, "đường");
+        assert_eq!(vni.feed("Duong972").0, "Đường");
+        assert_eq!(vni.feed("DUong972").0, "Đường");
+        assert_eq!(vni.feed("DUONG972").0, "ĐƯỜNG");
+
+        // Natural Vietnamese Phonology: Plain 'uo' and 'ie' without diacritics before coda cannot take tone
+        assert_eq!(vni.feed("duong2").0, "duong2");
+        assert_eq!(vni.feed("tuong2").0, "tuong2");
+        assert_eq!(vni.feed("buong2").0, "buong2");
+        assert_eq!(vni.feed("nuoc1").0, "nuoc1");
+        assert_eq!(vni.feed("cuoc1").0, "cuoc1");
+        assert_eq!(vni.feed("muon1").0, "muon1");
+        assert_eq!(vni.feed("luot1").0, "luot1");
+        assert_eq!(vni.feed("tien1").0, "tien1");
+        assert_eq!(vni.feed("tieng1").0, "tieng1");
+        assert_eq!(vni.feed("biet1").0, "biet1");
+
+        // Valid horned/circumflexed VNI inputs
+        assert_eq!(vni.feed("duong72").0, "dường");
+        assert_eq!(vni.feed("tuong72").0, "tường");
+        assert_eq!(vni.feed("buong62").0, "buồng");
+        assert_eq!(vni.feed("tien61").0, "tiến");
     }
 }

@@ -159,7 +159,16 @@ impl ParsedSyllable {
             return false;
         }
 
-        // 4. Spelling rules: 'gh', 'ngh' must precede 'i', 'e', 'ê' (or glide 'u' + 'y'/'ê')
+        // 4. Closed diphthongs (uo, ie): plain 'uo' or 'ie' with a coda can NEVER take a tone mark
+        // in Vietnamese orthography unless explicitly horned ('ươ') or circumflexed ('uô', 'iê').
+        if self.tone != ToneMark::None
+            && !lower_coda.is_empty()
+            && matches!(lower_nucleus.as_str(), "uo" | "ie")
+        {
+            return false;
+        }
+
+        // 5. Spelling rules: 'gh', 'ngh' must precede 'i', 'e', 'ê' (or glide 'u' + 'y'/'ê')
         if matches!(lower_onset.as_str(), "gh" | "ngh") {
             if let Some(first_v) = lower_nucleus.chars().next() {
                 if !matches!(first_v, 'i' | 'e' | 'ê') {

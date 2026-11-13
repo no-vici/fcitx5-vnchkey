@@ -567,6 +567,18 @@ pub fn apply_smart_uo_horn(letters: &mut [char]) -> bool {
         let has_consonant_coda =
             o_idx + 1 < letters.len() && !is_vietnamese_vowel(letters[o_idx + 1]);
         if has_consonant_coda {
+            // Natural Vietnamese Phonology: Plain 'uo' before a coda (e.g. 'duong', 'tuong', 'buong', 'nuoc')
+            // cannot take a tone mark directly unless the user explicitly horned 'ươ' (via 'w' or '7')
+            // or circumflexed 'uô' (via 'aa'/'oo'/'6').
+            // Exception: The highly frequent shorthand for 'được' (where onset is already 'đ'/'Đ' and coda is 'c')
+            // allows auto-promoting 'đ...uoc' -> 'đ...ược' when adding tone (e.g. dduocj -> được, duoc95 -> được).
+            let is_dd_uoc = u_idx == 1
+                && (letters[0] == 'đ' || letters[0] == 'Đ')
+                && letters[o_idx + 1..].iter().collect::<String>().eq_ignore_ascii_case("c");
+            if !is_dd_uoc {
+                return false;
+            }
+
             let (u_base, u_tone, u_up) = decompose_vowel(letters[u_idx]).unwrap();
             let (o_base, o_tone, o_up) = decompose_vowel(letters[o_idx]).unwrap();
             // Only auto-promote if 'o' is not explicitly circumflexed ('ô' as in 'cuộc', 'muốn')
@@ -1281,6 +1293,25 @@ mod tests {
         assert_eq!(telex.feed("duocdj").0, "được");
         assert_eq!(telex.feed("dad").0, "đa");
         assert_eq!(telex.feed("dend").0, "đen");
+
+        // Natural Vietnamese Phonology: Plain 'uo' and 'ie' without diacritics before coda cannot take tone
+        assert_eq!(telex.feed("duongf").0, "duongf");
+        assert_eq!(telex.feed("tuongf").0, "tuongf");
+        assert_eq!(telex.feed("buongf").0, "buongf");
+        assert_eq!(telex.feed("nuocs").0, "nuocs");
+        assert_eq!(telex.feed("cuocs").0, "cuocs");
+        assert_eq!(telex.feed("muons").0, "muons");
+        assert_eq!(telex.feed("luots").0, "luots");
+        assert_eq!(telex.feed("tiens").0, "tiens");
+        assert_eq!(telex.feed("tiengs").0, "tiengs");
+        assert_eq!(telex.feed("biets").0, "biets");
+
+        // Valid horned/circumflexed inputs
+        assert_eq!(telex.feed("duowngf").0, "dường");
+        assert_eq!(telex.feed("dduowngf").0, "đường");
+        assert_eq!(telex.feed("tuowngf").0, "tường");
+        assert_eq!(telex.feed("nuowcs").0, "nước");
+        assert_eq!(telex.feed("buoongf").0, "buồng");
     }
 
     #[test]
