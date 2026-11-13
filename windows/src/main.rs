@@ -734,12 +734,20 @@ mod win_app {
         if GetKeyboardState(key_state.as_mut_ptr()) == 0 {
             return None;
         }
-        if (GetAsyncKeyState(VK_SHIFT as i32) as u16 & 0x8000) != 0 {
-            key_state[VK_SHIFT as usize] = 0x80;
-        }
-        if (GetKeyState(VK_CAPITAL as i32) & 0x0001) != 0 {
-            key_state[VK_CAPITAL as usize] = 0x01;
-        }
+
+        // Live hardware state synchronization for Shift and CapsLock:
+        // When low-level hooks run, GetKeyboardState can contain stale modifier flags from previous strokes.
+        // We explicitly sync VK_SHIFT, VK_LSHIFT, VK_RSHIFT and VK_CAPITAL with GetAsyncKeyState/GetKeyState.
+        let shift_pressed = ((GetAsyncKeyState(VK_SHIFT as i32) as u16 & 0x8000) != 0)
+            || ((GetAsyncKeyState(VK_LSHIFT as i32) as u16 & 0x8000) != 0)
+            || ((GetAsyncKeyState(VK_RSHIFT as i32) as u16 & 0x8000) != 0);
+        let shift_val = if shift_pressed { 0x80 } else { 0 };
+        key_state[VK_SHIFT as usize] = shift_val;
+        key_state[VK_LSHIFT as usize] = shift_val;
+        key_state[VK_RSHIFT as usize] = shift_val;
+
+        let caps_on = (GetKeyState(VK_CAPITAL as i32) & 0x0001) != 0;
+        key_state[VK_CAPITAL as usize] = if caps_on { 0x01 } else { 0 };
 
         let mut buf = [0u16; 4];
         let len = ToUnicode(vk, scan_code, key_state.as_ptr(), buf.as_mut_ptr(), 4, 0);
@@ -1464,10 +1472,12 @@ mod win_app {
         let mut pt = POINT { x: 0, y: 0 };
         GetCursorPos(&mut pt);
 
-        // Save the user's currently active window so we can keep focus on it instead of
-        // calling SetForegroundWindow(hwnd) on our invisible window (which causes Windows 10/11
-        // to fall back to activating the last top-level window, such as Windows Terminal).
-        let prev_fg = GetForegroundWindow();
+        // Microsoft Knowledge Base (Q139526): To ensure TrackPopupMenu dismisses correctly
+        // when the user clicks on another window or app outside the menu, the calling window
+        // must be set as foreground window BEFORE calling TrackPopupMenu, and a WM_NULL message
+        // must be posted to force an asynchronous task switch.
+        SetForegroundWindow(hwnd);
+
         let cmd = TrackPopupMenu(
             menu,
             TPM_BOTTOMALIGN | TPM_LEFTALIGN | TPM_RETURNCMD | TPM_NONOTIFY,
@@ -1479,10 +1489,6 @@ mod win_app {
         );
         PostMessageW(hwnd, WM_NULL, 0, 0);
         DestroyMenu(menu);
-
-        if !prev_fg.is_null() && prev_fg != hwnd && IsWindow(prev_fg) != 0 {
-            SetForegroundWindow(prev_fg);
-        }
 
         if cmd != 0 {
             SendMessageW(hwnd, WM_COMMAND, cmd as usize, 0);

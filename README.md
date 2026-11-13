@@ -126,7 +126,7 @@ Giải quyết triệt để vấn đề kinh điển của các bộ gõ trên 
 
 - **Chế độ Gõ Trực Tiếp (Direct Mode - Khuyên dùng cho Coding/Terminal/Editor)**:
   - Sử dụng thuật toán Micro-diff: phát phím Backspace giả lập và commit phần đuôi biến đổi ngay tức thì.
-  - Tối ưu tuyệt đối cho độ trễ bằng $0$, mang lại cảm giác gõ mộc tự nhiên trên các editor chuyên nghiệp (Neovim, VS Code, Cursor, Zed, Alacritty, Kitty).
+  - Tối ưu cho độ trễ cực thấp (gần như bằng $0$), mang lại cảm giác gõ mộc tự nhiên trên các editor chuyên nghiệp (Neovim, VS Code, Cursor, Zed, Alacritty, Kitty).
 - **Chế độ Gõ Gạch Chân (Preedit Mode - Khuyên dùng cho Web/Google Docs/Chat)**:
   - Khắc phục tận gốc nguyên nhân gây lặp chữ: **Tuyệt đối không phát phím Backspace giả lập ra ứng dụng bên ngoài**.
   - Từ đang soạn được hiển thị bằng nét gạch chân nội dòng (`setClientPreedit`) và được cam kết nguyên tử một lần duy nhất (`commitString`) khi người dùng bấm phím cách (Space), Enter hoặc dấu phân cách.
