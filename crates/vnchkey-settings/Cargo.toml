@@ -4,6 +4,7 @@ version.workspace = true
 authors.workspace = true
 edition.workspace = true
 license.workspace = true
+repository.workspace = true
 description = "Native graphical configuration tool for Fcitx5 vnchKey written in 100% Rust"
 
 [[bin]]

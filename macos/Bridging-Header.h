@@ -83,6 +83,13 @@ bool fcitx5_vnchkey_get_spell_check(Fcitx5VnchkeyContext* ctx);
 void fcitx5_vnchkey_set_dictionary_enabled(Fcitx5VnchkeyContext* ctx, bool enabled);
 bool fcitx5_vnchkey_get_dictionary_enabled(Fcitx5VnchkeyContext* ctx);
 
+/// Configures Adaptive Habit Learning.
+void fcitx5_vnchkey_set_habit_learning_enabled(Fcitx5VnchkeyContext* ctx, bool enabled);
+bool fcitx5_vnchkey_get_habit_learning_enabled(Fcitx5VnchkeyContext* ctx);
+void fcitx5_vnchkey_set_habit_promote_threshold(Fcitx5VnchkeyContext* ctx, uint32_t threshold);
+uint32_t fcitx5_vnchkey_get_habit_promote_threshold(Fcitx5VnchkeyContext* ctx);
+void fcitx5_vnchkey_unlearn_word(Fcitx5VnchkeyContext* ctx, const char* word);
+
 /// Configures macro expansion.
 void fcitx5_vnchkey_set_macro_enabled(Fcitx5VnchkeyContext* ctx, bool enabled);
 bool fcitx5_vnchkey_get_macro_enabled(Fcitx5VnchkeyContext* ctx);
