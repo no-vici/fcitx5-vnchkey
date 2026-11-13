@@ -1549,10 +1549,10 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         alert.informativeText = """
         Phiên bản: v\(curVer) (Universal Binary: Apple Silicon & Intel)
 
-        • Bộ gõ Tiếng Việt hiệu năng cao cho macOS
-        • Tinh thần Tự Do và Di sản Cờ Vàng Ba Sọc Đỏ
-        • 100% Offline, Bảo mật tuyệt đối, Không gửi dữ liệu
-        • Tự động khôi phục Tiếng Anh, Smart Casing, Hồi sinh từ
+        • Bộ gõ Tiếng Việt hiện đại và gọn nhẹ cho macOS
+        • Tinh Thần Tự Do và Di Sản Cờ Vàng Ba Sọc Đỏ
+        • 100% Offline, bảo mật cao và không gởi bất kỳ dữ liệu nào ra khỏi máy người dùng
+        • Tự Động khôi phục Tiếng Anh, Smart Casing, hồi sinh từ
 
         Mã nguồn: https://github.com/no-vici/fcitx5-vnchkey
         Giấy phép: GNU General Public License v3.0 (GPLv3)

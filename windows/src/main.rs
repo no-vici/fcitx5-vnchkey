@@ -688,12 +688,12 @@ mod win_app {
     unsafe fn show_about_dialog(hwnd: HWND) {
         let cur_ver = env!("CARGO_PKG_VERSION");
         let info = format!(
-            "vnchKey (VnCharKey) — Tự Do Edition\n\
+            "VnCharKey — Bộ Gõ Tiếng Việt\n\
              Phiên bản: v{}\n\n\
-             • Bộ gõ Tiếng Việt hiệu năng cao cho Windows & Linux\n\
-             • Tinh thần Tự Do và Di sản Cờ Vàng Ba Sọc Đỏ\n\
-             • Hoàn toàn Offline, 100% An toàn, Không thu thập dữ liệu\n\
-             • Tự động khôi phục Tiếng Anh, Smart Casing, Hồi sinh từ\n\n\
+             • Bộ gõ Tiếng Việt hiện đại, gọn nhẹ và chuẩn mực cho Windows\n\
+             • 100% Offline, bảo mật cao và không gởi bất kỳ dữ liệu nào ra khỏi máy người dùng\n\
+             • Tự Động khôi phục Tiếng Anh, Smart Casing, hồi sinh từ\n\
+             • Hoạt động độc lập, không cần cài đặt (Portable Mode)\n\n\
              Mã nguồn & Giấy phép:\n\
              https://github.com/no-vici/fcitx5-vnchkey\n\
              Giấy phép: GNU General Public License v3.0 (GPLv3)\n\n\
@@ -701,7 +701,7 @@ mod win_app {
              Bấm 'No' để đóng hộp thoại này.",
             cur_ver
         );
-        let title = format!("Thông tin vnchKey v{}", cur_ver);
+        let title = format!("Thông tin VnCharKey v{}", cur_ver);
         let res = MessageBoxW(
             hwnd,
             to_wstring(&info).as_ptr(),
