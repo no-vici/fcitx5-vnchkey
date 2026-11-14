@@ -42,18 +42,27 @@ pub fn harmonize_syllable_case(word: &str) -> String {
 
     if first_is_upper {
         // TitleCase: First letter uppercase, every subsequent letter MUST be lowercase
+        // (unless immediately preceded by an apostrophe like M'Đrắk, H'Leo)
         let mut seen_first = false;
+        let mut after_apostrophe = false;
         let mut out = String::with_capacity(word.len());
         for c in chars {
-            if c.is_alphabetic() {
+            if c == '\'' || c == '’' {
+                out.push(c);
+                after_apostrophe = true;
+            } else if c.is_alphabetic() {
                 if !seen_first {
                     out.extend(c.to_uppercase());
                     seen_first = true;
+                } else if after_apostrophe && c.is_uppercase() {
+                    out.extend(c.to_uppercase());
                 } else {
                     out.extend(c.to_lowercase());
                 }
+                after_apostrophe = false;
             } else {
                 out.push(c);
+                after_apostrophe = false;
             }
         }
         out

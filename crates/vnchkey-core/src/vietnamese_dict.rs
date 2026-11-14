@@ -65,6 +65,7 @@ pub const RARE_WORDS: &[&str] = &[
     // Rare Han-Viet words
     "khuếch", "khuynh", "khoảnh", "ngoắt", "ngoèo", "nghễu", "nguầy", "huỳnh", "quỳnh",
     "khuỷu", "khuấy", "khuây", "ngoáy", "nguậy", "quánh", "quạnh", "quắt", "quặp",
+    "nguệch", "ngoạc",
     // Interjections, spoken and southern dialect words
     "dzô", "dzậy", "hông", "hổng", "zị", "zi", "zia", "hén", "nghen", "tui", "mầy",
     "chảnh", "xạo",

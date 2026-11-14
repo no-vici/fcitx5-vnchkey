@@ -17,8 +17,11 @@ Tất cả những thay đổi nổi bật của dự án **vnchKey** (**fcitx5-
   - Khắc phục triệt để hiện tượng gõ Telex nuốt chữ cái lặp khi gặp phím undo (`error` $\to$ `eror`, `mirror` $\to$ `miror`, `sorry` $\to$ `sory`): khi nhấn `Space`, bộ gõ nhận diện từ điển tiếng Anh kỹ thuật và tự động trả lại đúng nguyên bản (`error `, `mirror `).
 - **Mở Rộng Bộ Kiểm Thử Hồi Quy & Ngữ Âm Toàn Diện**:
   - Bổ sung cặp nhị trùng âm `('y', 'u')` (trong `khuỷu`) vào danh sách vần hợp lệ của Telex Engine, tránh việc bị nhận nhầm là tiếng Anh lỗi chính tả.
-  - Cập nhật thêm các từ hợp lệ vào từ điển chuẩn: `uồn`, `toãn`, `toạn`.
-  - Bổ sung bộ kiểm thử hồi quy nâng cao `test_nightmare_sloppy_typing_and_bilingual_edge_cases` bao phủ các trường hợp gõ ẩu, từ ngữ âm hiếm, địa danh Tây Nguyên (`Đắk Lắk`, `Krông Nô`, `M'Đrắk`, `Ea H'leo`, `Pleiku`, `Chư Prông`, `Chư Păh`), bẫy trùng từ tiếng Anh và cú pháp mã nguồn/URL.
+  - Cập nhật thêm các từ hợp lệ vào từ điển chuẩn: `uồn`, `toãn`, `toạn`, `nguệch`, `ngoạc`, cùng bộ âm tiết phương ngữ miền Nam và chính tả trước 1975.
+  - **Khắc phục bẫy vần `oeo` / `eo` trong Telex**: sửa lỗi `ngoefo` bị biến âm nhầm `oo` $\to$ `ô`, cho phép gõ chuẩn xác `ngoèo`, `khoèo`, `mèo`.
+  - **Phân biệt hoa/thường cho ký tự toán học & Symbol**: tìm kiếm ưu tiên khớp chính xác hoa/thường trước (`:Omega:` $\to$ $\Omega$, `:omega:` $\to$ $\omega$, `:Gamma:` $\to$ $\Gamma$, `:gamma:` $\to$ $\gamma$).
+  - **Bảo toàn chữ hoa sau dấu nháy đơn (`harmonize_syllable_case`)**: giữ nguyên dạng viết hoa chuẩn của các địa danh và tên riêng như `M'Đrắk`, `H'Leo` khi bật `initial_case_anchor`.
+  - Bổ sung bộ kiểm thử hồi quy nâng cao `nightmare_edge_cases` và `v034_coverage_tests` bao phủ hơn 100 kịch bản quái đản thực tế: gõ ẩu sai thứ tự, kẹt nút bàn phím cơ, bẫy nguyên âm 3, bẫy trùng từ tiếng Anh và cú pháp mã nguồn/URL.
 
 ### 🎨 Tinh Chỉnh Giao Diện & Đồng Bộ Đa Nền Tảng
 - **Chuẩn Hóa Thông Điệp Giới Thiệu (About Dialogs)**:

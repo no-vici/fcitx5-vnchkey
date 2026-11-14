@@ -1317,7 +1317,9 @@ impl Engine {
         }
 
         // Handle digits (0-9)
-        if ch.is_ascii_digit() {
+        // Note: If we are actively tracking an inline symbol shortcode starting with ':' (e.g. :100:),
+        // let the digit append to the shortcode buffer without resetting.
+        if ch.is_ascii_digit() && !self.current_word.starts_with(':') {
             match self.config.method {
                 InputMethod::Telex | InputMethod::SimpleTelex => {
                     self.reset();
@@ -1496,7 +1498,7 @@ impl Engine {
         if self.config.quick_telex && matches!(self.config.method, InputMethod::Telex | InputMethod::Auto | InputMethod::SimpleTelex) {
             if let Some(&last_ch) = self.current_word.chars().collect::<Vec<char>>().last() {
                 if last_ch.to_ascii_lowercase() == ch.to_ascii_lowercase() && ch.is_ascii_alphabetic() {
-                    let is_upper = ch.is_ascii_uppercase();
+                    let is_upper = last_ch.is_ascii_uppercase() || ch.is_ascii_uppercase();
                     let pair_rep = match ch.to_ascii_lowercase() {
                         'c' => Some(if is_upper { "Ch" } else { "ch" }),
                         'g' => Some(if is_upper { "Gi" } else { "gi" }),

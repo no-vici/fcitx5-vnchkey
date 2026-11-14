@@ -221,7 +221,14 @@ impl TelexEngine {
 
             // 3c. Circumflex modifiers: 'a' -> 'â', 'e' -> 'ê', 'o' -> 'ô'
             // Supports both inline (aa, ee, oo) and end-of-word (khongo -> không, toana -> toân, tienge -> tiêng)
-            if matches!(lower, 'a' | 'e' | 'o') {
+            let is_eo_diphthong = lower == 'o'
+                && letters
+                    .last()
+                    .and_then(|&c| decompose_vowel(c))
+                    .map(|(b, _, _)| matches!(b, 'e' | 'ê'))
+                    .unwrap_or(false);
+
+            if matches!(lower, 'a' | 'e' | 'o') && !is_eo_diphthong {
                 // Special case for 'o': if syllable has 'ươ' (e.g. dươc + o -> duôc), convert 'ươ' -> 'uô'
                 if lower == 'o' {
                     if let Some((u_idx, o_idx)) = find_adjacent_uo(&letters) {

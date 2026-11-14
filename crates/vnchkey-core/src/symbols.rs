@@ -225,6 +225,9 @@ pub fn lookup_symbol(code: &str) -> Option<&'static str> {
     if let Some(stripped) = clean.strip_suffix(':') {
         clean = stripped;
     }
+    if let Some(entry) = SYMBOL_TABLE.iter().find(|entry| entry.shortcode == clean) {
+        return Some(entry.symbol);
+    }
     SYMBOL_TABLE
         .iter()
         .find(|entry| entry.shortcode.eq_ignore_ascii_case(clean))
