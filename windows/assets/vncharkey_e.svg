@@ -65,41 +65,41 @@
      stroke-linecap="round"
      opacity="0.8"
      id="path3" />
-  <!-- Stylized Letter E (Silver/Slate White for English mode) -->
+  <!-- Stylized Letter E (Heritage Crimson Red / Đỏ Son Tự Do) -->
   <g
      id="g1"
-     style="fill:#f8fafc;stroke:#f8fafc;stroke-opacity:1"
+     style="fill:#ef4444;stroke:#ef4444;stroke-opacity:1"
      transform="translate(-22.93794)">
     <g
        id="g2"
        transform="translate(-370.49541,-15.35879)">
       <path
          d="m 480.87129,144.36013 v 0 m 0,0 33.06206,0.0213 48.06206,0.0213"
-         stroke="#f8fafc"
+         stroke="#ef4444"
          stroke-width="30"
          stroke-linecap="round"
          stroke-linejoin="round"
          id="path4-6"
          sodipodi:nodetypes="ccccc"
-         style="fill:#f8fafc;stroke:#f8fafc;stroke-opacity:1" />
+         style="fill:#ef4444;stroke:#ef4444;stroke-opacity:1" />
       <path
          d="m 480.78786,144.36013 -0.0248,45.93416 -0.0248,45.93416 m 0,0 81.39018,0.13034"
-         stroke="#f8fafc"
+         stroke="#ef4444"
          stroke-width="30"
          stroke-linecap="round"
          stroke-linejoin="round"
          id="path4-6-5"
          sodipodi:nodetypes="ccccc"
-         style="fill:#f8fafc;stroke:#f8fafc;stroke-opacity:1" />
+         style="fill:#ef4444;stroke:#ef4444;stroke-opacity:1" />
       <path
          d="m 480.87129,190.29424 v 0 m 0,0 33.06206,0.0213 h 48.06206"
-         stroke="#f8fafc"
+         stroke="#ef4444"
          stroke-width="30"
          stroke-linecap="round"
          stroke-linejoin="round"
          id="path4-6-56"
          sodipodi:nodetypes="ccccc"
-         style="fill:#f8fafc;stroke:#f8fafc;stroke-opacity:1" />
+         style="fill:#ef4444;stroke:#ef4444;stroke-opacity:1" />
     </g>
   </g>
 </svg>
