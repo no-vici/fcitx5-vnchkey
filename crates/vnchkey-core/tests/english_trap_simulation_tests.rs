@@ -106,6 +106,11 @@ fn test_vietnamese_collision_exceptions_protected() {
         ("these ", "thế "),    // Thực tế, thế giới (NOT English 'these')
         ("there ", "thể "),    // Có thể, cơ thể (NOT English 'there')
         ("reset ", "rết "),    // Con rết, rắn rết (NOT English 'reset')
+        ("max ", "mã "),        // Mã số, mã hóa (NOT English 'max')
+        ("mix ", "mĩ "),        // Mĩ thuật, mĩ miều (NOT English 'mix')
+        ("sex ", "sẽ "),        // Sẽ làm (NOT English 'sex')
+        ("six ", "sĩ "),        // Nghệ sĩ, chiến sĩ (NOT English 'six')
+        ("var ", "vả "),        // Vả lại (NOT English 'var')
         ("son ", "son "),      // Son môi / son sắt (stays valid Vietnamese)
         ("con ", "con "),      // Con cái
     ];

@@ -11,6 +11,7 @@
 pub mod auto_restore;
 pub mod casing;
 pub mod engine;
+pub mod glyph;
 pub mod habit_learner;
 pub mod macros;
 pub mod symbols;
@@ -21,6 +22,7 @@ pub mod vni;
 
 pub use auto_restore::{EnglishAutoRestore, DEFAULT_ENGLISH_WORDS};
 pub use casing::{harmonize_syllable_case, CaseTracker, CasingStyle};
+pub use glyph::{base_ascii, QualityModifier, ToneMark as GlyphToneMark, VietnameseGlyph};
 pub use engine::{
     to_composite_unicode, Charset, Engine, EngineConfig, EngineOutput, InputMethod, ToneStyle,
     W2UType,
