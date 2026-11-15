@@ -13,10 +13,10 @@ use std::fs;
 pub const DEFAULT_ENGLISH_WORDS: &[&str] = &[
     // Telex trap: words ending with 's' (sắc)
     "vs",
-    "always", "access", "address", "alias", "basis", "bonus", "boss", "business",
-    "campus", "canvas", "census", "chaos", "chorus", "circus", "class", "corpus",
+    "always", "access", "address", "alias", "basis", "bonus", "business",
+    "campus", "canvas", "census", "chorus", "circus", "class", "corpus",
     "crisis", "cross", "dress", "express", "famous", "focus", "genius", "glass",
-    "guess", "hiatus", "less", "loss", "lotus", "mass", "minus", "miss", "news",
+    "guess", "hiatus", "loss", "lotus", "mass", "minus", "miss", "news",
     "nexus", "oasis", "paris", "pass", "perhaps", "plus", "press", "process",
     "radius", "series", "sometimes", "species", "status", "success", "texas",
     "versus", "virus", "walrus", "yes",
@@ -26,8 +26,8 @@ pub const DEFAULT_ENGLISH_WORDS: &[&str] = &[
     "exclude", "excuse", "execute", "exercise", "exist", "exit", "expand", "expect",
     "expend", "expense", "expert", "expire", "explain", "explore", "export",
     "extent", "extra", "extreme", "fax", "fix", "galaxy", "index", "latex",
-    "linux", "luxury", "matrix", "max", "maximum", "mix", "next", "oxide",
-    "oxygen", "pixel", "prefix", "reflex", "sax", "sex", "six", "suffix",
+    "linux", "luxury", "matrix", "maximum", "next", "oxide",
+    "oxygen", "pixel", "prefix", "reflex", "sax", "suffix",
     "syntax", "tax", "taxi", "text", "toxic", "unix", "vertex",
     // Telex trap: words with 'r' (hỏi)
     "after", "armor", "bear", "better", "Browser", "browser", "care", "center",
@@ -87,7 +87,7 @@ pub const DEFAULT_ENGLISH_WORDS: &[&str] = &[
     "post", "postgres", "postgresql", "print", "prisma", "props", "proto",
     "protobuf", "pub", "public", "pull", "push", "pytest", "python", "rate",
     "react", "read", "readme", "rebase", "redis", "refactor", "regex", "release", "repo",
-    "request", "reset", "response", "rest", "restore", "return", "road", "rust", "rustc", "saas",
+    "request", "response", "rest", "restore", "return", "road", "rust", "rustc", "saas",
     "safari", "save", "screen", "script", "scss", "seed", "self", "semver",
     "service", "setup", "shell", "site", "some", "sort", "source", "span",
     "sql", "sqlite", "ssh", "stash", "state", "steam", "string", "struct",
@@ -95,7 +95,7 @@ pub const DEFAULT_ENGLISH_WORDS: &[&str] = &[
     "take", "target", "task", "tauri", "terminal", "terraform", "tesla", "test",
     "that", "them", "then", "think", "time", "tmux", "token", "toml", "tool",
     "trait", "true", "type", "ubuntu", "undefined", "update", "upload", "url",
-    "use", "utf8", "var", "version", "video", "view", "vim", "vite", "vitest",
+    "use", "utf8", "version", "video", "view", "vim", "vite", "vitest",
     "void", "vscode", "vulkan", "wasm", "wezterm", "while", "yaml", "yarn",
     "yay", "zip", "zsh",
 ];

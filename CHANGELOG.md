@@ -4,6 +4,23 @@ Tất cả những thay đổi nổi bật của dự án **vnchKey** (**fcitx5-
 
 ---
 
+## [0.3.6] - 2026-11-15
+
+### 🚀 Tính Năng Mới & Đột Phá Kiến Trúc (Architectural Innovations)
+- **Mô Hình Đại Số Dấu Thanh & NFD (`VietnameseGlyph`)**:
+  - Tích hợp module `glyph.rs` mô hình hóa ký tự tiếng Việt dạng đại số:
+    $$\text{Ký tự tiếng Việt} = \text{Base (ASCII)} \times \text{Quality (Mũ/Móc/Trăng/Stroke)} \times \text{Tone (Thanh điệu)}$$
+  - Thực hiện các phép biến đổi, hoán đổi thanh điệu (`with_tone`), hoán đổi chất âm (`with_quality`) và khôi phục ký tự gốc (`base_ascii`) trong thời gian $O(1)$ thuần túy mà không tốn chi phí cấp phát bộ nhớ động (Zero Heap Allocation).
+  - Kết hợp mô hình lai (Hybrid Architecture): bảo toàn tốc độ cực đại của bảng ánh xạ trực tiếp trong cache L1 khi gõ lướt, kết hợp cùng tính chặt chẽ của mô hình đại số NFD khi xử lý các tổ hợp dấu phức tạp.
+- **Làm Sạch Toàn Diện Từ Điển Tiếng Anh Mặc Định & Mở Rộng Kho Ngoại Lệ Va Chạm**:
+  - Rà soát và loại bỏ triệt để các từ tiếng Anh va chạm với tiếng Việt ra khỏi `DEFAULT_ENGLISH_WORDS`: `as`, `is`, `os`, `us`, `boss`, `chaos`, `less`, `max`, `mix`, `sex`, `six`, `reset`, `var`.
+  - Chuyển toàn bộ các từ này vào `VIETNAMESE_COLLISION_EXCEPTIONS` để bảo vệ tối đa chữ tiếng Việt có nghĩa (`á`, `í`, `ó`, `ú`, `bú`, `cháo`, `mã`, `mĩ`, `sẽ`, `sĩ`, `rết`, `vả`) khi nhấn phím Space.
+- **Mở Rộng Bộ Kiểm Thử Hồi Quy**:
+  - Bổ sung unit tests cho module `glyph` kiểm tra tính đối xứng phân rã $\leftrightarrow$ tái cấu trúc (roundtrip decompose / compose) cho mọi nguyên âm mang dấu.
+  - Mở rộng kịch bản kiểm thử trong `english_trap_simulation_tests.rs` bao phủ toàn bộ các từ va chạm mới được bảo vệ.
+
+---
+
 ## [0.3.5] - 2026-11-15
 
 ### 🐛 Sửa Lỗi Quan Trọng (Bug Fixes)
