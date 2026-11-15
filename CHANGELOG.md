@@ -4,6 +4,21 @@ Tất cả những thay đổi nổi bật của dự án **vnchKey** (**fcitx5-
 
 ---
 
+## [0.3.5] - 2026-11-15
+
+### 🐛 Sửa Lỗi Quan Trọng (Bug Fixes)
+- **Bảo Vệ Nguyên Âm Đơn Tiếng Việt Khi Nhấn Space (Single Vowel Collision Protection)**:
+  - Khắc phục hiện tượng khi gõ Telex `as` $\to$ `á` nhưng sau khi bấm phím `Space` thì `á` bị hoàn nguyên ngược về phím thô (`as `) trên Windows và Linux.
+  - Tách các từ nguyên âm đơn 2 ký tự (`as`, `is`, `os`, `us`) ra khỏi danh sách từ tiếng Anh mặc định (`DEFAULT_ENGLISH_WORDS`) và chuyển sang danh mục bảo vệ va chạm tiếng Việt (`VIETNAMESE_COLLISION_EXCEPTIONS`).
+  - Đảm bảo các nguyên âm đơn mang dấu tiếng Việt hợp lệ (`á`, `í`, `ó`, `ú`, `é`, `É`, `ù`...) được giữ nguyên vẹn 100% khi kết thúc từ bằng dấu cách hoặc phím dấu câu.
+- **Khắc Phục Lỗi Xóa Từ Trong User Dictionary Trên GUI (User Dictionary Persistence)**:
+  - Sửa lỗi trong hàm lưu từ điển người dùng (`ConfigManager::save_dictionary`): loại bỏ việc tự động nạp và merge ngược lại với từ điển mặc định / file cũ trên đĩa.
+  - Khi người dùng xóa một từ (ví dụ: `as`) trong Settings GUI và lưu, file cấu hình `~/.config/fcitx5/conf/vnchkey-dictionary.conf` sẽ cập nhật chính xác và không còn bị phục hồi lại từ đã xóa sau khi khởi động lại fcitx5.
+- **Bổ Sung Bộ Kiểm Thử Hồi Quy Toàn Diện**:
+  - Bổ sung test cases bao phủ toàn bộ các nguyên âm đơn (`as `, `is `, `os `, `us `, `es `, `Es `, `uf `) trong `tests/english_trap_simulation_tests.rs` và `tests/vietc_regression_tests.rs`.
+
+---
+
 ## [0.3.4] - 2026-11-14
 
 ### 🚀 Tính Năng Mới & Đột Phá Ngữ Âm Học (Linguistic Innovations)
