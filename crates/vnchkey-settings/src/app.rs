@@ -1602,10 +1602,16 @@ impl SettingsApp {
 
             if ui.button("+ Thêm Từ").clicked() || enter_pressed {
                 let trimmed = self.new_dict_word.trim().to_lowercase();
-                if !trimmed.is_empty() && !self.dictionary.contains(&trimmed) {
-                    self.dictionary.push(trimmed);
+                if trimmed.is_empty() {
+                    self.status_message = Some(("Vui lòng nhập từ hợp lệ để thêm vào User Dictionary!".to_string(), false));
+                } else if self.dictionary.contains(&trimmed) {
+                    self.new_dict_word.clear();
+                    self.status_message = Some((format!("Từ \"{}\" đã có sẵn trong User Dictionary!", trimmed), false));
+                } else {
+                    self.dictionary.push(trimmed.clone());
                     self.dictionary.sort();
                     self.new_dict_word.clear();
+                    self.status_message = Some((format!("Đã thêm thành công \"{}\" vào User Dictionary!", trimmed), true));
                 }
             }
 
@@ -1652,7 +1658,8 @@ impl SettingsApp {
                     }
 
                     if let Some(idx) = to_remove {
-                        self.dictionary.remove(idx);
+                        let removed_word = self.dictionary.remove(idx);
+                        self.status_message = Some((format!("Đã xóa \"{}\" khỏi User Dictionary!", removed_word), true));
                     }
                 });
             });
