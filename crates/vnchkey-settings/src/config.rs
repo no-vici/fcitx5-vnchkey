@@ -384,25 +384,16 @@ impl ConfigManager {
         let dir = Self::config_dir();
         fs::create_dir_all(&dir)?;
 
-        // Merge with existing on-disk dictionary to preserve newly learned words from HabitLearner
-        let mut merged = Self::load_dictionary();
-        for w in words {
-            let trimmed = w.trim();
-            if !trimmed.is_empty() && !merged.iter().any(|m| m.eq_ignore_ascii_case(trimmed)) {
-                merged.push(trimmed.to_string());
-            }
-        }
-        merged.sort_by_key(|a| a.to_lowercase());
-        merged.dedup_by(|a, b| a.eq_ignore_ascii_case(b));
-
         let mut lines = Vec::new();
         lines.push("# vnchKey Custom User Words Dictionary".to_string());
-        for w in &merged {
+        for w in words {
             let trimmed = w.trim();
-            if !trimmed.is_empty() {
+            if !trimmed.is_empty() && !trimmed.starts_with('#') {
                 lines.push(trimmed.to_string());
             }
         }
+        lines.sort_by_key(|a| a.to_lowercase());
+        lines.dedup_by(|a, b| a.eq_ignore_ascii_case(b));
 
         fs::write(Self::dict_path(), lines.join("\n") + "\n")?;
         Self::reload_fcitx5();

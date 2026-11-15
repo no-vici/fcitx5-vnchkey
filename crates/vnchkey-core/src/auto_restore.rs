@@ -12,7 +12,7 @@ use std::fs;
 /// (ported from OpenViet IME's `COMMON_ENGLISH_WORDS` / `DEFAULT_USER_WORDS`).
 pub const DEFAULT_ENGLISH_WORDS: &[&str] = &[
     // Telex trap: words ending with 's' (sắc)
-    "as", "is", "os", "us", "vs",
+    "vs",
     "always", "access", "address", "alias", "basis", "bonus", "boss", "business",
     "campus", "canvas", "census", "chaos", "chorus", "circus", "class", "corpus",
     "crisis", "cross", "dress", "express", "famous", "focus", "genius", "glass",
@@ -100,9 +100,10 @@ pub const DEFAULT_ENGLISH_WORDS: &[&str] = &[
     "yay", "zip", "zsh",
 ];
 
-/// Vietnamese Telex input sequences that happen to spell common English words (`thí`, `thế`, `thể`, `rết`, `cháo`)
+/// Vietnamese Telex input sequences that happen to spell common English words (`thí`, `thế`, `thể`, `rết`, `cháo`, `á`, `í`, `ó`, `ú`)
 /// and must never override valid Vietnamese words unless the user explicitly forces them.
 const VIETNAMESE_COLLISION_EXCEPTIONS: &[&str] = &[
+    "as", "is", "os", "us",
     "this", "these", "there", "those", "has", "his", "bus", "her", "see", "can", "man", "son", "con",
     "chaos", "its", "boss", "less", "reset",
 ];

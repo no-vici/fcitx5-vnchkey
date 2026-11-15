@@ -1817,7 +1817,8 @@ mod tests {
         });
 
         assert_eq!(type_word(&mut engine, "text "), "text ");
-        assert_eq!(type_word(&mut engine, "as "), "as ");
+        // Single vowel words with accents ('á', 'í', 'ó', 'ú') are valid Vietnamese words and must NOT be restored to English
+        assert_eq!(type_word(&mut engine, "as "), "á ");
         assert_eq!(type_word(&mut engine, "post "), "post ");
         assert_eq!(type_word(&mut engine, "general "), "general ");
         assert_eq!(type_word(&mut engine, "filter "), "filter ");

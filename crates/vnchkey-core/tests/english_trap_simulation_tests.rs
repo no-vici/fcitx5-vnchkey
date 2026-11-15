@@ -90,6 +90,13 @@ fn test_vietnamese_collision_exceptions_protected() {
     // Keystroke sequences that collide with valid Vietnamese words
     // MUST remain Vietnamese and NEVER be turned into English:
     let collisions = [
+        ("as ", "á "),          // Tiếng kêu á / á khẩu (NOT English 'as')
+        ("is ", "í "),          // Í ới / chí ít (NOT English 'is')
+        ("os ", "ó "),          // Chim ó / la ó (NOT English 'os')
+        ("us ", "ú "),          // Béo ú / ú ớ (NOT English 'us')
+        ("es ", "é "),          // Chim én / é (NOT English 'es')
+        ("Es ", "É "),          // É (capitalized)
+        ("uf ", "ù "),          // Béo ù / ù lì
         ("chaos ", "cháo "),    // Ăn cháo (NOT English 'chaos')
         ("its ", "ít "),        // Chút ít (NOT English 'its')
         ("this ", "thí "),      // Thí sinh, thí dụ (NOT English 'this')

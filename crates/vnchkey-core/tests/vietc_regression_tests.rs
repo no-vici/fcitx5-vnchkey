@@ -493,6 +493,10 @@ fn test_nightmare_sloppy_typing_and_bilingual_edge_cases() {
 
     // 3. Bảo vệ từ tiếng Việt khi trùng từ tiếng Anh
     let collision_cases = [
+        ("as ", "á "),
+        ("is ", "í "),
+        ("os ", "ó "),
+        ("us ", "ú "),
         ("this ", "thí "),
         ("these ", "thế "),
         ("there ", "thể "),
