@@ -4,14 +4,16 @@
 
 <img src="assets/logo.png" alt="vnchKey Official Logo" width="128" height="128" />
 
-**Bộ Gõ Tiếng Việt Hiệu Năng Cao Cho Linux (Fcitx5 / Wayland / X11)**  
-*Được phát triển bằng Rust kết hợp Native C++ Fcitx5 Module.*  
+**Bộ Gõ Tiếng Việt Hiệu Năng Cao Cho Linux, macOS & Windows**  
+*Được phát triển bằng Rust kết hợp Native C++ Fcitx5 Module & Cocoa / Win32.*  
 *Hội tụ tinh hoa xử lý biến âm từ **OpenViet IME**, **OpenKey**, **GoNhanh**, **VietC** và thuật toán Micro-diff từ **Lilypad**.*  
 *Mang đậm tinh thần Tự Do và Di sản Cờ Vàng Ba Sọc Đỏ.*
 
 [![Rust](https://img.shields.io/badge/Rust-1.80%2B-orange.svg?style=flat-square&logo=rust)](https://www.rust-lang.org)
 [![License](https://img.shields.io/badge/License-GNU%20GPL%203.0-blue.svg?style=flat-square)](LICENSE)
-[![Platform](https://img.shields.io/badge/Platform-Linux%20(Wayland%20%2F%20X11)-red.svg?style=flat-square&logo=linux)](https://archlinux.org)
+[![Linux](https://img.shields.io/badge/Linux-Wayland%20%2F%20X11-red.svg?style=flat-square&logo=linux)](https://archlinux.org)
+[![macOS](https://img.shields.io/badge/macOS-11.0%2B%20(Universal)-black.svg?style=flat-square&logo=apple)](macos/README.md)
+[![Windows](https://img.shields.io/badge/Windows-10%20%2F%2011-0078D6.svg?style=flat-square&logo=windows)](windows/README.md)
 [![Zero Telemetry](https://img.shields.io/badge/Telemetry-Zero%20(100%25%20Offline)-success.svg?style=flat-square)](#)
 [![AI-Assisted](https://img.shields.io/badge/AI%20Assisted-Google%20Gemini-8E75C2?logo=google-gemini&logoColor=white)](https://gemini.google.com)
 
