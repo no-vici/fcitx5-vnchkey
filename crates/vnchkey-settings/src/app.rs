@@ -161,6 +161,19 @@ impl SettingsApp {
 
 impl eframe::App for SettingsApp {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+        // Workaround for upstream egui 0.31 IME bug (GitHub Issue #7485 / PR #7983):
+        // In egui 0.31, TextEdit drops ImeEvent::Commit if state.ime_cursor_range doesn't match cursor_range.secondary,
+        // causing all words after the first word to be swallowed/dropped when using Linux IME (Fcitx5 / IBus).
+        // Converting ImeEvent::Commit into Event::Text cleanly replaces any active Preedit selection
+        // and inserts the committed word without being blocked by egui's broken cursor check.
+        ctx.input_mut(|i| {
+            for event in &mut i.events {
+                if let egui::Event::Ime(egui::ImeEvent::Commit(text)) = event {
+                    *event = egui::Event::Text(std::mem::take(text));
+                }
+            }
+        });
+
         // Bottom Control Bar
         egui::TopBottomPanel::bottom("bottom_bar")
             .frame(
