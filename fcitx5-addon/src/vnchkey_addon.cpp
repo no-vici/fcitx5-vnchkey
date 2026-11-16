@@ -32,9 +32,11 @@ public:
         if (engine_ctx_) {
             fcitx5_vnchkey_reset(engine_ctx_);
         }
+        if (!symbol_.empty()) {
+            ic->commitString(symbol_);
+        }
         ic->inputPanel().reset();
         ic->updatePreedit();
-        ic->commitString(symbol_);
         ic->updateUserInterface(fcitx::UserInterfaceComponent::InputPanel);
     }
 
@@ -1361,13 +1363,13 @@ void VnchkeyEngine::keyEvent(const fcitx::InputMethodEntry &entry, fcitx::KeyEve
                         is_forwarding_ = false;
                     }
                 }
+                if (undo_commit && undo_commit[0] != '\0') {
+                    ic->commitString(undo_commit);
+                }
                 if (isPreeditMode) {
                     ic->inputPanel().reset();
                     ic->updatePreedit();
                     ic->updateUserInterface(fcitx::UserInterfaceComponent::InputPanel);
-                }
-                if (undo_commit && undo_commit[0] != '\0') {
-                    ic->commitString(undo_commit);
                 }
             }
             if (undo_commit) {
@@ -1487,13 +1489,13 @@ void VnchkeyEngine::keyEvent(const fcitx::InputMethodEntry &entry, fcitx::KeyEve
         char* completed = fcitx5_vnchkey_get_completed_word(ctx);
         if (completed) {
             // Word finalized (delimiter, punctuation, macro expansion)
-            ic->inputPanel().reset();
-            ic->updatePreedit();
-            ic->updateUserInterface(fcitx::UserInterfaceComponent::InputPanel);
             if (completed[0] != '\0') {
                 ic->commitString(completed);
             }
             fcitx5_vnchkey_free_string(completed);
+            ic->inputPanel().reset();
+            ic->updatePreedit();
+            ic->updateUserInterface(fcitx::UserInterfaceComponent::InputPanel);
             keyEvent.filterAndAccept();
         } else if (fcitx5_vnchkey_has_active_word(ctx)) {
             // Active word being composed inline with underline
@@ -1511,15 +1513,15 @@ void VnchkeyEngine::keyEvent(const fcitx::InputMethodEntry &entry, fcitx::KeyEve
             }
             keyEvent.filterAndAccept();
         } else {
-            ic->inputPanel().reset();
-            ic->updatePreedit();
-            ic->updateUserInterface(fcitx::UserInterfaceComponent::InputPanel);
             if (consumed) {
                 if (out_commit && out_commit[0] != '\0') {
                     ic->commitString(out_commit);
                 }
                 keyEvent.filterAndAccept();
             }
+            ic->inputPanel().reset();
+            ic->updatePreedit();
+            ic->updateUserInterface(fcitx::UserInterfaceComponent::InputPanel);
         }
     } else {
         // Direct Mode: micro-diff backspaces + suffix commit
