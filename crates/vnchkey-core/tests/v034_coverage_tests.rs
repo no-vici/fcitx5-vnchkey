@@ -9,7 +9,6 @@
 use std::collections::HashSet;
 use std::fs;
 use std::time::{SystemTime, UNIX_EPOCH};
-use vnchkey_core::casing::{harmonize_syllable_case, CaseTracker};
 use vnchkey_core::engine::{Engine, EngineConfig, InputMethod, ToneStyle};
 use vnchkey_core::symbols::{lookup_symbol, search_symbols, SYMBOL_TABLE};
 

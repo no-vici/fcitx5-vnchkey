@@ -26,7 +26,26 @@ Bản port chính thức của bộ gõ **vnchKey (Tự Do Edition)** dành cho 
 
 ---
 
-## 🛠️ Yêu Cầu Trước Khi Build
+## ⚡ Cài Đặt Nhanh & Tự Động Cập Nhật Qua Homebrew (Khuyên dùng)
+
+Cách tiện lợi và ổn định nhất trên macOS là sử dụng Homebrew Cask:
+
+```bash
+# 1. Thêm tap cá nhân của vnchKey
+brew tap no-vici/vnchkey
+
+# 2. Cài đặt vnchKey
+brew install --cask vnchkey
+```
+
+Khi có bản cập nhật mới, chỉ cần chạy một lệnh duy nhất:
+```bash
+brew upgrade vnchkey
+```
+
+---
+
+## 🛠️ Yêu Cầu Trước Khi Tự Build Từ Mã Nguồn
 
 1. **Máy Mac**: Chạy macOS 11.0 (Big Sur) trở lên (Apple Silicon hoặc Intel).
 2. **Xcode Command Line Tools**:

@@ -374,7 +374,19 @@ makepkg -si
 
 ---
 
-### 5.4. Build & Cài đặt trên macOS (`vnchKey.app`)
+### 5.4. Cài đặt trên macOS (`vnchKey.app`)
+
+#### Cách 1: Cài đặt nhanh và Tự động Cập nhật qua Homebrew (Khuyên dùng)
+```bash
+brew tap no-vici/vnchkey
+brew install --cask vnchkey
+```
+Khi có phiên bản mới, bạn chỉ cần chạy 1 lệnh để nâng cấp:
+```bash
+brew upgrade vnchkey
+```
+
+#### Cách 2: Tự biên dịch từ mã nguồn
 Xem hướng dẫn chi tiết từng bước và cách xử lý quyền Trợ năng (Accessibility / TCC) tại **[macos/README.md](macos/README.md)**:
 
 ```bash
@@ -385,7 +397,7 @@ killall vnchKey 2>/dev/null || true
 cp -R build/vnchKey.app /Applications/
 open /Applications/vnchKey.app
 ```
-> **Lưu ý quan trọng trên macOS**: Mỗi khi build lại bản mới, bạn nhớ vào **System Settings > Privacy & Security > Accessibility**, xoá mục `vnchKey` cũ bằng nút `(-)` (hoặc tắt rồi bật lại công tắc) và mở lại `/Applications/vnchKey.app` để macOS cấp quyền bắt phím cho binary mới.
+> **Lưu ý quan trọng trên macOS**: Mỗi khi build lại bản mới từ mã nguồn, bạn nhớ vào **System Settings > Privacy & Security > Accessibility**, xoá mục `vnchKey` cũ bằng nút `(-)` (hoặc tắt rồi bật lại công tắc) và mở lại `/Applications/vnchKey.app` để macOS cấp quyền bắt phím cho binary mới.
 
 ---
 
