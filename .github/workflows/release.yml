@@ -84,6 +84,7 @@ jobs:
         shell: pwsh
         run: |
           mkdir dist
+          $TAG = "${{ github.ref_name }}"
           if (Test-Path windows/target/release/VnCharKey.exe) {
               Copy-Item windows/target/release/VnCharKey.exe dist/
           } elseif (Test-Path target/release/VnCharKey.exe) {
@@ -91,14 +92,15 @@ jobs:
           }
           Copy-Item windows/assets/vncharkey.ico dist/
           Copy-Item windows/README.md dist/
-          Compress-Archive -Path dist/* -DestinationPath VnCharKey-Windows-x64.zip
+          Compress-Archive -Path dist/* -DestinationPath "vnchKey-$TAG-Windows-x64.zip"
+          Copy-Item dist/VnCharKey.exe "vnchKey-$TAG-Windows-x64.exe"
 
       - name: Upload Windows Release Assets
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            VnCharKey-Windows-x64.zip
-            dist/VnCharKey.exe
+            vnchKey-*-Windows-x64.zip
+            vnchKey-*-Windows-x64.exe
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
