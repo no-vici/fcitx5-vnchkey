@@ -17,7 +17,9 @@
 #include <fcitx-utils/textformatflags.h>
 #include <fcitx/candidatelist.h>
 #include <fcitx-utils/event.h>
+#if __has_include(<fcitx-utils/eventloopinterface.h>)
 #include <fcitx-utils/eventloopinterface.h>
+#endif
 #include <cstdint>
 #include <cstddef>
 #include <chrono>
