@@ -820,9 +820,8 @@ public class KeyTapManager {
             }
         }
 
-        // Hỗ trợ Chuyển đổi HOA / thường bằng Ctrl+Shift+U (keyCode 32 = 'U')
-        // hoặc Ctrl+Shift+C (keyCode 8 = 'C') khi đang có từ gõ dở
-        if isCtrl && isShift && !isCmd && !isOpt && (keyCode == 32 || keyCode == 8) {
+        // Hỗ trợ Chuyển đổi HOA / thường bằng Ctrl+Shift+U (keyCode 32 = 'U') khi đang có từ gõ dở
+        if isCtrl && isShift && !isCmd && !isOpt && keyCode == 32 {
             if fcitx5_vnchkey_has_active_word(engine) && cycleWordCase() {
                 return nil
             }

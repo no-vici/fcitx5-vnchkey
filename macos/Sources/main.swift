@@ -123,6 +123,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             defaults.set(0, forKey: "vnchkey.charset")        // Unicode dựng sẵn NFC
             defaults.set(false, forKey: "vnchkey.bracket")    // Gõ [ ] thành ơ ư
             defaults.set(false, forKey: "vnchkey.caseAnchor") // Đồng nhất chữ hoa theo chữ cái đầu
+            defaults.set(false, forKey: "vnchkey.quick_telex") // Cho phép gõ nhanh phụ âm kép
+            defaults.set(false, forKey: "vnchkey.quick_start") // Phụ âm đầu nhanh
+            defaults.set(false, forKey: "vnchkey.quick_end")   // Phụ âm cuối nhanh
             defaults.set(0, forKey: "vnchkey.w2u")            // W -> ư (Không ở đầu từ)
             defaults.set(0, forKey: "vnchkey.idleTimeout")  // Mặc định tắt (0ms) để không ngắt gõ dấu VNI / flip word khi dừng tay
             defaults.set(true, forKey: "vnchkey.perApp")     // Mặc định nhớ trạng thái theo từng ứng dụng
@@ -495,6 +498,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         defaults.set(next, forKey: "vnchkey.quick_telex")
         km.setQuickTelex(next)
         rebuildMenu()
+        syncDashboardControls()
     }
 
     @objc func toggleQuickStart(_ sender: NSMenuItem) {
@@ -503,6 +507,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         defaults.set(next, forKey: "vnchkey.quick_start")
         km.setQuickStartConsonant(next)
         rebuildMenu()
+        syncDashboardControls()
     }
 
     @objc func toggleQuickEnd(_ sender: NSMenuItem) {
@@ -511,6 +516,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         defaults.set(next, forKey: "vnchkey.quick_end")
         km.setQuickEndConsonant(next)
         rebuildMenu()
+        syncDashboardControls()
     }
 
     @objc func selectMethod(_ sender: NSMenuItem) {

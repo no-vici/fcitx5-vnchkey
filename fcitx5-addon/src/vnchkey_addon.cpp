@@ -21,6 +21,7 @@
 #include <sys/un.h>
 #include <sys/stat.h>
 #include <fcntl.h>
+#include <filesystem>
 
 extern char **environ;
 
@@ -998,7 +999,10 @@ void VnchkeyEngine::loadConfig() {
 void VnchkeyEngine::saveConfig() {
     const char* home = getenv("HOME");
     if (!home) return;
-    std::string path = std::string(home) + "/.config/fcitx5/conf/vnchkey.conf";
+    std::string conf_dir = std::string(home) + "/.config/fcitx5/conf";
+    std::error_code ec;
+    std::filesystem::create_directories(conf_dir, ec);
+    std::string path = conf_dir + "/vnchkey.conf";
     
     // Read existing file to preserve other fields
     std::vector<std::string> lines;
