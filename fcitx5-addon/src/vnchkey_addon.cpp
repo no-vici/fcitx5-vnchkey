@@ -1855,6 +1855,94 @@ void VnchkeyEngine::startIpcServer() {
 
     if (manager_ && manager_->instance()) {
         auto& loop = manager_->instance()->eventLoop();
+        ipcServerSource_ = loop.addUnixFD(fd, fcitx::IOEventFlag::In, [this](fcitx::EventSource*, int server_fd, fcitx::IOEventFlags) {
+            struct sockaddr_un client_addr;
+            socklen_t client_len = sizeof(client_addr);
+            int client_fd = accept4(server_fd, (struct sockaddr*)&client_addr, &client_len, SOCK_NONBLOCK | SOCK_CLOEXEC);
+            if (client_fd >= 0) {
+                char buf[256];
+                ssize_t n = read(client_fd, buf, sizeof(buf) - 1);
+                if (n > 0) {
+                    buf[n] = '\0';
+                    handleIpcCommand(std::string(buf, n));
+                    const char reply[] = "OK\n";
+                    (void)write(client_fd, reply, sizeof(reply) - 1);
+                }
+                close(client_fd);
+            }
+            return true;
+        });
+    }
+}
+
+void VnchkeyEngine::stopIpcServer() {
+    ipcServerSource_.reset();
+    ipcClientSources_.clear();
+    if (ipc_server_fd_ >= 0) {
+        close(ipc_server_fd_);
+        ipc_server_fd_ = -1;
+    }
+    unlink("/tmp/vnchkey.sock");
+}
+
+void VnchkeyEngine::handleIpcCommand(const std::string& raw_cmd) {
+    std::string cmd = raw_cmd;
+    size_t end = cmd.find_last_not_of(" \t\r\n");
+    if (end != std::string::npos) {
+        cmd = cmd.substr(0, end + 1);
+    }
+    size_t start = cmd.find_first_not_of(" \t\r\n-");
+    if (start != std::string::npos) {
+        cmd = cmd.substr(start);
+    }
+    for (char& c : cmd) c = std::tolower(c);
+
+    if (cmd == "off" || cmd == "bypass_on" || cmd == "disable") {
+        neovim_bypass_ = true;
+        if (ctx_auto_) fcitx5_vnchkey_reset(ctx_auto_);
+        if (ctx_telex_) fcitx5_vnchkey_reset(ctx_telex_);
+        if (ctx_vni_) fcitx5_vnchkey_reset(ctx_vni_);
+    } else if (cmd == "on" || cmd == "bypass_off" || cmd == "enable") {
+        neovim_bypass_ = false;
+    } else if (cmd == "toggle") {
+        neovim_bypass_ = !neovim_bypass_;
+        if (neovim_bypass_) {
+            if (ctx_auto_) fcitx5_vnchkey_reset(ctx_auto_);
+            if (ctx_telex_) fcitx5_vnchkey_reset(ctx_telex_);
+            if (ctx_vni_) fcitx5_vnchkey_reset(ctx_vni_);
+        }
+    }
+}
+
+void VnchkeyEngine::startIpcServer() {
+    const char* sock_path = "/tmp/vnchkey.sock";
+    unlink(sock_path);
+
+    int fd = socket(AF_UNIX, SOCK_STREAM | SOCK_NONBLOCK | SOCK_CLOEXEC, 0);
+    if (fd < 0) return;
+    ipc_server_fd_ = fd;
+
+    struct sockaddr_un addr;
+    std::memset(&addr, 0, sizeof(addr));
+    addr.sun_family = AF_UNIX;
+    std::strncpy(addr.sun_path, sock_path, sizeof(addr.sun_path) - 1);
+
+    if (bind(fd, (struct sockaddr*)&addr, sizeof(addr)) != 0) {
+        close(fd);
+        ipc_server_fd_ = -1;
+        return;
+    }
+
+    if (listen(fd, 10) != 0) {
+        close(fd);
+        ipc_server_fd_ = -1;
+        return;
+    }
+
+    chmod(sock_path, 0666);
+
+    if (manager_ && manager_->instance()) {
+        auto& loop = manager_->instance()->eventLoop();
         ipcServerSource_ = loop.addIOEvent(fd, fcitx::IOEventFlag::In, [this](fcitx::EventSourceIO*, int server_fd, fcitx::IOEventFlags) {
             struct sockaddr_un client_addr;
             socklen_t client_len = sizeof(client_addr);
