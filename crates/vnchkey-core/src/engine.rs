@@ -771,6 +771,36 @@ impl Engine {
         })
     }
 
+    /// Cycles the casing of the currently composing word through:
+    /// lowercase -> UPPERCASE -> Title Case -> lowercase.
+    /// Returns the minimal suffix replacement (backspaces and commit_text) to update the document.
+    pub fn cycle_current_word_case(&mut self) -> Option<EngineOutput> {
+        if self.current_word.is_empty() {
+            return None;
+        }
+
+        let old_word = self.current_word.clone();
+        let new_word = crate::casing::cycle_text_casing(&old_word);
+        if new_word == old_word {
+            return None;
+        }
+
+        self.current_word = new_word.clone();
+        // Also sync casing to raw_strokes where applicable
+        let raw_cased = crate::casing::cycle_text_casing(&self.raw_strokes);
+        self.raw_strokes = raw_cased;
+
+        let (backspaces, commit_text) = compare_and_split_strings(&old_word, &new_word);
+        Some(EngineOutput {
+            backspaces,
+            commit_text: self.format_commit(&commit_text),
+            consumed: true,
+            auto_restored: false,
+            macro_expanded: false,
+            adaptive_delay_ms: 0,
+        })
+    }
+
     /// Checks if the last action was a macro expansion and handles two-step undo on Backspace.
     ///
     /// - Step 1: If the macro ended with Space, the first Backspace deletes only the trailing Space
@@ -2051,6 +2081,37 @@ mod tests {
         assert_eq!(engine.current_word(), "má");
         assert_eq!(out2.backspaces, 2);
         assert_eq!(out2.commit_text, "á");
+    }
+
+    #[test]
+    fn test_cycle_current_word_case() {
+        let mut engine = Engine::new(EngineConfig {
+            method: InputMethod::Telex,
+            ..EngineConfig::default()
+        });
+
+        // Type "vieetj" -> "việt"
+        for ch in ['v', 'i', 'e', 'e', 't', 'j'] {
+            engine.process_key(ch, 0.0);
+        }
+        assert_eq!(engine.current_word(), "việt");
+
+        // Cycle 1: "việt" -> "VIỆT"
+        let out1 = engine.cycle_current_word_case().unwrap();
+        assert_eq!(engine.current_word(), "VIỆT");
+        assert_eq!(out1.commit_text, "VIỆT");
+
+        // Cycle 2: "VIỆT" -> "Việt" (common prefix "V", backspaces = 3 for "IỆT", commit_text = "iệt")
+        let out2 = engine.cycle_current_word_case().unwrap();
+        assert_eq!(engine.current_word(), "Việt");
+        assert_eq!(out2.backspaces, 3);
+        assert_eq!(out2.commit_text, "iệt");
+
+        // Cycle 3: "Việt" -> "việt" (no common prefix because 'V' != 'v', backspaces = 4, commit_text = "việt")
+        let out3 = engine.cycle_current_word_case().unwrap();
+        assert_eq!(engine.current_word(), "việt");
+        assert_eq!(out3.backspaces, 4);
+        assert_eq!(out3.commit_text, "việt");
     }
 
     #[test]

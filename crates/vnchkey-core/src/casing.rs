@@ -3,7 +3,59 @@
 //! Preserves character-by-character capitalization vectors during diacritic
 //! replacement and expansion (e.g. `VIET` -> `VIỆT`, `Viet` -> `Việt`).
 
-/// Casing category of an individual letter.
+/// Cycles text casing between lowercase -> UPPERCASE -> Title Case.
+/// Works cleanly on single words or multi-word phrases (e.g. "việt nam" -> "VIỆT NAM" -> "Việt Nam" -> "việt nam").
+pub fn cycle_text_casing(text: &str) -> String {
+    let chars: Vec<char> = text.chars().collect();
+    let alpha_chars: Vec<char> = chars.iter().copied().filter(|c| c.is_alphabetic()).collect();
+
+    if alpha_chars.is_empty() {
+        return text.to_string();
+    }
+
+    let is_all_upper = alpha_chars.iter().all(|c| c.is_uppercase());
+    let is_all_lower = alpha_chars.iter().all(|c| c.is_lowercase());
+
+    if is_all_lower {
+        // lower -> UPPER
+        text.to_uppercase()
+    } else if is_all_upper {
+        // UPPER -> Title Case
+        to_title_case(text)
+    } else {
+        // Title / Mixed -> lower
+        text.to_lowercase()
+    }
+}
+
+/// Converts a word or multi-word sentence to Title Case (capitalizes first letter of each word).
+pub fn to_title_case(text: &str) -> String {
+    let mut out = String::with_capacity(text.len());
+    let mut capitalize_next = true;
+    let mut after_apostrophe = false;
+
+    for c in text.chars() {
+        if c == '\'' || c == '’' {
+            out.push(c);
+            after_apostrophe = true;
+        } else if c.is_alphabetic() {
+            if capitalize_next || after_apostrophe {
+                out.extend(c.to_uppercase());
+                capitalize_next = false;
+            } else {
+                out.extend(c.to_lowercase());
+            }
+            after_apostrophe = false;
+        } else {
+            out.push(c);
+            capitalize_next = c.is_whitespace() || c == '-' || c == '/' || c == '(' || c == '[' || c == '{' || c == '"';
+            after_apostrophe = false;
+        }
+    }
+    out
+}
+
+/// Casing category of an individual letter or word.
 #[allow(dead_code)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum CasingStyle {
@@ -119,5 +171,33 @@ impl CaseTracker {
         } else {
             transformed.to_string()
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_cycle_text_casing() {
+        // Lower -> Upper -> Title -> Lower
+        assert_eq!(cycle_text_casing("việt nam"), "VIỆT NAM");
+        assert_eq!(cycle_text_casing("VIỆT NAM"), "Việt Nam");
+        assert_eq!(cycle_text_casing("Việt Nam"), "việt nam");
+
+        // Single word
+        assert_eq!(cycle_text_casing("tiếng"), "TIẾNG");
+        assert_eq!(cycle_text_casing("TIẾNG"), "Tiếng");
+        assert_eq!(cycle_text_casing("Tiếng"), "tiếng");
+
+        // Mixed/camelCase -> Lower
+        assert_eq!(cycle_text_casing("vnchKey"), "vnchkey");
+    }
+
+    #[test]
+    fn test_to_title_case() {
+        assert_eq!(to_title_case("cộng hòa xã hội"), "Cộng Hòa Xã Hội");
+        assert_eq!(to_title_case("m'đrắk"), "M'Đrắk");
+        assert_eq!(to_title_case("được"), "Được");
     }
 }

@@ -621,6 +621,52 @@ pub unsafe extern "C" fn fcitx5_vnchkey_search_symbols(
     }
 }
 
+/// Cycles the casing of the active composing word (lower -> UPPER -> Title Case -> lower).
+/// Returns 1 if converted, and writes the required backspaces and replacement string to out_commit.
+#[no_mangle]
+pub unsafe extern "C" fn fcitx5_vnchkey_cycle_word_case(
+    ctx: *mut Fcitx5VnchkeyContext,
+    out_backspaces: *mut usize,
+    out_commit: *mut *mut c_char,
+) -> c_int {
+    if ctx.is_null() {
+        return 0;
+    }
+    let ctx = &mut *ctx;
+    if let Some(output) = ctx.engine.cycle_current_word_case() {
+        if !out_backspaces.is_null() {
+            *out_backspaces = output.backspaces;
+        }
+        if !out_commit.is_null() {
+            let c_str = CString::new(output.commit_text).unwrap_or_default();
+            *out_commit = c_str.into_raw();
+        }
+        1
+    } else {
+        0
+    }
+}
+
+/// Cycles the casing of arbitrary text or a selected string (e.g. from surrounding text).
+/// Returns 1 on success and sets `out_cased`. Result must be freed with `fcitx5_vnchkey_free_string`.
+#[no_mangle]
+pub unsafe extern "C" fn fcitx5_vnchkey_cycle_text_case(
+    text: *const c_char,
+    out_cased: *mut *mut c_char,
+) -> c_int {
+    if text.is_null() || out_cased.is_null() {
+        return 0;
+    }
+    if let Ok(c_str) = CStr::from_ptr(text).to_str() {
+        let converted = vnchkey_core::cycle_text_casing(c_str);
+        if let Ok(res_c) = CString::new(converted) {
+            *out_cased = res_c.into_raw();
+            return 1;
+        }
+    }
+    0
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -654,6 +700,8 @@ mod tests {
             assert_eq!(fcitx5_vnchkey_undo_escape(ptr::null_mut(), &mut bs, &mut commit), 0);
             assert_eq!(fcitx5_vnchkey_rescue_sentence(ptr::null_mut(), ptr::null(), &mut commit), 0);
             assert_eq!(fcitx5_vnchkey_apply_accent_to_selection(ptr::null_mut(), ptr::null(), 's' as u32, &mut commit), 0);
+            assert_eq!(fcitx5_vnchkey_cycle_word_case(ptr::null_mut(), &mut bs, &mut commit), 0);
+            assert_eq!(fcitx5_vnchkey_cycle_text_case(ptr::null(), &mut commit), 0);
             fcitx5_vnchkey_free_string(ptr::null_mut());
             fcitx5_vnchkey_free(ptr::null_mut());
         }
@@ -706,6 +754,21 @@ mod tests {
             let sel_ok = fcitx5_vnchkey_apply_accent_to_selection(ctx, sel_c.as_ptr(), 's' as u32, &mut sel_out);
             assert_eq!(sel_ok, 1);
             assert_eq!(take_ffi_string(sel_out), "tiếng");
+
+            // Test Case Converter over FFI:
+            // 1. Cycle active word case ("tiếng" -> "TIẾNG")
+            let mut case_bs: usize = 0;
+            let mut case_out: *mut c_char = ptr::null_mut();
+            let case_ok = fcitx5_vnchkey_cycle_word_case(ctx, &mut case_bs, &mut case_out);
+            assert_eq!(case_ok, 1);
+            assert_eq!(take_ffi_string(case_out), "TIẾNG");
+
+            // 2. Cycle arbitrary / selection text case ("việt nam" -> "VIỆT NAM")
+            let phrase_c = CString::new("việt nam").unwrap();
+            let mut text_cased_ptr: *mut c_char = ptr::null_mut();
+            let text_ok = fcitx5_vnchkey_cycle_text_case(phrase_c.as_ptr(), &mut text_cased_ptr);
+            assert_eq!(text_ok, 1);
+            assert_eq!(take_ffi_string(text_cased_ptr), "VIỆT NAM");
 
             fcitx5_vnchkey_free(ctx);
         }

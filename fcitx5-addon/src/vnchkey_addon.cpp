@@ -1215,6 +1215,76 @@ void VnchkeyEngine::keyEvent(const fcitx::InputMethodEntry &entry, fcitx::KeyEve
         }
     }
 
+    // Case Converter shortcut (Ctrl+Shift+U): instantly cycle casing (lower -> UPPER -> Title Case)
+    // Works either on currently composing active word, or on highlighted/selected text via SurroundingText!
+    bool isCaseConverter = states.test(fcitx::KeyState::Ctrl) &&
+                           states.test(fcitx::KeyState::Shift) &&
+                           !states.test(fcitx::KeyState::Alt) &&
+                           (sym == FcitxKey_U || sym == FcitxKey_u);
+
+    if (isCaseConverter) {
+        // Priority 1: If there is an active composing word
+        if (fcitx5_vnchkey_has_active_word(ctx)) {
+            size_t bs = 0;
+            char* commitText = nullptr;
+            if (fcitx5_vnchkey_cycle_word_case(ctx, &bs, &commitText) != 0) {
+                std::string prog = ic ? ic->program() : "";
+                if (isPreeditMode && ic) {
+                    char* cur = fcitx5_vnchkey_get_current_word(ctx);
+                    if (cur && cur[0] != '\0') {
+                        fcitx::Text text(cur, fcitx::TextFormatFlag::Underline);
+                        ic->inputPanel().setClientPreedit(text);
+                        if (config_preedit_tooltip_ || isWpsOffice(prog)) {
+                            ic->inputPanel().setPreedit(text);
+                        }
+                        ic->updatePreedit();
+                        ic->updateUserInterface(fcitx::UserInterfaceComponent::InputPanel);
+                        fcitx5_vnchkey_free_string(cur);
+                    }
+                } else if (ic) {
+                    for (size_t i = 0; i < bs; ++i) {
+                        ic->forwardKey(fcitx::Key(FcitxKey_BackSpace));
+                    }
+                    if (commitText && commitText[0] != '\0') {
+                        ic->commitString(commitText);
+                    }
+                }
+                if (commitText) {
+                    fcitx5_vnchkey_free_string(commitText);
+                }
+                keyEvent.filterAndAccept();
+                return;
+            }
+        }
+        // Priority 2: If there is a selection in surrounding text
+        else if (ic && ic->capabilityFlags().test(fcitx::CapabilityFlag::SurroundingText) &&
+                 ic->surroundingText().isValid()) {
+            const auto& surrounding = ic->surroundingText();
+            if (surrounding.cursor() != surrounding.anchor()) {
+                std::string sel = surrounding.selectedText();
+                if (!sel.empty() && sel.length() <= 1024) {
+                    char* cased = nullptr;
+                    if (fcitx5_vnchkey_cycle_text_case(sel.c_str(), &cased)) {
+                        if (cased && std::string(cased) != sel) {
+                            int start = std::min(surrounding.cursor(), surrounding.anchor());
+                            int end = std::max(surrounding.cursor(), surrounding.anchor());
+                            int sel_len = end - start;
+                            int offset = start - surrounding.cursor();
+                            ic->deleteSurroundingText(offset, sel_len);
+                            ic->commitString(cased);
+                            fcitx5_vnchkey_free_string(cased);
+                            keyEvent.filterAndAccept();
+                            return;
+                        }
+                        if (cased) {
+                            fcitx5_vnchkey_free_string(cased);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     // Pass through combination shortcuts (Ctrl, Alt, Super) and navigation/cursor keys
     if (states.test(fcitx::KeyState::Ctrl) ||
         states.test(fcitx::KeyState::Alt) ||
