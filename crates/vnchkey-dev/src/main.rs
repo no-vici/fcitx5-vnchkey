@@ -19,17 +19,50 @@ fn main() {
     let args: Vec<String> = env::args().collect();
     if args.len() < 2 {
         eprintln!("Usage: cargo run --bin set-version <new-version>");
-        eprintln!("Example: cargo run --bin set-version 0.3.4");
+        eprintln!("       cargo run --bin set-version --check [expected-version]");
+        eprintln!("Example: cargo run --bin set-version 0.3.6");
+        eprintln!("         cargo run --bin set-version --check 0.3.6");
         process::exit(1);
     }
 
-    let new_version = args[1].trim().trim_start_matches('v').trim();
-    if new_version.is_empty() {
-        eprintln!("Error: Version cannot be empty");
-        process::exit(1);
-    }
+    let is_check_mode = args[1] == "--check" || args[1] == "-c";
+    let target_version_arg = if is_check_mode {
+        if args.len() >= 3 {
+            Some(args[2].trim().trim_start_matches('v').trim())
+        } else {
+            None
+        }
+    } else {
+        Some(args[1].trim().trim_start_matches('v').trim())
+    };
 
-    println!("Updating vnchKey to version: v{}", new_version);
+    let fallback_version: String;
+    let new_version = match target_version_arg {
+        Some(v) if !v.is_empty() => v,
+        _ => {
+            // Extract from root Cargo.toml as expected version if not provided
+            let cargo_toml = fs::read_to_string("Cargo.toml").unwrap_or_default();
+            let mut extracted = String::new();
+            for line in cargo_toml.lines() {
+                if line.starts_with("version = \"") && line.ends_with('"') {
+                    extracted = line[11..line.len() - 1].to_string();
+                    break;
+                }
+            }
+            if extracted.is_empty() {
+                eprintln!("Error: Could not determine expected version");
+                process::exit(1);
+            }
+            fallback_version = extracted;
+            fallback_version.as_str()
+        }
+    };
+
+    if is_check_mode {
+        println!("Checking vnchKey version consistency against: v{}", new_version);
+    } else {
+        println!("Updating vnchKey to version: v{}", new_version);
+    }
 
     let rules = vec![
         // 1. Root workspace Cargo.toml
@@ -116,6 +149,16 @@ fn main() {
                 |_old, _new| String::new(),
             )],
         },
+        // 6b. PPA publication script
+        ReplacementRule {
+            file_path: "scripts/publish-ppa.sh",
+            patterns: vec![(
+                |content, new_ver| {
+                    regex_lite_replace(content, r#"VERSION="[^"]+""#, &format!("VERSION=\"{}\"", new_ver), 1)
+                },
+                |_old, _new| String::new(),
+            )],
+        },
         // 7. macOS Makefile
         ReplacementRule {
             file_path: "macos/Makefile",
@@ -163,6 +206,8 @@ fn main() {
     ];
 
     let mut updated_files = 0;
+    let mut mismatch_found = false;
+
     for rule in rules {
         let path = Path::new(rule.file_path);
         if !path.exists() {
@@ -178,21 +223,35 @@ fn main() {
                 }
 
                 if new_content != content {
-                    if let Err(e) = fs::write(path, new_content) {
-                        eprintln!("Error writing {}: {}", rule.file_path, e);
+                    if is_check_mode {
+                        eprintln!("  ✗ Version mismatch in: {}", rule.file_path);
+                        mismatch_found = true;
                     } else {
-                        println!("  ✓ Updated: {}", rule.file_path);
-                        updated_files += 1;
+                        if let Err(e) = fs::write(path, new_content) {
+                            eprintln!("Error writing {}: {}", rule.file_path, e);
+                        } else {
+                            println!("  ✓ Updated: {}", rule.file_path);
+                            updated_files += 1;
+                        }
                     }
                 } else {
-                    println!("  - No change needed: {}", rule.file_path);
+                    println!("  - In sync: {}", rule.file_path);
                 }
             }
             Err(e) => eprintln!("Error reading {}: {}", rule.file_path, e),
         }
     }
 
-    println!("\nSuccessfully synchronized version {} across {} files!", new_version, updated_files);
+    if is_check_mode {
+        if mismatch_found {
+            eprintln!("\n❌ Version verification FAILED! Run `cargo run --bin set-version {}` to fix.", new_version);
+            process::exit(1);
+        } else {
+            println!("\n✅ All project configuration files are perfectly in sync with version {}!", new_version);
+        }
+    } else {
+        println!("\nSuccessfully synchronized version {} across {} files!", new_version, updated_files);
+    }
 }
 
 /// Simple regex-like string replacer without external dependencies
