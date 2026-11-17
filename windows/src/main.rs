@@ -203,6 +203,7 @@ mod win_app {
         recording_mode: RecordingMode,
         hwnd: HWND,
         macro_dlg_hwnd: HWND,
+        about_dlg_hwnd: HWND,
         chord_armed: bool,
         other_key_during_chord: bool,
     }
@@ -228,6 +229,7 @@ mod win_app {
             recording_mode: RecordingMode::None,
             hwnd: null_mut(),
             macro_dlg_hwnd: null_mut(),
+            about_dlg_hwnd: null_mut(),
             chord_armed: false,
             other_key_during_chord: false,
         });
@@ -695,6 +697,8 @@ mod win_app {
 
     const IDC_EDIT_SHORTCUT: i32 = 101;
     const IDC_EDIT_EXPANSION: i32 = 102;
+    const IDC_ABOUT_BTN_WEB: i32 = 103;
+    const IDC_ABOUT_BTN_CHECK: i32 = 104;
 
     fn add_or_update_macro(shortcut: &str, expansion: &str) -> std::io::Result<()> {
         super::add_or_update_macro_file(&macros_path(), shortcut, expansion)
@@ -949,34 +953,252 @@ mod win_app {
         }
     }
 
-    /// Hiển thị hộp thoại About với thông tin chi tiết về phiên bản và dự án
-    unsafe fn show_about_dialog(hwnd: HWND) {
+    const SS_ICON: u32 = 0x00000003;
+    const STM_SETICON: u32 = 0x0170;
+
+    unsafe extern "system" fn about_dlg_wnd_proc(
+        hwnd: HWND,
+        msg: u32,
+        wparam: WPARAM,
+        lparam: LPARAM,
+    ) -> LRESULT {
+        match msg {
+            WM_CREATE => {
+                let hinstance = GetModuleHandleW(null_mut());
+                let hfont = GetStockObject(DEFAULT_GUI_FONT);
+
+                // Static icon control to display the high-res app logo (Resource ID 1)
+                let h_icon = CreateWindowExW(
+                    0,
+                    to_wstring("STATIC").as_ptr(),
+                    null_mut(),
+                    WS_CHILD | WS_VISIBLE | SS_ICON,
+                    20,
+                    20,
+                    48,
+                    48,
+                    hwnd,
+                    null_mut(),
+                    hinstance,
+                    null_mut(),
+                );
+
+                let app_icon = LoadIconW(hinstance, 1 as *const u16);
+                let valid_icon = if !app_icon.is_null() {
+                    app_icon
+                } else {
+                    LoadIconW(null_mut(), IDI_APPLICATION)
+                };
+
+                if !h_icon.is_null() && !valid_icon.is_null() {
+                    SendMessageW(h_icon, STM_SETICON, valid_icon as WPARAM, 0);
+                }
+
+                let cur_ver = env!("CARGO_PKG_VERSION");
+                let header_text = format!("VnCharKey — Bộ Gõ Tiếng Việt (v{})", cur_ver);
+                let h_header = CreateWindowExW(
+                    0,
+                    to_wstring("STATIC").as_ptr(),
+                    to_wstring(&header_text).as_ptr(),
+                    WS_CHILD | WS_VISIBLE,
+                    80,
+                    20,
+                    380,
+                    22,
+                    hwnd,
+                    null_mut(),
+                    hinstance,
+                    null_mut(),
+                );
+
+                let subheader_text = "Phát triển bởi Cộng đồng Tự do & No-Vici\nGiấy phép: GNU General Public License v3.0 (GPLv3)";
+                let h_subheader = CreateWindowExW(
+                    0,
+                    to_wstring("STATIC").as_ptr(),
+                    to_wstring(subheader_text).as_ptr(),
+                    WS_CHILD | WS_VISIBLE,
+                    80,
+                    44,
+                    380,
+                    36,
+                    hwnd,
+                    null_mut(),
+                    hinstance,
+                    null_mut(),
+                );
+
+                let desc_text = "• 100% Thuần Việt, Hiện Đại, Nhẹ & Tốc Độ Cao\n\
+                                 • 100% Offline, bảo mật, không gửi dữ liệu ra ngoài\n\
+                                 • Tự động khôi phục Tiếng Anh, Smart Casing, hồi sinh từ\n\
+                                 • Tối ưu cho Excel, Word, Trình duyệt & Lập trình\n\
+                                 • Hoạt động độc lập, không cần cài đặt (Portable Mode)";
+                let h_desc = CreateWindowExW(
+                    0,
+                    to_wstring("STATIC").as_ptr(),
+                    to_wstring(desc_text).as_ptr(),
+                    WS_CHILD | WS_VISIBLE,
+                    24,
+                    90,
+                    436,
+                    95,
+                    hwnd,
+                    null_mut(),
+                    hinstance,
+                    null_mut(),
+                );
+
+                // Button: Trang Chủ / GitHub
+                let h_btn_web = CreateWindowExW(
+                    0,
+                    to_wstring("BUTTON").as_ptr(),
+                    to_wstring("Trang Chủ GitHub").as_ptr(),
+                    WS_CHILD | WS_VISIBLE | WS_TABSTOP | (BS_PUSHBUTTON as u32),
+                    24,
+                    200,
+                    140,
+                    30,
+                    hwnd,
+                    IDC_ABOUT_BTN_WEB as isize as _,
+                    hinstance,
+                    null_mut(),
+                );
+
+                // Button: Kiểm tra cập nhật
+                let h_btn_check = CreateWindowExW(
+                    0,
+                    to_wstring("BUTTON").as_ptr(),
+                    to_wstring("Kiểm Tra Cập Nhật").as_ptr(),
+                    WS_CHILD | WS_VISIBLE | WS_TABSTOP | (BS_PUSHBUTTON as u32),
+                    174,
+                    200,
+                    150,
+                    30,
+                    hwnd,
+                    IDC_ABOUT_BTN_CHECK as isize as _,
+                    hinstance,
+                    null_mut(),
+                );
+
+                // Button: Đóng
+                let h_btn_close = CreateWindowExW(
+                    0,
+                    to_wstring("BUTTON").as_ptr(),
+                    to_wstring("Đóng").as_ptr(),
+                    WS_CHILD | WS_VISIBLE | WS_TABSTOP | (BS_DEFPUSHBUTTON as u32),
+                    350,
+                    200,
+                    100,
+                    30,
+                    hwnd,
+                    IDOK as isize as _,
+                    hinstance,
+                    null_mut(),
+                );
+
+                if !hfont.is_null() {
+                    for child in [h_header, h_subheader, h_desc, h_btn_web, h_btn_check, h_btn_close] {
+                        if !child.is_null() {
+                            SendMessageW(child, WM_SETFONT, hfont as WPARAM, 1);
+                        }
+                    }
+                }
+
+                SetFocus(h_btn_close);
+                0
+            }
+            WM_COMMAND => {
+                let id = (wparam & 0xFFFF) as i32;
+                if id == IDOK || id == IDCANCEL {
+                    DestroyWindow(hwnd);
+                    0
+                } else if id == IDC_ABOUT_BTN_WEB {
+                    let _ = Command::new("cmd")
+                        .args(&["/c", "start", "https://github.com/no-vici/fcitx5-vnchkey"])
+                        .spawn();
+                    0
+                } else if id == IDC_ABOUT_BTN_CHECK {
+                    check_for_updates(hwnd, false);
+                    0
+                } else {
+                    DefWindowProcW(hwnd, msg, wparam, lparam)
+                }
+            }
+            WM_CLOSE => {
+                DestroyWindow(hwnd);
+                0
+            }
+            WM_DESTROY => {
+                STATE.with(|s| {
+                    if let Ok(mut st) = s.try_borrow_mut() {
+                        st.about_dlg_hwnd = null_mut();
+                    }
+                });
+                0
+            }
+            _ => DefWindowProcW(hwnd, msg, wparam, lparam),
+        }
+    }
+
+    /// Hiển thị hộp thoại About chuyên nghiệp với logo bộ gõ chính thức thay cho biểu tượng (i) hệ thống
+    unsafe fn show_about_dialog(parent_hwnd: HWND) {
+        let existing = STATE.with(|s| s.borrow().about_dlg_hwnd);
+        if !existing.is_null() && IsWindow(existing) != 0 {
+            SetForegroundWindow(existing);
+            SetActiveWindow(existing);
+            return;
+        }
+
+        let hinstance = GetModuleHandleW(null_mut());
+        let class_name = to_wstring("VnCharKeyAboutDlgClass");
+
+        let wc = WNDCLASSW {
+            style: CS_HREDRAW | CS_VREDRAW,
+            lpfnWndProc: Some(about_dlg_wnd_proc),
+            cbClsExtra: 0,
+            cbWndExtra: 0,
+            hInstance: hinstance,
+            hIcon: LoadIconW(hinstance, 1 as *const u16),
+            hCursor: LoadCursorW(null_mut(), IDC_ARROW),
+            hbrBackground: (COLOR_BTNFACE + 1) as HBRUSH,
+            lpszMenuName: null_mut(),
+            lpszClassName: class_name.as_ptr(),
+        };
+
+        RegisterClassW(&wc);
+
+        let screen_w = GetSystemMetrics(SM_CXSCREEN);
+        let screen_h = GetSystemMetrics(SM_CYSCREEN);
+        let width = 485;
+        let height = 285;
+        let x = (screen_w - width) / 2;
+        let y = (screen_h - height) / 2;
+
         let cur_ver = env!("CARGO_PKG_VERSION");
-        let info = format!(
-            "VnCharKey — Bộ Gõ Tiếng Việt\n\
-             Phiên bản: v{}\n\n\
-             • Bộ gõ Tiếng Việt hiện đại và gọn nhẹ cho Windows\n\
-             • 100% Offline, bảo mật cao và không gởi bất kỳ dữ liệu nào ra khỏi máy người dùng\n\
-             • Tự động khôi phục Tiếng Anh, Smart Casing, hồi sinh từ\n\
-             • Hoạt động độc lập, không cần cài đặt (Portable Mode)\n\n\
-             Mã nguồn & Giấy phép:\n\
-             https://github.com/no-vici/fcitx5-vnchkey\n\
-             Giấy phép: GNU General Public License v3.0 (GPLv3)\n\n\
-             Bấm 'Yes' để mở trang GitHub phát hành chính thức.\n\
-             Bấm 'No' để đóng hộp thoại này.",
-            cur_ver
-        );
-        let title = format!("Thông tin VnCharKey v{}", cur_ver);
-        let res = MessageBoxW(
-            hwnd,
-            to_wstring(&info).as_ptr(),
+        let title = format!("Giới thiệu VnCharKey v{}", cur_ver);
+
+        let hwnd_dlg = CreateWindowExW(
+            WS_EX_DLGMODALFRAME | WS_EX_TOPMOST,
+            class_name.as_ptr(),
             to_wstring(&title).as_ptr(),
-            MB_YESNO | MB_ICONINFORMATION,
+            WS_POPUP | WS_CAPTION | WS_SYSMENU | WS_VISIBLE,
+            x,
+            y,
+            width,
+            height,
+            parent_hwnd,
+            null_mut(),
+            hinstance,
+            null_mut(),
         );
-        if res == IDYES {
-            let _ = Command::new("cmd")
-                .args(&["/c", "start", "https://github.com/no-vici/fcitx5-vnchkey/releases"])
-                .spawn();
+
+        if !hwnd_dlg.is_null() {
+            STATE.with(|s| {
+                if let Ok(mut st) = s.try_borrow_mut() {
+                    st.about_dlg_hwnd = hwnd_dlg;
+                }
+            });
+            SetForegroundWindow(hwnd_dlg);
+            SetActiveWindow(hwnd_dlg);
         }
     }
 
@@ -2481,8 +2703,14 @@ Start-Process -FilePath $batch -WindowStyle Hidden;
 
         let mut msg: MSG = std::mem::zeroed();
         while GetMessageW(&mut msg, null_mut(), 0, 0) > 0 {
-            let dlg = STATE.with(|s| s.borrow().macro_dlg_hwnd);
-            if !dlg.is_null() && IsWindow(dlg) != 0 && IsDialogMessageW(dlg, &msg) != 0 {
+            let (dlg_macro, dlg_about) = STATE.with(|s| {
+                let st = s.borrow();
+                (st.macro_dlg_hwnd, st.about_dlg_hwnd)
+            });
+            if !dlg_macro.is_null() && IsWindow(dlg_macro) != 0 && IsDialogMessageW(dlg_macro, &msg) != 0 {
+                continue;
+            }
+            if !dlg_about.is_null() && IsWindow(dlg_about) != 0 && IsDialogMessageW(dlg_about, &msg) != 0 {
                 continue;
             }
             TranslateMessage(&msg);
