@@ -305,6 +305,13 @@ impl VietnameseGlyph {
         }
     }
 
+    /// Changes or sets whether the character is uppercase.
+    #[inline]
+    pub fn with_upper(mut self, is_upper: bool) -> Self {
+        self.is_upper = is_upper;
+        self
+    }
+
     /// Changes or sets the tone mark while preserving the base and quality modifier.
     #[inline]
     pub fn with_tone(mut self, tone: ToneMark) -> Self {
@@ -317,6 +324,18 @@ impl VietnameseGlyph {
     pub fn with_quality(mut self, quality: QualityModifier) -> Self {
         self.quality = quality;
         self
+    }
+    /// Returns the tone-stripped lowercase base vowel with quality modifier preserved.
+    /// (e.g. 'á' -> 'a', 'ế' -> 'ê', 'ợ' -> 'ơ', 'Đ' -> 'đ')
+    #[inline]
+    pub fn base_vowel(self) -> char {
+        Self {
+            base: self.base,
+            quality: self.quality,
+            tone: ToneMark::Level,
+            is_upper: false,
+        }
+        .compose()
     }
 }
 
