@@ -1470,6 +1470,16 @@ Start-Process -FilePath $batch -WindowStyle Hidden;
             if let Some(ch) = vk_to_char(kbd.vkCode, kbd.scanCode) {
                 let output = st.engine.process_key(ch, now_ms());
                 if output.consumed {
+                    // Pass through unchanged single ASCII characters directly via CallNextHookEx
+                    // instead of swallowing and re-injecting via KEYEVENTF_UNICODE (VK_PACKET).
+                    // Excel in Ready Mode ignores VK_PACKET and only enters Cell Edit Mode on real WM_KEYDOWN.
+                    if output.backspaces == 0
+                        && output.commit_text.len() == 1
+                        && ch.is_ascii()
+                        && output.commit_text.as_bytes()[0] == ch as u8
+                    {
+                        return false;
+                    }
                     emit_output(output.backspaces, &output.commit_text);
                     return true;
                 }
