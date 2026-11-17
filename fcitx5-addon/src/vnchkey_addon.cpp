@@ -939,6 +939,16 @@ void VnchkeyEngine::loadConfig() {
                 } else {
                     config_w2u_ = 0;
                 }
+            } else if (line.rfind("InitialCaseAnchor=", 0) == 0) {
+                config_initial_case_anchor_ = (line.find("True") != std::string::npos || line.find("true") != std::string::npos);
+            } else if (line.rfind("LearnTypingHabits=", 0) == 0) {
+                config_learn_typing_habits_ = (line.find("False") == std::string::npos && line.find("false") == std::string::npos);
+            } else if (line.rfind("HabitPromoteThreshold=", 0) == 0) {
+                try {
+                    config_habit_promote_threshold_ = std::max(1, std::stoi(line.substr(22)));
+                } catch (...) {
+                    config_habit_promote_threshold_ = 4;
+                }
             }
         }
     }
@@ -966,6 +976,9 @@ void VnchkeyEngine::loadConfig() {
         uint32_t charset_code = (config_charset_.find("Composite") != std::string::npos || config_charset_.find("Tổ hợp") != std::string::npos) ? 1 : 0;
         fcitx5_vnchkey_set_charset(ctx, charset_code);
         fcitx5_vnchkey_set_idle_timeout(ctx, config_idle_timeout_ms_);
+        fcitx5_vnchkey_set_initial_case_anchor(ctx, config_initial_case_anchor_);
+        fcitx5_vnchkey_set_habit_learning_enabled(ctx, config_learn_typing_habits_);
+        fcitx5_vnchkey_set_habit_promote_threshold(ctx, config_habit_promote_threshold_);
     }
 }
 

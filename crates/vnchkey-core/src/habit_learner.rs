@@ -114,17 +114,28 @@ impl HabitLearner {
     }
 
     /// Sets the user dictionary path and loads existing words so we don't duplicate entries.
+    /// Also purges correction counts and unlearns words that were deleted from the dictionary file.
     pub fn set_dictionary_path(&mut self, path: &str) {
         self.dictionary_path = Some(path.to_string());
-        self.promoted_words.clear();
+        let mut new_promoted = HashMap::new();
         if let Ok(content) = fs::read_to_string(path) {
             for line in content.lines() {
                 let clean = line.trim().to_lowercase();
                 if !clean.is_empty() && !clean.starts_with('#') {
-                    self.promoted_words.insert(clean, true);
+                    new_promoted.insert(clean, true);
                 }
             }
         }
+
+        // If a word was in promoted_words but is no longer present in the updated dictionary file,
+        // it means the user deleted it in GUI Settings: reset its correction counter completely!
+        for old_word in self.promoted_words.keys() {
+            if !new_promoted.contains_key(old_word) {
+                self.correction_counts.remove(old_word);
+            }
+        }
+
+        self.promoted_words = new_promoted;
     }
 
     /// Explicitly unlearns a word: removes it from the promoted whitelist and resets its correction count.

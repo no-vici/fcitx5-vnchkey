@@ -61,6 +61,13 @@ extern "C" {
     void fcitx5_vnchkey_set_charset(void* ctx, uint32_t charset);
     void fcitx5_vnchkey_set_idle_timeout(void* ctx, uint64_t ms);
     uint64_t fcitx5_vnchkey_get_idle_timeout(void* ctx);
+    void fcitx5_vnchkey_set_habit_learning_enabled(void* ctx, bool enabled);
+    bool fcitx5_vnchkey_get_habit_learning_enabled(void* ctx);
+    void fcitx5_vnchkey_set_habit_promote_threshold(void* ctx, uint32_t threshold);
+    uint32_t fcitx5_vnchkey_get_habit_promote_threshold(void* ctx);
+    void fcitx5_vnchkey_unlearn_word(void* ctx, const char* word);
+    void fcitx5_vnchkey_set_initial_case_anchor(void* ctx, bool enabled);
+    bool fcitx5_vnchkey_get_initial_case_anchor(void* ctx);
 
     char* fcitx5_vnchkey_get_current_word(void* ctx);
     char* fcitx5_vnchkey_get_completed_word(void* ctx);
@@ -129,6 +136,9 @@ private:
     bool config_esc_restore_raw_ = false; // false = Esc passes through to app (Neovim mode), Shift+Esc undos; true = Esc undos to raw
     bool config_select_and_replace_web_ = true;
     bool config_word_rescue_ = true;
+    bool config_initial_case_anchor_ = false;
+    bool config_learn_typing_habits_ = true;
+    uint32_t config_habit_promote_threshold_ = 4;
 
     // Rescue Undo Cache (Escape/Backspace immediately after activation rescue)
     std::string last_rescue_raw_;

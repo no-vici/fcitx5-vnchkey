@@ -168,10 +168,38 @@ impl ParsedSyllable {
             return false;
         }
 
-        // 5. Spelling rules: 'gh', 'ngh' must precede 'i', 'e', 'ê' (or glide 'u' + 'y'/'ê')
+        // 5. Spelling rules & Phonology constraints:
+        // - 'gh', 'ngh' must precede 'i', 'e', 'ê' (or glide 'u' + 'y'/'ê')
         if matches!(lower_onset.as_str(), "gh" | "ngh") {
             if let Some(first_v) = lower_nucleus.chars().next() {
                 if !matches!(first_v, 'i' | 'e' | 'ê') {
+                    return false;
+                }
+            }
+        }
+
+        // - 'c' (unless 'ch') is never followed by 'e', 'ê', 'i', 'y' (e.g. center, city, cell)
+        if lower_onset == "c" && self.glide.is_none() {
+            if let Some(first_v) = lower_nucleus.chars().next() {
+                if matches!(first_v, 'e' | 'ê' | 'i' | 'y') {
+                    return false;
+                }
+            }
+        }
+
+        // - 'g' (unless 'gh' or 'gi') is never followed by 'e', 'ê' (e.g. get, gen, gear)
+        if lower_onset == "g" && self.glide.is_none() {
+            if let Some(first_v) = lower_nucleus.chars().next() {
+                if matches!(first_v, 'e' | 'ê') {
+                    return false;
+                }
+            }
+        }
+
+        // - 'ng' (unless 'ngh') is never followed by 'e', 'ê', 'i' (e.g. nge, ngi, engine)
+        if lower_onset == "ng" && self.glide.is_none() {
+            if let Some(first_v) = lower_nucleus.chars().next() {
+                if matches!(first_v, 'e' | 'ê' | 'i') {
                     return false;
                 }
             }
@@ -206,10 +234,38 @@ impl ParsedSyllable {
             return false;
         }
 
-        // 4. Spelling rules: 'gh', 'ngh' must precede 'i', 'e', 'ê' (or glide 'u' + 'y'/'ê')
+        // 4. Spelling rules & Phonology constraints:
+        // - 'gh', 'ngh' must precede 'i', 'e', 'ê' (or glide 'u' + 'y'/'ê')
         if matches!(lower_onset.as_str(), "gh" | "ngh") {
             if let Some(first_v) = lower_nucleus.chars().next() {
                 if !matches!(first_v, 'i' | 'e' | 'ê') {
+                    return false;
+                }
+            }
+        }
+
+        // - 'c' (unless 'ch') is never followed by 'e', 'ê', 'i', 'y' (e.g. center, city, cell)
+        if lower_onset == "c" && self.glide.is_none() {
+            if let Some(first_v) = lower_nucleus.chars().next() {
+                if matches!(first_v, 'e' | 'ê' | 'i' | 'y') {
+                    return false;
+                }
+            }
+        }
+
+        // - 'g' (unless 'gh' or 'gi') is never followed by 'e', 'ê' (e.g. get, gen, gear)
+        if lower_onset == "g" && self.glide.is_none() {
+            if let Some(first_v) = lower_nucleus.chars().next() {
+                if matches!(first_v, 'e' | 'ê') {
+                    return false;
+                }
+            }
+        }
+
+        // - 'ng' (unless 'ngh') is never followed by 'e', 'ê', 'i' (e.g. nge, ngi, engine)
+        if lower_onset == "ng" && self.glide.is_none() {
+            if let Some(first_v) = lower_nucleus.chars().next() {
+                if matches!(first_v, 'e' | 'ê' | 'i') {
                     return false;
                 }
             }
@@ -864,6 +920,20 @@ mod tests {
         // Invalid: 'gh' before 'a'
         let invalid_gh = ParsedSyllable::new("gh", None, "a", "", ToneMark::None);
         assert!(!invalid_gh.is_valid());
+
+        // Invalid: 'c' before 'e', 'ê', 'i', 'y'
+        let invalid_ce = ParsedSyllable::new("c", None, "e", "ll", ToneMark::None);
+        assert!(!invalid_ce.is_valid());
+        let invalid_ci = ParsedSyllable::new("c", None, "i", "ty", ToneMark::None);
+        assert!(!invalid_ci.is_valid());
+
+        // Invalid: 'g' before 'e', 'ê'
+        let invalid_ge = ParsedSyllable::new("g", None, "e", "t", ToneMark::None);
+        assert!(!invalid_ge.is_valid());
+
+        // Invalid: 'ng' before 'e', 'ê', 'i'
+        let invalid_nge = ParsedSyllable::new("ng", None, "e", "", ToneMark::None);
+        assert!(!invalid_nge.is_valid());
     }
 
     #[test]
