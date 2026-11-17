@@ -93,6 +93,9 @@ def transform_content(text: str) -> str:
     """Replaces branding tokens in text files."""
     # Order matters: longer / specific tokens first
     replacements = [
+        ("https://github.com/no-vici/fcitx5-vnchkey", "https://github.com/no-vici/vncharkey"),
+        ("https://api.github.com/repos/no-vici/fcitx5-vnchkey", "https://api.github.com/repos/no-vici/vncharkey"),
+        ("no-vici/fcitx5-vnchkey", "no-vici/vncharkey"),
         ("fcitx5-vnchkey", "fcitx5-vncharkey"),
         ("fcitx-vnchkey", "fcitx-vncharkey"),
         ("Fcitx5.vnchkey", "Fcitx5.vncharkey"),
