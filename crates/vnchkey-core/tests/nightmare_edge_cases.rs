@@ -394,6 +394,18 @@ let code_cases = [
 ("_variable ", "_variable "),
 ("init ", "init "),
 ("db.collection.findOne ", "db.collection.findOne "),
+// Technical Tokens & CSS Units (#hex, units, alpha-numeric identifiers)
+("#f97316 ", "#f97316 "),
+("#ef4444 ", "#ef4444 "),
+("#root ", "#root "),
+("10px ", "10px "),
+("2rem ", "2rem "),
+("50vh ", "50vh "),
+("100vw ", "100vw "),
+("v1s ", "v1s "),
+("sha256 ", "sha256 "),
+("md5 ", "md5 "),
+("utf8 ", "utf8 "),
 // URL, Email, Path & CLI flags
 ("https://github.com/no-vici/fcitx5-vnchkey ", "https://github.com/no-vici/fcitx5-vnchkey "),
 ("user@domain.com ", "user@domain.com "),

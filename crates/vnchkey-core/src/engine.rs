@@ -1062,6 +1062,41 @@ impl Engine {
             }
         }
 
+        // Developer-Aware: Hash prefix technical token handling (e.g. #hex colors #f97316, #ef4444, CSS IDs #app, hashtags)
+        if ch == '#' {
+            self.reopen_state = None;
+            self.last_delimiter = Some('#');
+            self.last_delimiter_spaced = false;
+
+            if self.current_word.is_empty() {
+                self.raw_strokes.push('#');
+                self.current_word.push('#');
+                self.english_locked = true;
+                return EngineOutput {
+                    backspaces: 0,
+                    commit_text: self.format_commit("#"),
+                    consumed: false,
+                    auto_restored: false,
+                    macro_expanded: false,
+                    adaptive_delay_ms: 0,
+                };
+            } else {
+                let old_word = self.current_word.clone();
+                self.raw_strokes.push('#');
+                self.current_word = self.raw_strokes.clone();
+                self.english_locked = true;
+                let (backspaces, commit_text) = compare_and_split_strings(&old_word, &self.current_word);
+                return EngineOutput {
+                    backspaces,
+                    commit_text: self.format_commit(&commit_text),
+                    consumed: true,
+                    auto_restored: true,
+                    macro_expanded: false,
+                    adaptive_delay_ms: 0,
+                };
+            }
+        }
+
         // Word delimiter check (Space, Enter, Punctuation)
         if !ch.is_alphanumeric() && !is_bracket {
             self.last_delimiter = Some(ch);
@@ -1258,6 +1293,29 @@ impl Engine {
             self.english_locked = true;
         }
 
+        // Developer-Aware: Technical Token Protection (e.g. CSS units like "10px", "2rem", "50vh", variables with digits "v1s", "sha256", "md5")
+        // If the token starts with '#' or contains digits in Telex mode and a letter arrives, lock English mode.
+        // In VNI/Auto mode, a digit could be a tone modifier (e.g. "biet61"), so we only lock if method is Telex/SimpleTelex,
+        // or if the token starts with '#', or if digits are already followed by non-transforming letters.
+        let is_telex_method = matches!(self.config.method, InputMethod::Telex | InputMethod::SimpleTelex);
+        let has_prior_digits = self.raw_strokes.chars().any(|c| c.is_ascii_digit());
+        let starts_with_hash = self.raw_strokes.starts_with('#');
+        if ((is_telex_method && has_prior_digits) || starts_with_hash) && ch.is_ascii_alphabetic() && !self.english_locked {
+            let old_word = self.current_word.clone();
+            self.raw_strokes.push(ch);
+            self.current_word = self.raw_strokes.clone();
+            self.english_locked = true;
+            let (backspaces, commit_text) = compare_and_split_strings(&old_word, &self.current_word);
+            return EngineOutput {
+                backspaces,
+                commit_text: self.format_commit(&commit_text),
+                consumed: backspaces > 0 || commit_text != ch.to_string(),
+                auto_restored: backspaces > 0,
+                macro_expanded: false,
+                adaptive_delay_ms: 0,
+            };
+        }
+
         // Developer-Aware: camelCase identifier detection (e.g. "parse" + 'S' -> "parseS", "vnch" + 'K' -> "vnchKey")
         // If an uppercase letter arrives after lowercase letters, and does not form a valid Vietnamese
         // syllable continuation or diacritic transform, restore raw prefix if it had diacritics
@@ -1320,21 +1378,56 @@ impl Engine {
         // Note: If we are actively tracking an inline symbol shortcode starting with ':' (e.g. :100:),
         // let the digit append to the shortcode buffer without resetting.
         if ch.is_ascii_digit() && !self.current_word.starts_with(':') {
+            // If we are in an English-locked word or technical token (e.g. #f97316, sha256), keep digit in token
+            if self.english_locked || self.raw_strokes.starts_with('#') {
+                self.raw_strokes.push(ch);
+                self.current_word.push(ch);
+                self.casing.track(ch);
+                self.english_locked = true;
+                return EngineOutput {
+                    backspaces: 0,
+                    commit_text: ch.to_string(),
+                    consumed: false,
+                    auto_restored: false,
+                    macro_expanded: false,
+                    adaptive_delay_ms: 0,
+                };
+            }
+
             match self.config.method {
                 InputMethod::Telex | InputMethod::SimpleTelex => {
-                    self.reset();
+                    // For standalone numbers or numbers following letters (e.g. 10, v1), track in word buffers
+                    // so subsequent letters lock English (e.g. 10px, 2rem, v1s, sha256).
+                    let old_word = self.current_word.clone();
+                    self.raw_strokes.push(ch);
+                    self.current_word = self.raw_strokes.clone();
+                    self.english_locked = true;
+                    let (backspaces, commit_text) = compare_and_split_strings(&old_word, &self.current_word);
                     return EngineOutput {
-                        backspaces: 0,
-                        commit_text: ch.to_string(),
-                        consumed: false,
-                        auto_restored: false,
+                        backspaces,
+                        commit_text: self.format_commit(&commit_text),
+                        consumed: backspaces > 0 || commit_text != ch.to_string(),
+                        auto_restored: backspaces > 0,
                         macro_expanded: false,
                         adaptive_delay_ms: 0,
                     };
                 }
                 InputMethod::Auto => {
-                    if self.word_used_telex || self.current_word.is_empty() {
+                    if self.word_used_telex {
                         self.reset();
+                        return EngineOutput {
+                            backspaces: 0,
+                            commit_text: ch.to_string(),
+                            consumed: false,
+                            auto_restored: false,
+                            macro_expanded: false,
+                            adaptive_delay_ms: 0,
+                        };
+                    }
+                    if self.current_word.is_empty() {
+                        self.raw_strokes.push(ch);
+                        self.current_word.push(ch);
+                        self.english_locked = true;
                         return EngineOutput {
                             backspaces: 0,
                             commit_text: ch.to_string(),
@@ -2325,6 +2418,45 @@ mod tests {
             assert!(!out.consumed);
         }
         assert_eq!(engine.current_word(), "collection");
+    }
+
+    #[test]
+    fn test_developer_technical_tokens_hex_and_css_units() {
+        let mut engine = Engine::new(EngineConfig {
+            method: InputMethod::Telex,
+            ..EngineConfig::default()
+        });
+
+        // 1. CSS Hex color: #f97316 (f and s must NOT transform into Vietnamese diacritics!)
+        assert_eq!(type_word(&mut engine, "#f97316 "), "#f97316 ");
+        engine.reset();
+        assert_eq!(type_word(&mut engine, "#ef4444 "), "#ef4444 ");
+        engine.reset();
+        assert_eq!(type_word(&mut engine, "#root "), "#root ");
+
+        // 2. CSS Units: 10px, 2rem, 50vh, 100vw
+        engine.reset();
+        assert_eq!(type_word(&mut engine, "10px "), "10px ");
+        engine.reset();
+        assert_eq!(type_word(&mut engine, "2rem "), "2rem ");
+        engine.reset();
+        assert_eq!(type_word(&mut engine, "50vh "), "50vh ");
+        engine.reset();
+        assert_eq!(type_word(&mut engine, "100vw "), "100vw ");
+
+        // 3. Technical tokens with digits and letters: v1s, sha256, md5, utf8
+        engine.reset();
+        assert_eq!(type_word(&mut engine, "v1s "), "v1s ");
+        engine.reset();
+        assert_eq!(type_word(&mut engine, "sha256 "), "sha256 ");
+        engine.reset();
+        assert_eq!(type_word(&mut engine, "md5 "), "md5 ");
+        engine.reset();
+        assert_eq!(type_word(&mut engine, "utf8 "), "utf8 ");
+
+        // 4. Normal Vietnamese typing works immediately after space
+        engine.reset();
+        assert_eq!(type_word(&mut engine, "10px tieengs vieetj "), "10px tiếng việt ");
     }
 
     #[test]
