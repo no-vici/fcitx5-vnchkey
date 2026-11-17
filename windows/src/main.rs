@@ -290,6 +290,10 @@ mod win_app {
                                quick_end_consonant=false\n\
                                macro_enabled=true\n\
                                dict_enabled=true\n\
+                               learn_habits=true\n\
+                               habit_threshold=4\n\
+                               initial_case_anchor=false\n\
+                               per_app=true\n\
                                ctrl=true\n\
                                shift=true\n\
                                alt=false\n\
