@@ -20,7 +20,8 @@ mod win_app {
     use std::path::PathBuf;
     use std::process::Command;
     use std::ptr::null_mut;
-    use std::time::{SystemTime, UNIX_EPOCH};
+    use std::thread::sleep;
+    use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
     use vnchkey_core::{Charset, Engine, EngineConfig, InputMethod, ToneStyle};
     use windows_sys::Win32::Foundation::{HWND, LPARAM, LRESULT, POINT, WPARAM};
@@ -1070,77 +1071,96 @@ Start-Process -FilePath $batch -WindowStyle Hidden;
         });
     }
 
-    /// Sends an atomic batch of Backspaces and UTF-16 characters via `SendInput`.
+    /// Sends Backspaces and UTF-16 characters via two-stage `SendInput` with micro-pause.
+    /// In complex apps (Excel, Word, Chromium, Google Docs), sending Backspaces and Unicode
+    /// characters in a single 0ms batch causes the app's DOM/caret calculations to process
+    /// Backspace out of order, resulting in swallowed characters or mangled words (e.g. "T ờiơ").
+    /// Splitting Backspaces into Stage 1, followed by a 1-2ms micro-pause, guarantees that
+    /// the host application has fully cleared the old characters before Stage 2 injects the new glyphs.
     unsafe fn emit_output(backspaces: usize, commit_text: &str) {
         let utf16: Vec<u16> = commit_text.encode_utf16().collect();
-        let total_events = (backspaces * 2) + (utf16.len() * 2);
-        if total_events == 0 {
+        if backspaces == 0 && utf16.is_empty() {
             return;
         }
 
-        let mut inputs: Vec<INPUT> = Vec::with_capacity(total_events);
+        // Stage 1: Send Backspaces if any
+        if backspaces > 0 {
+            let mut bs_inputs: Vec<INPUT> = Vec::with_capacity(backspaces * 2);
+            for _ in 0..backspaces {
+                bs_inputs.push(INPUT {
+                    r#type: INPUT_KEYBOARD,
+                    Anonymous: INPUT_0 {
+                        ki: KEYBDINPUT {
+                            wVk: VK_BACK,
+                            wScan: 0x0E, // Standard hardware scan code for Backspace
+                            dwFlags: 0,
+                            time: 0,
+                            dwExtraInfo: VNCHARKEY_INJECTED_TAG,
+                        },
+                    },
+                });
+                bs_inputs.push(INPUT {
+                    r#type: INPUT_KEYBOARD,
+                    Anonymous: INPUT_0 {
+                        ki: KEYBDINPUT {
+                            wVk: VK_BACK,
+                            wScan: 0x0E,
+                            dwFlags: KEYEVENTF_KEYUP,
+                            time: 0,
+                            dwExtraInfo: VNCHARKEY_INJECTED_TAG,
+                        },
+                    },
+                });
+            }
 
-        // 1. Queue Backspace key down/up pairs
-        for _ in 0..backspaces {
-            inputs.push(INPUT {
-                r#type: INPUT_KEYBOARD,
-                Anonymous: INPUT_0 {
-                    ki: KEYBDINPUT {
-                        wVk: VK_BACK,
-                        wScan: 0,
-                        dwFlags: 0,
-                        time: 0,
-                        dwExtraInfo: VNCHARKEY_INJECTED_TAG,
-                    },
-                },
-            });
-            inputs.push(INPUT {
-                r#type: INPUT_KEYBOARD,
-                Anonymous: INPUT_0 {
-                    ki: KEYBDINPUT {
-                        wVk: VK_BACK,
-                        wScan: 0,
-                        dwFlags: KEYEVENTF_KEYUP,
-                        time: 0,
-                        dwExtraInfo: VNCHARKEY_INJECTED_TAG,
-                    },
-                },
-            });
+            SendInput(
+                bs_inputs.len() as u32,
+                bs_inputs.as_ptr(),
+                size_of::<INPUT>() as i32,
+            );
+
+            // Micro-pause: allow Excel/Word/Browser message loop & caret repositioning to settle
+            if !utf16.is_empty() {
+                sleep(Duration::from_millis(1));
+            }
         }
 
-        // 2. Queue UTF-16 Unicode characters
-        for code_unit in utf16 {
-            inputs.push(INPUT {
-                r#type: INPUT_KEYBOARD,
-                Anonymous: INPUT_0 {
-                    ki: KEYBDINPUT {
-                        wVk: 0,
-                        wScan: code_unit,
-                        dwFlags: KEYEVENTF_UNICODE,
-                        time: 0,
-                        dwExtraInfo: VNCHARKEY_INJECTED_TAG,
+        // Stage 2: Send Unicode characters
+        if !utf16.is_empty() {
+            let mut char_inputs: Vec<INPUT> = Vec::with_capacity(utf16.len() * 2);
+            for code_unit in utf16 {
+                char_inputs.push(INPUT {
+                    r#type: INPUT_KEYBOARD,
+                    Anonymous: INPUT_0 {
+                        ki: KEYBDINPUT {
+                            wVk: 0,
+                            wScan: code_unit,
+                            dwFlags: KEYEVENTF_UNICODE,
+                            time: 0,
+                            dwExtraInfo: VNCHARKEY_INJECTED_TAG,
+                        },
                     },
-                },
-            });
-            inputs.push(INPUT {
-                r#type: INPUT_KEYBOARD,
-                Anonymous: INPUT_0 {
-                    ki: KEYBDINPUT {
-                        wVk: 0,
-                        wScan: code_unit,
-                        dwFlags: KEYEVENTF_UNICODE | KEYEVENTF_KEYUP,
-                        time: 0,
-                        dwExtraInfo: VNCHARKEY_INJECTED_TAG,
+                });
+                char_inputs.push(INPUT {
+                    r#type: INPUT_KEYBOARD,
+                    Anonymous: INPUT_0 {
+                        ki: KEYBDINPUT {
+                            wVk: 0,
+                            wScan: code_unit,
+                            dwFlags: KEYEVENTF_UNICODE | KEYEVENTF_KEYUP,
+                            time: 0,
+                            dwExtraInfo: VNCHARKEY_INJECTED_TAG,
+                        },
                     },
-                },
-            });
-        }
+                });
+            }
 
-        SendInput(
-            inputs.len() as u32,
-            inputs.as_ptr(),
-            size_of::<INPUT>() as i32,
-        );
+            SendInput(
+                char_inputs.len() as u32,
+                char_inputs.as_ptr(),
+                size_of::<INPUT>() as i32,
+            );
+        }
     }
 
     /// Translates virtual key and current keyboard state to a Unicode `char`.
