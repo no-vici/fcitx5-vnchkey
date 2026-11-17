@@ -1770,23 +1770,33 @@ impl SettingsApp {
         ui.add_space(4.0);
 
         let habit_log_path = ConfigManager::habit_log_path();
-        let mut habit_entries: Vec<(String, u32, String)> = Vec::new(); // (word, count, last_time)
+        let mut habit_map: std::collections::BTreeMap<String, u32> = std::collections::BTreeMap::new();
 
         if habit_log_path.exists() {
             if let Ok(content) = fs::read_to_string(&habit_log_path) {
                 for line in content.lines() {
+                    let line = line.trim();
+                    if line.is_empty() || line.starts_with('#') {
+                        continue;
+                    }
+                    // Format: timestamp_ms \t KIND \t raw_word \t accented_word \t count=N \t STATUS
                     let parts: Vec<&str> = line.split('\t').collect();
-                    if parts.len() >= 4 {
-                        let raw = parts[1].trim().to_string();
-                        let count: u32 = parts[2].trim().parse().unwrap_or(1);
-                        let time_str = parts[3].trim().to_string();
+                    if parts.len() >= 5 {
+                        let raw = parts[2].trim().to_lowercase();
+                        let count: u32 = parts[4]
+                            .trim()
+                            .strip_prefix("count=")
+                            .and_then(|s| s.parse().ok())
+                            .unwrap_or(1);
                         if !raw.is_empty() {
-                            habit_entries.push((raw, count, time_str));
+                            let entry = habit_map.entry(raw).or_insert(0);
+                            *entry = (*entry).max(count);
                         }
                     }
                 }
             }
         }
+        let habit_entries: Vec<(String, u32)> = habit_map.into_iter().collect();
 
         egui::Frame::new()
             .fill(egui::Color32::from_rgb(0x18, 0x18, 0x25))
@@ -1804,7 +1814,7 @@ impl SettingsApp {
                     let threshold = self.config.habit_promote_threshold;
                     egui::ScrollArea::vertical().max_height(160.0).show(ui, |ui| {
                         let mut word_to_whitelist = None;
-                        for (raw, count, _time) in habit_entries.iter() {
+                        for (raw, count) in habit_entries.iter() {
                             ui.horizontal(|ui| {
                                 ui.label(egui::RichText::new(raw).strong().color(egui::Color32::from_rgb(0x89, 0xb4, 0xfa)));
                                 let progress = (*count as f32) / (threshold as f32).max(1.0);
