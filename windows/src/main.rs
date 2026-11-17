@@ -24,6 +24,7 @@ mod win_app {
 
     use vnchkey_core::{Charset, Engine, EngineConfig, InputMethod, ToneStyle};
     use windows_sys::Win32::Foundation::{HWND, LPARAM, LRESULT, POINT, WPARAM};
+    use windows_sys::Win32::Graphics::Gdi::{GetStockObject, COLOR_BTNFACE, DEFAULT_GUI_FONT, HBRUSH};
     use windows_sys::Win32::System::LibraryLoader::GetModuleHandleW;
     use windows_sys::Win32::System::ProcessStatus::GetModuleBaseNameW;
     use windows_sys::Win32::System::Threading::{OpenProcess, PROCESS_QUERY_INFORMATION, PROCESS_VM_READ};
@@ -83,6 +84,7 @@ mod win_app {
     const ID_FLIP_DISABLED: usize = 1063;
     const ID_FLIP_RECORD: usize = 1064;
 
+    const ID_ADD_MACRO: usize = 1049;
     const ID_OPEN_MACROS: usize = 1050;
     const ID_OPEN_DICT: usize = 1051;
     const ID_RELOAD_FILES: usize = 1052;
@@ -199,6 +201,7 @@ mod win_app {
         flip_shortcut: CustomShortcut,
         recording_mode: RecordingMode,
         hwnd: HWND,
+        macro_dlg_hwnd: HWND,
         chord_armed: bool,
         other_key_during_chord: bool,
     }
@@ -223,6 +226,7 @@ mod win_app {
             flip_shortcut: CustomShortcut::from_modifiers_and_key(true, true, false, false, 0x5A),
             recording_mode: RecordingMode::None,
             hwnd: null_mut(),
+            macro_dlg_hwnd: null_mut(),
             chord_armed: false,
             other_key_during_chord: false,
         });
@@ -682,6 +686,262 @@ mod win_app {
 
     fn open_file_in_notepad(path: PathBuf) {
         let _ = Command::new("notepad.exe").arg(path).spawn();
+    }
+
+    const IDC_EDIT_SHORTCUT: i32 = 101;
+    const IDC_EDIT_EXPANSION: i32 = 102;
+
+    fn add_or_update_macro(shortcut: &str, expansion: &str) -> std::io::Result<()> {
+        super::add_or_update_macro_file(&macros_path(), shortcut, expansion)
+    }
+
+    unsafe extern "system" fn macro_dlg_wnd_proc(
+        hwnd: HWND,
+        msg: u32,
+        wparam: WPARAM,
+        lparam: LPARAM,
+    ) -> LRESULT {
+        match msg {
+            WM_CREATE => {
+                let hinstance = GetModuleHandleW(null_mut());
+                let hfont = GetStockObject(DEFAULT_GUI_FONT);
+
+                let h_lbl1 = CreateWindowExW(
+                    0,
+                    to_wstring("STATIC").as_ptr(),
+                    to_wstring("Từ viết tắt (ví dụ: vn, idk, sg):").as_ptr(),
+                    WS_CHILD | WS_VISIBLE,
+                    20,
+                    16,
+                    384,
+                    18,
+                    hwnd,
+                    null_mut(),
+                    hinstance,
+                    null_mut(),
+                );
+
+                let h_edit1 = CreateWindowExW(
+                    WS_EX_CLIENTEDGE,
+                    to_wstring("EDIT").as_ptr(),
+                    null_mut(),
+                    WS_CHILD | WS_VISIBLE | WS_TABSTOP | WS_BORDER | (ES_AUTOHSCROLL as u32),
+                    20,
+                    36,
+                    384,
+                    26,
+                    hwnd,
+                    IDC_EDIT_SHORTCUT as isize as _,
+                    hinstance,
+                    null_mut(),
+                );
+
+                let h_lbl2 = CreateWindowExW(
+                    0,
+                    to_wstring("STATIC").as_ptr(),
+                    to_wstring("Cụm từ thay thế (hỗ trợ $DATE, $TIME, $YEAR, $NOW):").as_ptr(),
+                    WS_CHILD | WS_VISIBLE,
+                    20,
+                    72,
+                    384,
+                    18,
+                    hwnd,
+                    null_mut(),
+                    hinstance,
+                    null_mut(),
+                );
+
+                let h_edit2 = CreateWindowExW(
+                    WS_EX_CLIENTEDGE,
+                    to_wstring("EDIT").as_ptr(),
+                    null_mut(),
+                    WS_CHILD | WS_VISIBLE | WS_TABSTOP | WS_BORDER | (ES_AUTOHSCROLL as u32),
+                    20,
+                    92,
+                    384,
+                    26,
+                    hwnd,
+                    IDC_EDIT_EXPANSION as isize as _,
+                    hinstance,
+                    null_mut(),
+                );
+
+                let h_btn_ok = CreateWindowExW(
+                    0,
+                    to_wstring("BUTTON").as_ptr(),
+                    to_wstring("Lưu").as_ptr(),
+                    WS_CHILD | WS_VISIBLE | WS_TABSTOP | (BS_DEFPUSHBUTTON as u32),
+                    214,
+                    140,
+                    90,
+                    30,
+                    hwnd,
+                    IDOK as isize as _,
+                    hinstance,
+                    null_mut(),
+                );
+
+                let h_btn_cancel = CreateWindowExW(
+                    0,
+                    to_wstring("BUTTON").as_ptr(),
+                    to_wstring("Hủy").as_ptr(),
+                    WS_CHILD | WS_VISIBLE | WS_TABSTOP | (BS_PUSHBUTTON as u32),
+                    314,
+                    140,
+                    90,
+                    30,
+                    hwnd,
+                    IDCANCEL as isize as _,
+                    hinstance,
+                    null_mut(),
+                );
+
+                if !hfont.is_null() {
+                    for child in [h_lbl1, h_edit1, h_lbl2, h_edit2, h_btn_ok, h_btn_cancel] {
+                        if !child.is_null() {
+                            SendMessageW(child, WM_SETFONT, hfont as WPARAM, 1);
+                        }
+                    }
+                }
+
+                SetFocus(h_edit1);
+                0
+            }
+            WM_COMMAND => {
+                let id = (wparam & 0xFFFF) as i32;
+                if id == IDOK {
+                    let mut buf_sc = [0u16; 128];
+                    let len_sc = GetDlgItemTextW(
+                        hwnd,
+                        IDC_EDIT_SHORTCUT,
+                        buf_sc.as_mut_ptr(),
+                        buf_sc.len() as i32,
+                    );
+                    let shortcut =
+                        String::from_utf16_lossy(&buf_sc[..len_sc as usize]).trim().to_string();
+
+                    let mut buf_exp = [0u16; 512];
+                    let len_exp = GetDlgItemTextW(
+                        hwnd,
+                        IDC_EDIT_EXPANSION,
+                        buf_exp.as_mut_ptr(),
+                        buf_exp.len() as i32,
+                    );
+                    let expansion =
+                        String::from_utf16_lossy(&buf_exp[..len_exp as usize]).trim().to_string();
+
+                    if shortcut.is_empty() || expansion.is_empty() {
+                        MessageBoxW(
+                            hwnd,
+                            to_wstring("Vui lòng nhập đầy đủ Từ viết tắt và Cụm từ thay thế!").as_ptr(),
+                            to_wstring("Thông báo — VnCharKey").as_ptr(),
+                            MB_OK | MB_ICONWARNING,
+                        );
+                        return 0;
+                    }
+
+                    if let Err(e) = add_or_update_macro(&shortcut, &expansion) {
+                        let err_msg = format!("Lỗi khi lưu gõ tắt: {}", e);
+                        MessageBoxW(
+                            hwnd,
+                            to_wstring(&err_msg).as_ptr(),
+                            to_wstring("Lỗi").as_ptr(),
+                            MB_OK | MB_ICONERROR,
+                        );
+                        return 0;
+                    }
+
+                    STATE.with(|s| {
+                        if let Ok(mut st) = s.try_borrow_mut() {
+                            if let Some(p) = macros_path().to_str() {
+                                st.engine.load_macros_from_file(p);
+                            }
+                        }
+                    });
+
+                    DestroyWindow(hwnd);
+                    0
+                } else if id == IDCANCEL {
+                    DestroyWindow(hwnd);
+                    0
+                } else {
+                    DefWindowProcW(hwnd, msg, wparam, lparam)
+                }
+            }
+            WM_CLOSE => {
+                DestroyWindow(hwnd);
+                0
+            }
+            WM_DESTROY => {
+                STATE.with(|s| {
+                    if let Ok(mut st) = s.try_borrow_mut() {
+                        st.macro_dlg_hwnd = null_mut();
+                    }
+                });
+                0
+            }
+            _ => DefWindowProcW(hwnd, msg, wparam, lparam),
+        }
+    }
+
+    /// Hiển thị hộp thoại thêm Gõ Tắt mới (kiểu xKey)
+    unsafe fn show_add_macro_dialog(parent_hwnd: HWND) {
+        let existing = STATE.with(|s| s.borrow().macro_dlg_hwnd);
+        if !existing.is_null() && IsWindow(existing) != 0 {
+            SetForegroundWindow(existing);
+            SetActiveWindow(existing);
+            return;
+        }
+
+        let hinstance = GetModuleHandleW(null_mut());
+        let class_name = to_wstring("VnCharKeyMacroDlgClass");
+
+        let wc = WNDCLASSW {
+            style: CS_HREDRAW | CS_VREDRAW,
+            lpfnWndProc: Some(macro_dlg_wnd_proc),
+            cbClsExtra: 0,
+            cbWndExtra: 0,
+            hInstance: hinstance,
+            hIcon: null_mut(),
+            hCursor: LoadCursorW(null_mut(), IDC_ARROW),
+            hbrBackground: (COLOR_BTNFACE + 1) as HBRUSH,
+            lpszMenuName: null_mut(),
+            lpszClassName: class_name.as_ptr(),
+        };
+
+        RegisterClassW(&wc);
+
+        let screen_w = GetSystemMetrics(SM_CXSCREEN);
+        let screen_h = GetSystemMetrics(SM_CYSCREEN);
+        let width = 440;
+        let height = 230;
+        let x = (screen_w - width) / 2;
+        let y = (screen_h - height) / 2;
+
+        let hwnd_dlg = CreateWindowExW(
+            WS_EX_DLGMODALFRAME | WS_EX_TOPMOST,
+            class_name.as_ptr(),
+            to_wstring("Thêm Gõ Tắt Mới — VnCharKey").as_ptr(),
+            WS_POPUP | WS_CAPTION | WS_SYSMENU | WS_VISIBLE,
+            x,
+            y,
+            width,
+            height,
+            parent_hwnd,
+            null_mut(),
+            hinstance,
+            null_mut(),
+        );
+
+        if !hwnd_dlg.is_null() {
+            STATE.with(|s| {
+                if let Ok(mut st) = s.try_borrow_mut() {
+                    st.macro_dlg_hwnd = hwnd_dlg;
+                }
+            });
+            SetForegroundWindow(hwnd_dlg);
+            SetActiveWindow(hwnd_dlg);
+        }
     }
 
     /// Hiển thị hộp thoại About với thông tin chi tiết về phiên bản và dự án
@@ -1593,6 +1853,12 @@ Start-Process -FilePath $batch -WindowStyle Hidden;
         AppendMenuW(
             menu,
             MF_STRING,
+            ID_ADD_MACRO,
+            to_wstring("➕ Thêm Gõ Tắt mới...").as_ptr(),
+        );
+        AppendMenuW(
+            menu,
+            MF_STRING,
             ID_OPEN_MACROS,
             to_wstring("Chỉnh sửa bảng Gõ Tắt (macros.conf)...").as_ptr(),
         );
@@ -1932,6 +2198,9 @@ Start-Process -FilePath $batch -WindowStyle Hidden;
                             st.engine.set_enable_macro(val);
                             save_app_config(&st);
                         }
+                        ID_ADD_MACRO => {
+                            show_add_macro_dialog(hwnd);
+                        }
                         ID_OPEN_MACROS => {
                             open_file_in_notepad(macros_path());
                         }
@@ -2155,6 +2424,10 @@ Start-Process -FilePath $batch -WindowStyle Hidden;
 
         let mut msg: MSG = std::mem::zeroed();
         while GetMessageW(&mut msg, null_mut(), 0, 0) > 0 {
+            let dlg = STATE.with(|s| s.borrow().macro_dlg_hwnd);
+            if !dlg.is_null() && IsWindow(dlg) != 0 && IsDialogMessageW(dlg, &msg) != 0 {
+                continue;
+            }
             TranslateMessage(&msg);
             DispatchMessageW(&msg);
         }
@@ -2171,6 +2444,60 @@ Start-Process -FilePath $batch -WindowStyle Hidden;
     }
 }
 
+fn add_or_update_macro_file(
+    p: &std::path::Path,
+    shortcut: &str,
+    expansion: &str,
+) -> std::io::Result<()> {
+    let content = if p.exists() {
+        std::fs::read_to_string(p).unwrap_or_default()
+    } else {
+        String::new()
+    };
+    let norm_shortcut = shortcut.trim();
+    let norm_expansion = expansion.trim();
+    if norm_shortcut.is_empty() || norm_expansion.is_empty() {
+        return Ok(());
+    }
+
+    let mut lines: Vec<String> = Vec::new();
+    let mut updated = false;
+
+    for line in content.lines() {
+        let trimmed = line.trim();
+        if !trimmed.starts_with('#') && !trimmed.is_empty() {
+            let pair = if let Some(p) = trimmed.split_once('=') {
+                Some(p)
+            } else if let Some(p) = trimmed.split_once(':') {
+                Some(p)
+            } else if let Some(p) = trimmed.split_once(';') {
+                Some(p)
+            } else {
+                None
+            };
+            if let Some((k, _)) = pair {
+                if k.trim().eq_ignore_ascii_case(norm_shortcut) {
+                    lines.push(format!("{}={}", norm_shortcut, norm_expansion));
+                    updated = true;
+                    continue;
+                }
+            }
+        }
+        lines.push(line.to_string());
+    }
+
+    if !updated {
+        if !lines.is_empty() && !lines.last().map(|l| l.trim().is_empty()).unwrap_or(false) {
+            lines.push(String::new());
+        }
+        lines.push(format!("{}={}", norm_shortcut, norm_expansion));
+    }
+
+    let new_content = lines.join("\r\n") + "\r\n";
+    std::fs::write(p, new_content)?;
+    Ok(())
+}
+
 fn main() {
     #[cfg(windows)]
     unsafe {
@@ -2180,5 +2507,37 @@ fn main() {
     #[cfg(not(windows))]
     {
         println!("VnCharKey for Windows must be compiled targeting Windows (e.g. x86_64-pc-windows-msvc).");
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_add_or_update_macro_file() {
+        let temp_dir = std::env::temp_dir().join(format!("vncharkey_test_{}", std::process::id()));
+        let _ = std::fs::create_dir_all(&temp_dir);
+        let file_path = temp_dir.join("macros.conf");
+
+        // 1. Add new macro
+        add_or_update_macro_file(&file_path, "vn", "Việt Nam").unwrap();
+        let content = std::fs::read_to_string(&file_path).unwrap();
+        assert!(content.contains("vn=Việt Nam"));
+
+        // 2. Add second macro
+        add_or_update_macro_file(&file_path, "idk", "Tôi không biết").unwrap();
+        let content2 = std::fs::read_to_string(&file_path).unwrap();
+        assert!(content2.contains("vn=Việt Nam"));
+        assert!(content2.contains("idk=Tôi không biết"));
+
+        // 3. Update existing macro (case-insensitive key)
+        add_or_update_macro_file(&file_path, "IDK", "hông biết").unwrap();
+        let content3 = std::fs::read_to_string(&file_path).unwrap();
+        assert!(!content3.contains("Tôi không biết"));
+        assert!(content3.contains("IDK=hông biết"));
+        assert!(content3.contains("vn=Việt Nam"));
+
+        let _ = std::fs::remove_dir_all(&temp_dir);
     }
 }
