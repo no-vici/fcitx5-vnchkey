@@ -4,9 +4,26 @@ Tất cả những thay đổi nổi bật của dự án **vnchKey** (**fcitx5-
 
 ---
 
-## [0.3.6] - 2026-11-15
+## [0.3.6] - 2026-11-17
 
 ### 🚀 Tính Năng Mới & Đột Phá Kiến Trúc (Architectural Innovations)
+- **Bộ Chuyển Đổi HOA / thường / Title Case Siêu Tốc (Rapid Case Converter)**:
+  - Bổ sung phím tắt chuyển đổi kiểu chữ nhanh theo chu kỳ: `chữ thường` $\rightarrow$ `CHỮ HOA` $\rightarrow$ `Viết Hoa Đầu Từ (Title Case)`.
+  - Phím tắt mặc định `Ctrl + Shift + U` (tự do thu nhận và tùy biến phím tắt trên cả Linux, Windows và macOS).
+  - Tự động nhận diện ngữ cảnh: chuyển đổi từ đang gõ dở trong bộ đệm (`has_active_word()`) hoặc đoạn văn bản được bôi đen bằng chuột/bàn phím qua `surroundingText().selectedText()`.
+- **Đồng Bộ Bộ Gõ Không Độ Trễ Cho Neovim / Terminal Qua Unix Domain Socket IPC Trên Linux**:
+  - Tích hợp listener Unix Domain Socket non-blocking tại `/tmp/vnchkey.sock` trực tiếp vào Event Loop của Fcitx5 (`fcitx::EventSourceIO`), siết quyền bảo mật cục bộ `0600`.
+  - Phục vụ module Neovim ([data/neovim/lua/vnchkey.lua](file:///home/codegpt/antigravity/vnchKey/data/neovim/lua/vnchkey.lua)) chuyển đổi chế độ gõ tức thì ($< 2\text{ ms}$) qua `vim.uv.new_pipe()` mà không làm mất biểu tượng cờ vàng trên khay hệ thống, không trôi phím chế độ Normal.
+- **Bảo Vệ Chuỗi Mã Hóa & Token Kỹ Thuật (Technical Token Protection)**:
+  - Tự động phát hiện và khóa tiếng Anh (`english_locked = true`) cho mã màu CSS Hex (`#f97316`, `#ef4444`), đơn vị đo lường lập trình (`10px`, `2rem`, `50vh`, `100vw`), và định danh kỹ thuật pha trộn chữ - số (`v1s`, `sha256`, `utf8`, `x86_64`).
+- **Thanh Tra Thói Quen Gõ Trực Quan (Habit Inspector GUI)**:
+  - Bổ sung bảng kiểm soát tiến trình tự học từ trực tiếp trong tab Từ Điển (`fcitx5-vnchkey-settings`).
+  - Đọc từ nhật ký `vnchkey-habit.log`, hiển thị tiến trình dạng thanh (`count / threshold`) và cung cấp nút `+ Học ngay` để đẩy thẳng từ vào danh sách whitelist.
+- **Bổ Sung Các Bộ Preset Gõ Tắt Chuyên Biệt Mới**:
+  - Tích hợp sẵn 2 preset chọn lọc: **Lập Trình & Git** (`presets/dev-git-macro.conf`) và **Toán Học & Khoa Học** (`presets/math-science-macro.conf`).
+- **Tái Cấu Trúc Toàn Diện VNI & Telex Sang Đại Số `VietnameseGlyph`**:
+  - Loại bỏ hoàn toàn các bảng `match` phân rã/tái cấu trúc nguyên âm cồng kềnh trong `telex.rs` và `vni.rs`.
+  - Toàn bộ thao tác tách/nạp nguyên âm, hoán đổi dấu thanh được vận hành qua đại số $O(1)$ trong `glyph.rs`.
 - **Mô Hình Đại Số Dấu Thanh & NFD (`VietnameseGlyph`)**:
   - Tích hợp module `glyph.rs` mô hình hóa ký tự tiếng Việt dạng đại số:
     $$\text{Ký tự tiếng Việt} = \text{Base (ASCII)} \times \text{Quality (Mũ/Móc/Trăng/Stroke)} \times \text{Tone (Thanh điệu)}$$

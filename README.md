@@ -39,10 +39,11 @@
    - [3.9. Bộ Bóc Tách Âm Tiết 5 Thành Phần & Dời Dấu Thanh Động (Next-Gen Syllable Parser)](#39-bộ-bóc-tách-âm-tiết-5-thành-phần--dời-dấu-thanh-động-next-gen-syllable-parser)
    - [3.10. Hoán Đổi Dấu Phụ Bảo Toàn Thanh Điệu (Shape Modifier Swapping — Tinh Hoa VietC)](#310-hoán-đổi-dấu-phụ-bảo-toàn-thanh-điệu-shape-modifier-swapping--tinh-hoa-vietc)
    - [3.11. Bảo Vệ Ngữ Âm Học & Chống Gõ Sai Dấu (Phonetic Tone Protection)](#311-bảo-vệ-ngữ-âm-học--chống-gõ-sai-dấu-phonetic-tone-protection)
-   - [3.12. Tổ Hợp Phím Tắt Thông Minh & Hệ Thống "Cứu Chữ / Cứu Dấu"](#312-tổ-hợp-phím-tắt-thông-minh--hệ-thống-cứu-chữ--cứu-dấu)
-   - [3.13. Tự Động Học Thói Quen Gõ & Đưa Vào Whitelist (Adaptive Habit Learner — Log 100 MB)](#313-tự-động-học-thói-quen-gõ--đưa-vào-whitelist-adaptive-habit-learner--log-100-mb)
-   - [3.14. Chẩn Đoán Hệ Thống `--doctor`, Cố Vấn Electron Wayland & Tự Động Bypass Game/Password](#314-chẩn-đoán-hệ-thống---doctor-cố-vấn-electron-wayland--tự-động-bypass-gamepassword)
-   - [3.15. Bộ Lọc & Đặc Trị Thực Chiến Linux / Wayland (Hardened Runtime Fixes)](#315-bộ-lọc--đặc-trị-thực-chiến-linux--wayland-hardened-runtime-fixes)
+   - [3.12. Tổ Hợp Phím Tắt Thông Minh, Bộ Đổi Kiểu Chữ Siêu Tốc & Hệ Thống "Cứu Chữ / Cứu Dấu"](#312-tổ-hợp-phím-tắt-thông-minh-bộ-đổi-kiểu-chữ-siêu-tốc--hệ-thống-cứu-chữ--cứu-dấu)
+   - [3.13. Tự Động Học Thói Quen Gõ & Bảng Thanh Tra Habit Inspector](#313-tự-động-học-thói-quen-gõ--bảng-thanh-tra-habit-inspector)
+   - [3.14. Đồng Bộ Neovim & Terminal Qua Unix Socket IPC Tức Thì (< 2ms)](#314-đồng-bộ-neovim--terminal-qua-unix-socket-ipc-tức-thì--2ms)
+   - [3.15. Chẩn Đoán Hệ Thống `--doctor`, Cố Vấn Electron Wayland & Tự Động Bypass Game/Password](#315-chẩn-đoán-hệ-thống---doctor-cố-vấn-electron-wayland--tự-động-bypass-gamepassword)
+   - [3.16. Bộ Lọc & Đặc Trị Thực Chiến Linux / Wayland (Hardened Runtime Fixes)](#316-bộ-lọc--đặc-trị-thực-chiến-linux--wayland-hardened-runtime-fixes)
 4. [Giao Diện Cài Đặt Trực Quan (Rust + egui GUI)](#4-giao-diện-cài-đặt-trực-quan-rust--egui-gui)
 5. [Hướng Dẫn Cài Đặt Cho Linux, macOS & Windows](#5-hướng-dẫn-cài-đặt-cho-linux-macos--windows)
 6. [Lộ Trình Phát Triển & Tài Liệu Kỹ Thuật (Roadmap & Docs)](#6-lộ-trình-phát-triển--tài-liệu-kỹ-thuật-roadmap--docs)
@@ -259,7 +260,11 @@ Chắt lọc và nâng cấp từ thuật toán hoán đổi dấu phụ của *
 
 ---
 
-### 3.12. Tổ Hợp Phím Tắt Thông Minh & Hệ Thống "Cứu Chữ / Cứu Dấu"
+### 3.12. Tổ Hợp Phím Tắt Thông Minh, Bộ Đổi Kiểu Chữ Siêu Tốc & Hệ Thống "Cứu Chữ / Cứu Dấu"
+- **Chuyển Đổi Nhanh HOA / thường / Title Case (`Ctrl + Shift + U` / Tùy Chỉnh — Rapid Case Converter)**:
+  - Khi đang gõ dở một từ hoặc bôi đen một đoạn văn bản, bấm phím tắt để xoay vòng tức thì qua 3 định dạng:
+    $$\text{chữ thường} \longrightarrow \text{CHỮ HOA} \longrightarrow \text{Viết Hoa Đầu Từ (Title Case)}$$
+  - Hỗ trợ đổi phím tắt linh hoạt trong Cài Đặt trên cả 3 nền tảng (Linux, Windows, macOS).
 - **Lật Từ Tức Thì (`Ctrl + Shift + Z` / Tùy chỉnh tự do — Flip Word)**:
   - Đảo ngược qua lại trạng thái của từ đang gõ giữa Tiếng Việt và chuỗi phím thô (`thể` $\longleftrightarrow$ `theer`, `việt` $\longleftrightarrow$ `vieetj`).
   - **Không xung đột với phím tắt Redo của Editor**: Tổ hợp phím chỉ bắt sự kiện khi trong bộ đệm đang thực sự có từ vừa gõ (`has_active_word()`). Khi bộ đệm đang rỗng, phím tắt được trả thẳng về cho ứng dụng (VS Code, trình duyệt...) thực hiện lệnh Redo bình thường. Trên Windows, người dùng có thể tự do đổi sang `Alt + X`, `Ctrl + Alt + Z` hoặc thu phím bất kỳ.
@@ -271,33 +276,45 @@ Chắt lọc và nâng cấp từ thuật toán hoán đổi dấu phụ của *
 - **Cứu Chữ & Cứu Dấu Kiểu Ngó Sen (Word & Accent Rescue)**:
   - **Cứu Chữ tự động khi bật bộ gõ**: Nếu bạn quên bật bộ gõ và lỡ gõ cả câu tiếng Anh thô (`chaof banj, tieengs vieetj`), chỉ cần bấm phím chuyển sang vnchKey — toàn bộ câu vừa gõ sẽ tự động hóa phép thành **`chào bạn, tiếng việt`**! (Nhấn `Backspace` hoặc `Esc` ngay sau đó nếu muốn hoàn tác về chữ thô).
   - **Cứu Dấu khi bôi đen từ**: Dùng chuột hoặc bàn phím bôi đen một từ bất kỳ (ví dụ `tiêng`) rồi bấm phím dấu (`s` hoặc `1`), từ đang bôi đen sẽ lập tức biến thành **`tiếng`**.
-- **Tự Động Bỏ Qua Ký Tự Lập Trình (Developer Code Auto-Bypass)**:
+- **Tự Động Bỏ Qua Ký Tự Lập Trình & Token Kỹ Thuật (Developer & Technical Token Protection)**:
   - Tự động nhận diện và khóa tiếng Anh cho các định danh mã nguồn: biến bắt đầu bằng gạch dưới (`_variable`, `__init__`), chuỗi `snake_case` (`user_id`, `parse_string`), chuỗi truy cập thuộc tính qua dấu chấm (`db.collection.findOne`), và `camelCase` / `PascalCase` (`useState`, `ClassName`).
+  - **Bảo vệ mã màu & đơn vị CSS**: tự động khóa bảo vệ mã màu Hex (`#f97316`, `#ef4444`), đơn vị CSS (`10px`, `2rem`, `50vh`, `100vw`) và token kỹ thuật pha trộn số-chữ (`v1s`, `sha256`, `utf8`, `x86_64`) không bị nhảy dấu nhầm.
 - **Hỗ Trợ Bảng Mã Unicode Tổ Hợp (NFD Composite Charset)**:
   - Cho phép chuyển đổi linh hoạt giữa **Unicode Dựng Sẵn (NFC)** và **Unicode Tổ Hợp (NFD)** ngay trong bảng Cài Đặt để tương thích tuyệt đối với các phần mềm đồ họa XWayland đặc thù.
 
 ---
 
-### 3.13. Tự Động Học Thói Quen Gõ & Đưa Vào Whitelist (Adaptive Habit Learner — Tự Do Cấu Hình)
+### 3.13. Tự Động Học Thói Quen Gõ & Bảng Thanh Tra Habit Inspector
 Tích hợp bộ máy học thích nghi cục bộ (`habit_learner.rs`) ngay trong lõi `vnchkey-core` cho cả 3 hệ điều hành (Linux, Windows, macOS):
 - **Tự động phát hiện 4 hành vi sửa lỗi của người dùng**:
   1. **Xóa bằng `Backspace` rồi gõ lại chữ không dấu (`BackspaceRetype`)**: Khi một từ bị bỏ dấu nhầm, người dùng bấm `Backspace` xóa đi rồi gõ lại từ nguyên bản.
   2. **Nhấn đúp phím dấu để khử dấu (`DoubleKeyUndo`)**: Gõ `ss`, `ff`, `rr`, `ww`... để hoàn tác dấu thanh/dấu mũ về chữ ASCII.
   3. **Bấm phím Lật Từ (`FlipToRaw`)**: Dùng `Ctrl + Shift + Z` / `Alt + X` để trả từ tiếng Việt về chuỗi phím gốc.
   4. **Bấm phím Hoàn Nguyên (`EscapeToRaw`)**: Dùng `Esc` / `Shift + Esc` để hủy bỏ dấu vừa gõ.
+- **Bảng Tra Cứu Trực Quan (Habit Inspector trên GUI Settings)**:
+  - Hiển thị danh sách từ đang được bộ gõ theo dõi cùng thanh tiến trình trực quan (`2/4 lần`).
+  - Cung cấp nút **"Học ngay"** để người dùng đưa thẳng từ vào User Dictionary chỉ bằng một cú nhấp chuột.
 - **Tự Do Bật/Tắt & Toàn Quyền Đặt Ngưỡng Học (Custom Promotion Threshold)**:
   - Cho phép người dùng **bật hoặc tắt hoàn toàn** tính năng tự học nếu không muốn bộ gõ tự ý thay đổi hành vi.
-  - Ngưỡng sửa/xóa mặc định được nâng lên **4 lần** (thay vì 2 lần dễ bị tai nạn khi gõ nhầm thao tác nhanh), đồng thời người dùng có thể tùy chỉnh tự do ngưỡng này (từ 2 đến 10 lần trên Linux/Windows/macOS).
+  - Ngưỡng sửa/xóa mặc định được nâng lên **4 lần**, đồng thời người dùng có thể tùy chỉnh tự do ngưỡng này (từ 2 đến 10 lần trên Linux/Windows/macOS).
 - **Tự động đưa vào Từ Điển Cá Nhân & Phục Hồi Tức Thì (Instant Unlearn)**:
   - Từ được học sẽ tự động được ghi nối vào tệp **Từ Điển Cá Nhân** (`vnchkey-dictionary.conf` / `dictionary.conf`).
-  - Nếu lỡ bị "tai nạn" học nhầm từ tiếng Việt, người dùng chỉ cần mở tab **Dictionary** trên GUI hoặc chỉnh sửa file từ điển để **xóa từ đó đi** — bộ gõ sẽ lập tức unlearn và phục hồi khả năng gõ dấu tiếng Việt bình thường ngay tức khắc!
+  - Nếu xóa từ trong tab **Dictionary** trên GUI, bộ gõ lập tức dọn sạch bộ nhớ đệm và phục hồi khả năng gõ dấu tiếng Việt bình thường ngay tức khắc!
 - **Nhật ký thói quen dung lượng cao (100 MB FIFO Rotation) & Bảo mật tuyệt đối**:
   - Hỗ trợ lưu lịch sử học tập lên tới **100 MB** (`vnchkey-habit.log` / `habit.log`), tự động xoay vòng FIFO giữ lại 70% dữ liệu mới nhất khi đầy.
   - Chỉ ghi nhận các từ chữ cái đơn thuần (2–32 ký tự), tuyệt đối không ghi nhận chuỗi số, mã PIN hay mật khẩu.
 
 ---
 
-### 3.14. Chẩn Đoán Hệ Thống `--doctor`, Cố Vấn Electron Wayland & Tự Động Bypass Game/Password
+### 3.14. Đồng Bộ Neovim & Terminal Qua Unix Socket IPC Tức Thì (< 2ms)
+- Bộ gõ trên Linux mở một listener Unix Domain Socket non-blocking (`/tmp/vnchkey.sock`) được cấp quyền riêng tư an toàn `0600`.
+- Module [vnchkey.lua](file:///home/codegpt/antigravity/vnchKey/data/neovim/lua/vnchkey.lua) trong Neovim tự động kết nối qua `vim.uv.new_pipe()`:
+  - Khi rời Insert mode (`InsertLeave`): gửi lệnh `bypass_on` để tắt gõ tiếng Việt tức thì mà **không làm mất cờ vàng** trên khay hệ thống, không bị trễ D-Bus.
+  - Khi vào Insert mode (`InsertEnter`): gửi lệnh `bypass_off` để khôi phục tiếng Việt siêu tốc.
+
+---
+
+### 3.15. Chẩn Đoán Hệ Thống `--doctor`, Cố Vấn Electron Wayland & Tự Động Bypass Game/Password
 Học hỏi và phát triển từ các công cụ thực chiến trên Wayland:
 - **Lệnh CLI Chẩn Đoán Nhanh (`fcitx5-vnchkey-settings --doctor` / `-d`) & Tab "Doctor" trên GUI**:
   - Kiểm tra toàn diện môi trường hiển thị (`XDG_SESSION_TYPE`, `XDG_CURRENT_DESKTOP`, `SWAYSOCK`), các biến môi trường `XMODIFIERS`, `GTK_IM_MODULE`, `QT_IM_MODULE`, trạng thái tiến trình daemon `fcitx5`, và sự hiện diện của các thư viện hệ thống (`fcitx5-vnchkey-addon.so`, `libfcitx5_vnchkey_ffi.so`).
