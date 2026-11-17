@@ -541,6 +541,17 @@ public class KeyTapManager {
         return false
     }
 
+    public func cycleWordCase() -> Bool {
+        guard let engine = self.engine else { return false }
+        var backspaces: Int = 0
+        var outCommit: UnsafeMutablePointer<CChar>? = nil
+        if fcitx5_vnchkey_cycle_word_case(engine, &backspaces, &outCommit) == 1 {
+            emitOutput(backspaces: backspaces, commitPtr: outCommit)
+            return true
+        }
+        return false
+    }
+
     public func resetEngine() {
         if let engine = self.engine {
             fcitx5_vnchkey_reset(engine)
@@ -805,6 +816,14 @@ public class KeyTapManager {
         // và chỉ kích hoạt khi trong bộ đệm thực sự đang có từ gõ dở!)
         if isCtrl && isShift && !isCmd && !isOpt && keyCode == 6 { // 6 = 'Z'
             if fcitx5_vnchkey_has_active_word(engine) && flipWord() {
+                return nil
+            }
+        }
+
+        // Hỗ trợ Chuyển đổi HOA / thường bằng Ctrl+Shift+U (keyCode 32 = 'U')
+        // hoặc Ctrl+Shift+C (keyCode 8 = 'C') khi đang có từ gõ dở
+        if isCtrl && isShift && !isCmd && !isOpt && (keyCode == 32 || keyCode == 8) {
+            if fcitx5_vnchkey_has_active_word(engine) && cycleWordCase() {
                 return nil
             }
         }

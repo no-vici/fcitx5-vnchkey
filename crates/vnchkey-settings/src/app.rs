@@ -782,6 +782,28 @@ impl SettingsApp {
                 .size(11.0)
                 .color(egui::Color32::from_rgb(0xa6, 0xad, 0xc8)),
         );
+        ui.add_space(14.0);
+
+        ui.horizontal(|ui| {
+            ui.label(egui::RichText::new("Phím tắt Chuyển Đổi HOA / thường (Case Converter)").size(13.0));
+            ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                egui::ComboBox::from_id_salt("case_converter_shortcut")
+                    .selected_text(&self.config.case_converter_shortcut)
+                    .width(200.0)
+                    .show_ui(ui, |ui| {
+                        ui.selectable_value(&mut self.config.case_converter_shortcut, "Ctrl+Shift+U".to_string(), "Ctrl + Shift + U");
+                        ui.selectable_value(&mut self.config.case_converter_shortcut, "Ctrl+Shift+C".to_string(), "Ctrl + Shift + C");
+                        ui.selectable_value(&mut self.config.case_converter_shortcut, "Alt+C".to_string(), "Alt + C");
+                        ui.selectable_value(&mut self.config.case_converter_shortcut, "Ctrl+Alt+U".to_string(), "Ctrl + Alt + U");
+                        ui.selectable_value(&mut self.config.case_converter_shortcut, "Disabled".to_string(), "Disabled (Tắt)");
+                    });
+            });
+        });
+        ui.label(
+            egui::RichText::new("   💡 Chuyển đổi nhanh giữa: chữ thường ➔ CHỮ HOA ➔ Viết Hoa Đầu Từ cho từ đang gõ hoặc văn bản được bôi đen.")
+                .size(11.0)
+                .color(egui::Color32::from_rgb(0xa6, 0xad, 0xc8)),
+        );
     }
 
     // 3. Applications Page

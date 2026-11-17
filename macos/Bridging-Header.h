@@ -136,6 +136,19 @@ int fcitx5_vnchkey_apply_accent_to_selection(
     char** out_transformed
 );
 
+/// Cycles the casing of the active composing word (lower -> UPPER -> Title Case -> lower).
+int fcitx5_vnchkey_cycle_word_case(
+    Fcitx5VnchkeyContext* ctx,
+    size_t* out_backspaces,
+    char** out_commit
+);
+
+/// Cycles the casing of arbitrary text or a selected string.
+int fcitx5_vnchkey_cycle_text_case(
+    const char* text,
+    char** out_cased
+);
+
 /// Searches for matching math symbols and emojis by shortcode prefix.
 /// Results are formatted as lines of `symbol\t:shortcode:\n`.
 /// Must be freed with `fcitx5_vnchkey_free_string`.

@@ -916,6 +916,13 @@ void VnchkeyEngine::loadConfig() {
                 if (start != std::string::npos && end != std::string::npos) {
                     config_flip_shortcut_ = val.substr(start, end - start + 1);
                 }
+            } else if (line.rfind("CaseConverterShortcut=", 0) == 0) {
+                std::string val = line.substr(22);
+                size_t start = val.find_first_not_of(" \t\"'");
+                size_t end = val.find_last_not_of(" \t\"'");
+                if (start != std::string::npos && end != std::string::npos) {
+                    config_case_converter_shortcut_ = val.substr(start, end - start + 1);
+                }
             } else if (line.rfind("SpellCheck=", 0) == 0) {
                 config_spell_check_ = (line.find("False") == std::string::npos);
             } else if (line.rfind("EnableDictionary=", 0) == 0) {
@@ -1215,12 +1222,31 @@ void VnchkeyEngine::keyEvent(const fcitx::InputMethodEntry &entry, fcitx::KeyEve
         }
     }
 
-    // Case Converter shortcut (Ctrl+Shift+U): instantly cycle casing (lower -> UPPER -> Title Case)
+    // Case Converter shortcut: instantly cycle casing (lower -> UPPER -> Title Case)
     // Works either on currently composing active word, or on highlighted/selected text via SurroundingText!
-    bool isCaseConverter = states.test(fcitx::KeyState::Ctrl) &&
-                           states.test(fcitx::KeyState::Shift) &&
-                           !states.test(fcitx::KeyState::Alt) &&
-                           (sym == FcitxKey_U || sym == FcitxKey_u);
+    // Configurable options: "Ctrl+Shift+U", "Ctrl+Shift+C", "Alt+C", "Ctrl+Alt+U", or "Disabled"
+    bool isCaseConverter = false;
+    if (config_case_converter_shortcut_ == "Ctrl+Shift+U") {
+        isCaseConverter = states.test(fcitx::KeyState::Ctrl) &&
+                          states.test(fcitx::KeyState::Shift) &&
+                          !states.test(fcitx::KeyState::Alt) &&
+                          (sym == FcitxKey_U || sym == FcitxKey_u);
+    } else if (config_case_converter_shortcut_ == "Ctrl+Shift+C") {
+        isCaseConverter = states.test(fcitx::KeyState::Ctrl) &&
+                          states.test(fcitx::KeyState::Shift) &&
+                          !states.test(fcitx::KeyState::Alt) &&
+                          (sym == FcitxKey_C || sym == FcitxKey_c);
+    } else if (config_case_converter_shortcut_ == "Alt+C") {
+        isCaseConverter = states.test(fcitx::KeyState::Alt) &&
+                          !states.test(fcitx::KeyState::Ctrl) &&
+                          !states.test(fcitx::KeyState::Shift) &&
+                          (sym == FcitxKey_C || sym == FcitxKey_c);
+    } else if (config_case_converter_shortcut_ == "Ctrl+Alt+U") {
+        isCaseConverter = states.test(fcitx::KeyState::Ctrl) &&
+                          states.test(fcitx::KeyState::Alt) &&
+                          !states.test(fcitx::KeyState::Shift) &&
+                          (sym == FcitxKey_U || sym == FcitxKey_u);
+    }
 
     if (isCaseConverter) {
         // Priority 1: If there is an active composing word

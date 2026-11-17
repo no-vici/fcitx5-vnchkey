@@ -37,6 +37,7 @@ pub struct VnchkeyConfig {
     pub esc_restore_raw: bool,
     pub switch_shortcut: String,
     pub flip_shortcut: String,
+    pub case_converter_shortcut: String,
     pub temp_english_mode: String,
     pub tray_icon_theme: String,
     pub show_indicator_badge: bool,
@@ -76,6 +77,7 @@ impl Default for VnchkeyConfig {
             esc_restore_raw: false,
             switch_shortcut: "Ctrl+Shift".to_string(),
             flip_shortcut: "Ctrl+Shift+Z".to_string(),
+            case_converter_shortcut: "Ctrl+Shift+U".to_string(),
             temp_english_mode: "Disabled".to_string(),
             tray_icon_theme: "Default".to_string(),
             show_indicator_badge: true,
@@ -198,6 +200,7 @@ impl ConfigManager {
             if let Some(v) = map.get("EscRestoreRaw") { cfg.esc_restore_raw = v.eq_ignore_ascii_case("true"); }
             if let Some(v) = map.get("SwitchShortcut") { cfg.switch_shortcut = v.clone(); }
             if let Some(v) = map.get("FlipShortcut") { cfg.flip_shortcut = v.clone(); }
+            if let Some(v) = map.get("CaseConverterShortcut") { cfg.case_converter_shortcut = v.clone(); }
             if let Some(v) = map.get("TempEnglishMode") { cfg.temp_english_mode = v.clone(); }
             if let Some(v) = map.get("TrayIconTheme") { cfg.tray_icon_theme = v.clone(); }
             if let Some(v) = map.get("ShowIndicatorBadge") { cfg.show_indicator_badge = v.eq_ignore_ascii_case("true"); }
@@ -247,6 +250,7 @@ impl ConfigManager {
         lines.push(format!("EscRestoreRaw={}", if cfg.esc_restore_raw { "True" } else { "False" }));
         lines.push(format!("SwitchShortcut={}", cfg.switch_shortcut));
         lines.push(format!("FlipShortcut={}", cfg.flip_shortcut));
+        lines.push(format!("CaseConverterShortcut={}", cfg.case_converter_shortcut));
         lines.push(format!("TempEnglishMode={}", cfg.temp_english_mode));
         lines.push(format!("TrayIconTheme={}", cfg.tray_icon_theme));
         lines.push(format!("ShowIndicatorBadge={}", if cfg.show_indicator_badge { "True" } else { "False" }));
