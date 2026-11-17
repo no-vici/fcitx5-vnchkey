@@ -296,10 +296,18 @@ pub fn scan_system_applications() -> Vec<SystemAppEntry> {
         ("Ghostty", "ghostty", "💻"),
         ("Rio Terminal", "rio", "💻"),
         ("Foot", "foot", "💻"),
+        ("Konsole", "konsole", "💻"),
+        ("Terminator", "terminator", "💻"),
+        ("Tilix", "tilix", "💻"),
+        ("Tabby", "tabby", "💻"),
+        ("Hyper", "hyper", "💻"),
+        ("Xterm", "xterm", "💻"),
         ("Tmux", "tmux", "💻"),
         ("Helix Editor", "hx", "📝"),
         ("Zellij", "zellij", "💻"),
         ("Visual Studio Code", "code", "📝"),
+        ("VSCodium", "vscodium", "📝"),
+        ("Cursor", "cursor", "📝"),
         ("Google Chrome", "google-chrome", "🌐"),
         ("Chromium", "chromium", "🌐"),
         ("Mozilla Firefox", "firefox", "🌐"),
@@ -308,6 +316,8 @@ pub fn scan_system_applications() -> Vec<SystemAppEntry> {
         ("Slack", "slack", "💬"),
         ("Discord", "discord", "💬"),
         ("Telegram Desktop", "telegram-desktop", "💬"),
+        ("Zalo", "zalo", "💬"),
+        ("LibreOffice", "libreoffice", "📄"),
     ];
 
     for (disp, exec, glyph) in common_tools {
