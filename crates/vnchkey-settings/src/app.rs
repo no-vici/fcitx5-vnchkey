@@ -1839,7 +1839,9 @@ impl SettingsApp {
                             if !self.dictionary.contains(&w) {
                                 self.dictionary.push(w.clone());
                                 self.dictionary.sort();
-                                self.status_message = Some((format!("Đã đẩy ngay \"{}\" vào User Dictionary!", w), true));
+                                if ConfigManager::save_dictionary(&self.dictionary).is_ok() {
+                                    self.status_message = Some((format!("Đã đẩy ngay \"{}\" vào User Dictionary và đồng bộ Fcitx5!", w), true));
+                                }
                             }
                         }
                     });

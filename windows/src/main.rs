@@ -1372,7 +1372,7 @@ Start-Process -FilePath $batch -WindowStyle Hidden;
             return 1;
         }
 
-        // --- Case Converter Shortcut (Default: Ctrl + Shift + U or Ctrl + Shift + C) ---
+        // --- Case Converter Shortcut (Default: Ctrl + Shift + U) ---
         // Cycles word casing (lower -> UPPER -> Title Case) when active word exists!
         let case_cycled = STATE.with(|s| {
             let Ok(mut st) = s.try_borrow_mut() else { return false; };
@@ -1381,7 +1381,7 @@ Start-Process -FilePath $batch -WindowStyle Hidden;
                 && shift_down
                 && !alt_down
                 && !win_down
-                && (vk == 'U' as u16 || vk == 'C' as u16)
+                && vk == 'U' as u16
                 && st.engine.has_active_word()
             {
                 if let Some(out) = st.engine.cycle_current_word_case() {

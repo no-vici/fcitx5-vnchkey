@@ -768,9 +768,14 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         self.dashEscCheckbox = escCheck
 
         let bracketCheck = NSButton(checkboxWithTitle: "Gõ [ ] thành ơ ư", target: self, action: #selector(dashBracketChanged(_:)))
-        bracketCheck.frame = NSRect(x: 245, y: 86, width: 220, height: 22)
+        bracketCheck.frame = NSRect(x: 245, y: 86, width: 110, height: 22)
         smartBox.addSubview(bracketCheck)
         self.dashBracketCheckbox = bracketCheck
+
+        let caseAnchorCheck = NSButton(checkboxWithTitle: "Neo chữ hoa đầu (Anchor)", target: self, action: #selector(dashCaseAnchorChanged(_:)))
+        caseAnchorCheck.frame = NSRect(x: 360, y: 86, width: 110, height: 22)
+        smartBox.addSubview(caseAnchorCheck)
+        self.dashCaseAnchorCheckbox = caseAnchorCheck
 
         let w2uLabel = NSTextField(labelWithString: "Quy tắc gõ phím W → ư:")
         w2uLabel.frame = NSRect(x: 16, y: 50, width: 165, height: 20)
@@ -984,6 +989,13 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         let enabled = (sender.state == .on)
         defaults.set(enabled, forKey: "vnchkey.bracket")
         keyManager?.setBracketTransform(enabled)
+        rebuildMenu()
+    }
+
+    @objc func dashCaseAnchorChanged(_ sender: NSButton) {
+        let enabled = (sender.state == .on)
+        defaults.set(enabled, forKey: "vnchkey.caseAnchor")
+        keyManager?.setInitialCaseAnchor(enabled)
         rebuildMenu()
     }
 
