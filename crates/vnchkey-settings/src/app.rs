@@ -1469,12 +1469,12 @@ impl SettingsApp {
         );
         ui.add_space(8.0);
 
-        // Thanh công cụ: Thêm viết tắt, Nạp mẫu Sài Gòn Xưa, Tìm kiếm macro
+        // Thanh công cụ: Thêm viết tắt, Nạp mẫu Sài Gòn Xưa, Lập trình & Git, Toán học, Tìm kiếm macro
         ui.horizontal(|ui| {
             if ui.button("+ Thêm Viết Tắt").clicked() {
                 self.macros.push(("".to_string(), "".to_string()));
             }
-            if ui.button("📜 Nạp Mẫu Sài Gòn Xưa").clicked() {
+            if ui.button("📜 Sài Gòn Xưa").clicked() {
                 let saigon_macros = ConfigManager::load_macros_from_file(&ConfigManager::saigon_macro_path());
                 let mut existing_keys: std::collections::HashSet<String> =
                     self.macros.iter().map(|(k, _)| k.trim().to_lowercase()).filter(|k| !k.is_empty()).collect();
@@ -1503,11 +1503,69 @@ impl SettingsApp {
                 }
             }
 
-            ui.add_space(16.0);
+            if ui.button("💻 Lập Trình & Git").clicked() {
+                let dev_macros = ConfigManager::load_macros_from_file(&ConfigManager::dev_git_macro_path());
+                let mut existing_keys: std::collections::HashSet<String> =
+                    self.macros.iter().map(|(k, _)| k.trim().to_lowercase()).filter(|k| !k.is_empty()).collect();
+                let mut added = 0;
+                let mut skipped = 0;
+                for (k, v) in dev_macros {
+                    let norm = k.trim().to_lowercase();
+                    if !norm.is_empty() && !existing_keys.contains(&norm) {
+                        existing_keys.insert(norm);
+                        self.macros.push((k, v));
+                        added += 1;
+                    } else {
+                        skipped += 1;
+                    }
+                }
+                if added > 0 {
+                    self.status_message = Some((
+                        format!("Đã nạp {} macro Lập Trình & Git (đã bỏ qua {} mục trùng lặp)!", added, skipped),
+                        true,
+                    ));
+                } else {
+                    self.status_message = Some((
+                        format!("Tất cả macro Lập Trình & Git đã có sẵn trong danh sách."),
+                        false,
+                    ));
+                }
+            }
+
+            if ui.button("📐 Toán Học & Ký Hiệu").clicked() {
+                let math_macros = ConfigManager::load_macros_from_file(&ConfigManager::math_science_macro_path());
+                let mut existing_keys: std::collections::HashSet<String> =
+                    self.macros.iter().map(|(k, _)| k.trim().to_lowercase()).filter(|k| !k.is_empty()).collect();
+                let mut added = 0;
+                let mut skipped = 0;
+                for (k, v) in math_macros {
+                    let norm = k.trim().to_lowercase();
+                    if !norm.is_empty() && !existing_keys.contains(&norm) {
+                        existing_keys.insert(norm);
+                        self.macros.push((k, v));
+                        added += 1;
+                    } else {
+                        skipped += 1;
+                    }
+                }
+                if added > 0 {
+                    self.status_message = Some((
+                        format!("Đã nạp {} ký hiệu Toán Học (đã bỏ qua {} mục trùng lặp)!", added, skipped),
+                        true,
+                    ));
+                } else {
+                    self.status_message = Some((
+                        format!("Tất cả macro Toán Học đã có sẵn trong danh sách."),
+                        false,
+                    ));
+                }
+            }
+
+            ui.add_space(10.0);
             ui.add(
                 egui::TextEdit::singleline(&mut self.macro_search)
-                    .hint_text("🔍 Tìm từ viết tắt hoặc nội dung...")
-                    .desired_width(220.0),
+                    .hint_text("🔍 Tìm viết tắt...")
+                    .desired_width(160.0),
             );
             if !self.macro_search.is_empty() && ui.button("✖").clicked() {
                 self.macro_search.clear();
@@ -1697,6 +1755,85 @@ impl SettingsApp {
                         self.status_message = Some((format!("Đã xóa \"{}\" khỏi User Dictionary!", removed_word), true));
                     }
                 });
+            });
+
+        // ---------------------------------------------------------------------
+        // Habit Inspector Card (Theo dõi tiến trình từ tự học từ vnchkey-habit.log)
+        // ---------------------------------------------------------------------
+        ui.add_space(14.0);
+        ui.label(
+            egui::RichText::new("🔬 Bảng Theo Dõi Thói Quen Tự Học (Habit Inspector):")
+                .size(13.0)
+                .color(egui::Color32::from_rgb(0xfa, 0xb3, 0x87))
+                .strong(),
+        );
+        ui.add_space(4.0);
+
+        let habit_log_path = ConfigManager::habit_log_path();
+        let mut habit_entries: Vec<(String, u32, String)> = Vec::new(); // (word, count, last_time)
+
+        if habit_log_path.exists() {
+            if let Ok(content) = fs::read_to_string(&habit_log_path) {
+                for line in content.lines() {
+                    let parts: Vec<&str> = line.split('\t').collect();
+                    if parts.len() >= 4 {
+                        let raw = parts[1].trim().to_string();
+                        let count: u32 = parts[2].trim().parse().unwrap_or(1);
+                        let time_str = parts[3].trim().to_string();
+                        if !raw.is_empty() {
+                            habit_entries.push((raw, count, time_str));
+                        }
+                    }
+                }
+            }
+        }
+
+        egui::Frame::new()
+            .fill(egui::Color32::from_rgb(0x18, 0x18, 0x25))
+            .stroke(egui::Stroke::new(1.0_f32, egui::Color32::from_rgb(0x31, 0x32, 0x44)))
+            .corner_radius(egui::CornerRadius::same(8))
+            .inner_margin(egui::Margin::same(12))
+            .show(ui, |ui| {
+                if habit_entries.is_empty() {
+                    ui.label(
+                        egui::RichText::new("Chưa có từ nào đang được học trong lịch sử gõ. Khi bạn sửa/xoá một từ Tiếng Anh nhiều lần, bộ gõ sẽ tự động theo dõi ở đây.")
+                            .size(12.0)
+                            .color(egui::Color32::from_rgb(0x7f, 0x84, 0x9c)),
+                    );
+                } else {
+                    let threshold = self.config.habit_promote_threshold;
+                    egui::ScrollArea::vertical().max_height(160.0).show(ui, |ui| {
+                        let mut word_to_whitelist = None;
+                        for (raw, count, _time) in habit_entries.iter() {
+                            ui.horizontal(|ui| {
+                                ui.label(egui::RichText::new(raw).strong().color(egui::Color32::from_rgb(0x89, 0xb4, 0xfa)));
+                                let progress = (*count as f32) / (threshold as f32).max(1.0);
+                                let progress_clamped = progress.min(1.0);
+                                ui.add(
+                                    egui::ProgressBar::new(progress_clamped)
+                                        .desired_width(120.0)
+                                        .text(format!("{}/{} lần", count, threshold)),
+                                );
+
+                                if self.dictionary.contains(raw) {
+                                    ui.label(egui::RichText::new("✔ Đã thuộc User Dict").color(egui::Color32::from_rgb(0xa6, 0xe3, 0xa1)).size(11.0));
+                                } else {
+                                    if ui.button(egui::RichText::new("Học ngay").size(11.0)).clicked() {
+                                        word_to_whitelist = Some(raw.clone());
+                                    }
+                                }
+                            });
+                        }
+
+                        if let Some(w) = word_to_whitelist {
+                            if !self.dictionary.contains(&w) {
+                                self.dictionary.push(w.clone());
+                                self.dictionary.sort();
+                                self.status_message = Some((format!("Đã đẩy ngay \"{}\" vào User Dictionary!", w), true));
+                            }
+                        }
+                    });
+                }
             });
     }
 

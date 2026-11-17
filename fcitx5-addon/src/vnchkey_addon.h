@@ -16,6 +16,8 @@
 #include <fcitx-utils/signals.h>
 #include <fcitx-utils/textformatflags.h>
 #include <fcitx/candidatelist.h>
+#include <fcitx-utils/event.h>
+#include <fcitx-utils/eventloopinterface.h>
 #include <cstdint>
 #include <cstddef>
 #include <chrono>
@@ -146,6 +148,15 @@ private:
     // Rescue Undo Cache (Escape/Backspace immediately after activation rescue)
     std::string last_rescue_raw_;
     std::string last_rescue_converted_;
+
+    // Unix Socket IPC Server for Instant Neovim / Terminal sync (<2ms)
+    std::unique_ptr<fcitx::EventSourceIO> ipcServerSource_;
+    int ipc_server_fd_ = -1;
+    bool neovim_bypass_ = false;
+
+    void startIpcServer();
+    void stopIpcServer();
+    void handleIpcCommand(const std::string& cmd);
 
     bool isWebApp(const std::string& prog) const;
     size_t utf8CharCount(const std::string& str) const;

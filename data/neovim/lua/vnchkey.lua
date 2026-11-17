@@ -27,7 +27,7 @@ end
 -- Detect OS and IME backend
 local is_mac = vim.fn.has("mac") == 1 or vim.fn.has("macunix") == 1
 local fcitx_cmd = nil
-local mac_sock = "/tmp/vnchkey.sock"
+local vnchkey_sock = "/tmp/vnchkey.sock"
 local mac_cmd = nil
 
 if is_mac then
@@ -38,7 +38,7 @@ if is_mac then
     mac_cmd = "/Applications/vnchKey.app/Contents/MacOS/vnchKey"
   end
 else
-  -- Linux / BSD: Resolve fcitx-remote binary
+  -- Linux / BSD: Resolve fcitx-remote binary as fallback
   if vim.fn.executable("fcitx5-remote") == 1 then
     fcitx_cmd = "fcitx5-remote"
   elseif vim.fn.executable("fcitx-remote") == 1 then
@@ -50,40 +50,43 @@ end
 local uv = vim.uv or vim.loop
 local spawn = uv.spawn
 
--- Function: send_mac_ipc (Instant IPC via /tmp/vnchkey.sock or CLI fallback)
-local function send_mac_ipc(cmd_str)
-  -- 1. Try zero-latency Unix Domain Socket if uv.new_pipe available
+-- Function: send_unix_ipc (Instant IPC via /tmp/vnchkey.sock or fallback)
+local function send_unix_ipc(cmd_str, fallback_fn)
   local client = uv.new_pipe(false)
   if client then
-    client:connect(mac_sock, function(err)
+    client:connect(vnchkey_sock, function(err)
       if not err then
         client:read_start(function(read_err, chunk)
-          -- Đọc phản hồi OK từ server xong mới đóng pipe để tránh SIGPIPE
+          -- Read response OK before closing pipe to avoid SIGPIPE
           client:close()
         end)
         client:write(cmd_str .. "\n")
       else
         client:close()
-        -- Fallback to CLI binary if socket failed
-        if mac_cmd then
-          spawn(mac_cmd, { args = { "--" .. cmd_str } }, nil)
-        end
+        if fallback_fn then fallback_fn() end
       end
     end)
-  elseif mac_cmd then
-    spawn(mac_cmd, { args = { "--" .. cmd_str } }, nil)
+  elseif fallback_fn then
+    fallback_fn()
   end
 end
 
 -- Function: fcitx2en (Switch to English / Latin input when in Normal mode)
 function M.fcitx2en()
   if is_mac then
-    send_mac_ipc("off")
+    send_unix_ipc("off", function()
+      if mac_cmd then spawn(mac_cmd, { args = { "--off" } }, nil) end
+    end)
     vim.b.input_toggle_flag = true
     return
   end
-  if not fcitx_cmd then return end
-  spawn(fcitx_cmd, { args = { "-c" } }, nil)
+
+  -- Linux: Try sub-2ms Unix socket bypass first, fall back to fcitx-remote -c
+  send_unix_ipc("bypass_on", function()
+    if fcitx_cmd then
+      spawn(fcitx_cmd, { args = { "-c" } }, nil)
+    end
+  end)
   vim.b.input_toggle_flag = true
 end
 
@@ -91,14 +94,21 @@ end
 function M.fcitx2vi()
   if is_mac then
     if vim.b.input_toggle_flag == true then
-      send_mac_ipc("on")
+      send_unix_ipc("on", function()
+        if mac_cmd then spawn(mac_cmd, { args = { "--on" } }, nil) end
+      end)
       vim.b.input_toggle_flag = false
     end
     return
   end
-  if not fcitx_cmd then return end
+
   if vim.b.input_toggle_flag == true then
-    spawn(fcitx_cmd, { args = { "-o" } }, nil)
+    -- Linux: Try sub-2ms Unix socket bypass first, fall back to fcitx-remote -o
+    send_unix_ipc("bypass_off", function()
+      if fcitx_cmd then
+        spawn(fcitx_cmd, { args = { "-o" } }, nil)
+      end
+    end)
     vim.b.input_toggle_flag = false
   end
 end

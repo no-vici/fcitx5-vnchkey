@@ -124,13 +124,31 @@ impl ConfigManager {
         Self::config_dir().join("saigon-xua-macro.conf")
     }
 
+    pub fn dev_git_macro_path() -> PathBuf {
+        Self::config_dir().join("dev-git-macro.conf")
+    }
+
+    pub fn math_science_macro_path() -> PathBuf {
+        Self::config_dir().join("math-science-macro.conf")
+    }
+
     pub const SAIGON_MACRO_CONTENT: &'static str = include_str!("../../../presets/saigon-xua-macro.conf");
+    pub const DEV_GIT_MACRO_CONTENT: &'static str = include_str!("../../../presets/dev-git-macro.conf");
+    pub const MATH_SCIENCE_MACRO_CONTENT: &'static str = include_str!("../../../presets/math-science-macro.conf");
 
     pub fn ensure_saigon_macro_preset() {
+        let _ = fs::create_dir_all(Self::config_dir());
         let path = Self::saigon_macro_path();
         if !path.exists() {
-            let _ = fs::create_dir_all(Self::config_dir());
             let _ = fs::write(&path, Self::SAIGON_MACRO_CONTENT);
+        }
+        let dev_path = Self::dev_git_macro_path();
+        if !dev_path.exists() {
+            let _ = fs::write(&dev_path, Self::DEV_GIT_MACRO_CONTENT);
+        }
+        let math_path = Self::math_science_macro_path();
+        if !math_path.exists() {
+            let _ = fs::write(&math_path, Self::MATH_SCIENCE_MACRO_CONTENT);
         }
     }
 
