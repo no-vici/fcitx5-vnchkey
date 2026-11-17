@@ -55,8 +55,9 @@ BINARY_EXTENSIONS = {
     ".exe",
 }
 
-# Specific asset files that VnCharKey keeps custom (neutral logo, not flag)
+# Specific asset & doc files that VnCharKey keeps custom (neutral logo, custom README, etc.)
 CUSTOM_ASSETS = {
+    "README.md",
     "assets/logo.png",
     "macos/Resources/AppIcon.png",
     "macos/Resources/AppIcon.icns",
