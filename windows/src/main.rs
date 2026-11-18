@@ -2543,13 +2543,13 @@ Start-Process -FilePath $batch -WindowStyle Hidden;
                         }
                         ID_RESET_DEFAULTS => {
                             let _ = std::fs::remove_file(config_path());
-                            st.engine = Engine::new();
+                            st.engine = Engine::new(EngineConfig::default());
                             st.enabled = true;
                             st.method = InputMethod::Auto;
                             st.charset = Charset::Unicode;
-                            st.tone_style = ToneStyle::Old;
+                            st.tone_style = ToneStyle::Classic;
                             save_app_config(&st);
-                            update_tray_icon(hwnd, st.enabled);
+                            update_tray_tooltip(hwnd, st.enabled, st.method);
                         }
                         ID_TRAY_EXIT => {
                             remove_tray_icon(hwnd);
