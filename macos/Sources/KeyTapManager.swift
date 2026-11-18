@@ -921,6 +921,15 @@ public class KeyTapManager {
         return Unmanaged.passRetained(event)
     }
 
+    func inspectState() -> String {
+        guard let engine = engine, let ptr = fcitx5_vnchkey_inspect_state(engine) else {
+            return "Engine not initialized"
+        }
+        let str = String(cString: ptr)
+        fcitx5_vnchkey_free_string(ptr)
+        return str
+    }
+
     private func emitOutput(backspaces: Int, commitPtr: UnsafeMutablePointer<CChar>?) {
         let src = eventSource
 

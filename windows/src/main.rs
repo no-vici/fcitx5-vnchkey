@@ -109,6 +109,7 @@ mod win_app {
     }
 
     const ID_ABOUT: usize = 1073;
+    const ID_LIVE_INSPECTOR: usize = 1074;
     const ID_CHECK_UPDATE: usize = 1071;
     const ID_RESET_DEFAULTS: usize = 1072;
 
@@ -2400,6 +2401,12 @@ Start-Process -FilePath $batch -WindowStyle Hidden;
         AppendMenuW(
             menu,
             MF_STRING,
+            ID_LIVE_INSPECTOR,
+            to_wstring("Live Inspector (Debug)...").as_ptr(),
+        );
+        AppendMenuW(
+            menu,
+            MF_STRING,
             ID_RESET_DEFAULTS,
             to_wstring("Khôi phục mặc định").as_ptr(),
         );
@@ -2726,6 +2733,15 @@ Start-Process -FilePath $batch -WindowStyle Hidden;
                     show_add_macro_dialog(hwnd);
                 } else if id == ID_ABOUT {
                     show_about_dialog(hwnd);
+                } else if id == ID_LIVE_INSPECTOR {
+                    let info = if let Ok(st) = STATE.lock() {
+                        st.engine.inspect_state()
+                    } else {
+                        "Engine locked".to_string()
+                    };
+                    let title = to_wstring("VnCharKey - Live Inspector (Debug)");
+                    let body = to_wstring(&info);
+                    MessageBoxW(hwnd, body.as_ptr(), title.as_ptr(), MB_OK | MB_ICONINFORMATION);
                 }
                 if let Some((body, title)) = record_dialog {
                     MessageBoxW(
