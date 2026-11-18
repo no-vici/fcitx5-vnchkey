@@ -958,6 +958,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         sc.useOption = (dashShortcutOptCheck?.state == .on)
         sc.useShift = (dashShortcutShiftCheck?.state == .on)
         sc.useCommand = (dashShortcutCmdCheck?.state == .on)
+        sc.keyCode = -1
+        sc.keyDisplay = ""
         km.customShortcut = sc
         saveCustomShortcut(sc)
         rebuildMenu()
@@ -1043,6 +1045,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     @objc func dashResetDefaults() {
         let domain = Bundle.main.bundleIdentifier ?? "com.vnchkey.macos"
         defaults.removePersistentDomain(forName: domain)
+        defaults.synchronize()
         defaults.set(false, forKey: "vnchkey.quick_telex")
         defaults.set(false, forKey: "vnchkey.quick_start")
         defaults.set(false, forKey: "vnchkey.quick_end")
