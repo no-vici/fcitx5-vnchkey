@@ -1292,9 +1292,11 @@ void VnchkeyEngine::keyEvent(const fcitx::InputMethodEntry &entry, fcitx::KeyEve
                         fcitx5_vnchkey_free_string(cur);
                     }
                 } else if (ic) {
+                    is_forwarding_ = true;
                     for (size_t i = 0; i < bs; ++i) {
                         ic->forwardKey(fcitx::Key(FcitxKey_BackSpace));
                     }
+                    is_forwarding_ = false;
                     if (commitText && commitText[0] != '\0') {
                         ic->commitString(commitText);
                     }

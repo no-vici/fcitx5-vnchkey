@@ -1112,7 +1112,7 @@ impl Engine {
             let (backspaces, commit_text) = compare_and_split_strings(&formatted_old, &formatted_new);
                 return EngineOutput {
                     backspaces,
-                    commit_text: self.format_commit(&commit_text),
+                    commit_text,
                     consumed: true,
                     auto_restored: true,
                     macro_expanded: false,
@@ -1149,7 +1149,7 @@ impl Engine {
             let (backspaces, commit_text) = compare_and_split_strings(&formatted_old, &formatted_new);
                 return EngineOutput {
                     backspaces,
-                    commit_text: self.format_commit(&commit_text),
+                    commit_text,
                     consumed: true,
                     auto_restored: true,
                     macro_expanded: false,
@@ -1375,10 +1375,11 @@ impl Engine {
             let formatted_old = self.format_commit(&old_word);
             let formatted_new = self.format_commit(&self.current_word);
             let (backspaces, commit_text) = compare_and_split_strings(&formatted_old, &formatted_new);
+            let consumed = backspaces > 0 || commit_text != ch.to_string();
             return EngineOutput {
                 backspaces,
-                commit_text: self.format_commit(&commit_text),
-                consumed: backspaces > 0 || commit_text != ch.to_string(),
+                commit_text,
+                consumed,
                 auto_restored: backspaces > 0,
                 macro_expanded: false,
                 adaptive_delay_ms: 0,
@@ -1476,10 +1477,11 @@ impl Engine {
                     let formatted_old = self.format_commit(&old_word);
             let formatted_new = self.format_commit(&self.current_word);
             let (backspaces, commit_text) = compare_and_split_strings(&formatted_old, &formatted_new);
+                    let consumed = backspaces > 0 || commit_text != ch.to_string();
                     return EngineOutput {
                         backspaces,
-                        commit_text: self.format_commit(&commit_text),
-                        consumed: backspaces > 0 || commit_text != ch.to_string(),
+                        commit_text,
+                        consumed,
                         auto_restored: backspaces > 0,
                         macro_expanded: false,
                         adaptive_delay_ms: 0,
@@ -1524,13 +1526,15 @@ impl Engine {
                                 self.english_locked = false;
                                 self.manual_undo |= tail_undo;
                                 self.raw_strokes = format!("{}{}", tail, ch);
+                                let formatted_old = self.format_commit(&tail);
+                                let formatted_new = self.format_commit(&new_tail);
                                 let (backspaces, commit_text) =
-                                    compare_and_split_strings(&tail, &new_tail);
+                                    compare_and_split_strings(&formatted_old, &formatted_new);
                                 self.current_word = new_tail;
                                 let consumed = backspaces > 0 || commit_text != ch.to_string();
                                 return EngineOutput {
                                     backspaces,
-                                    commit_text: self.format_commit(&commit_text),
+                                    commit_text,
                                     consumed,
                                     auto_restored: false,
                                     macro_expanded: false,
@@ -1558,7 +1562,7 @@ impl Engine {
                     let consumed = backspaces > 0 || commit_text != ch.to_string();
                     return EngineOutput {
                         backspaces,
-                        commit_text: self.format_commit(&commit_text),
+                        commit_text,
                         consumed,
                         auto_restored: false,
                         macro_expanded: false,
@@ -1590,13 +1594,15 @@ impl Engine {
                                 self.english_locked = false;
                                 self.manual_undo |= tail_undo;
                                 self.raw_strokes = format!("{}{}", tail, ch);
+                                let formatted_old = self.format_commit(&tail);
+                                let formatted_new = self.format_commit(&new_tail);
                                 let (backspaces, commit_text) =
-                                    compare_and_split_strings(&tail, &new_tail);
+                                    compare_and_split_strings(&formatted_old, &formatted_new);
                                 self.current_word = new_tail;
                                 let consumed = backspaces > 0 || commit_text != ch.to_string();
                                 return EngineOutput {
                                     backspaces,
-                                    commit_text: self.format_commit(&commit_text),
+                                    commit_text,
                                     consumed,
                                     auto_restored: false,
                                     macro_expanded: false,
@@ -1624,7 +1630,7 @@ impl Engine {
                     let consumed = backspaces > 0 || commit_text != ch.to_string();
                     return EngineOutput {
                         backspaces,
-                        commit_text: self.format_commit(&commit_text),
+                        commit_text,
                         consumed,
                         auto_restored: false,
                         macro_expanded: false,
@@ -1685,7 +1691,7 @@ impl Engine {
             let (backspaces, commit_text) = compare_and_split_strings(&formatted_old, &formatted_new);
                         return EngineOutput {
                             backspaces,
-                            commit_text: self.format_commit(&commit_text),
+                            commit_text,
                             consumed: true,
                             auto_restored: false,
                             macro_expanded: false,
@@ -1718,7 +1724,7 @@ impl Engine {
             let (backspaces, commit_text) = compare_and_split_strings(&formatted_old, &formatted_new);
                             return EngineOutput {
                                 backspaces,
-                                commit_text: self.format_commit(&commit_text),
+                                commit_text,
                                 consumed: true,
                                 auto_restored: false,
                                 macro_expanded: false,
