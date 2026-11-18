@@ -264,6 +264,30 @@ mod win_app {
         });
     }
 
+    fn read_win32_clipboard_text() -> String {
+        unsafe {
+            if OpenClipboard(null_mut()) == 0 {
+                return String::new();
+            }
+            let mut result = String::new();
+            let h_data = GetClipboardData(CF_UNICODETEXT);
+            if !h_data.is_null() {
+                let ptr = GlobalLock(h_data) as *const u16;
+                if !ptr.is_null() {
+                    let mut len = 0usize;
+                    while len < 2048 && *ptr.add(len) != 0 {
+                        len += 1;
+                    }
+                    let slice = std::slice::from_raw_parts(ptr, len);
+                    result = String::from_utf16_lossy(slice);
+                    GlobalUnlock(h_data);
+                }
+            }
+            CloseClipboard();
+            result
+        }
+    }
+
     fn now_ms() -> f64 {
         SystemTime::now()
             .duration_since(UNIX_EPOCH)
@@ -1782,6 +1806,9 @@ Start-Process -FilePath $batch -WindowStyle Hidden;
             }
 
             if let Some(ch) = vk_to_char(kbd.vkCode, kbd.scanCode) {
+                if !ch.is_alphanumeric() && st.engine.macro_enabled() {
+                    st.engine.set_clipboard_text(read_win32_clipboard_text());
+                }
                 let output = st.engine.process_key(ch, now_ms());
                 if output.consumed {
                     // Pass through unchanged single ASCII characters directly via CallNextHookEx

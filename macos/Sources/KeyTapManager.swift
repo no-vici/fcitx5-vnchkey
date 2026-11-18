@@ -893,6 +893,18 @@ public class KeyTapManager {
         var outCommit: UnsafeMutablePointer<CChar>? = nil
         let timestamp = Date().timeIntervalSince1970 * 1000.0
 
+        let ch = Character(scalar)
+        if !ch.isLetter && !ch.isNumber && fcitx5_vnchkey_get_enable_macro(engine) {
+            if let clip = NSPasteboard.general.string(forType: .string) {
+                let capped = clip.count > 2048 ? String(clip.prefix(2048)) : clip
+                capped.withCString { cstr in
+                    fcitx5_vnchkey_set_clipboard_text(engine, cstr)
+                }
+            } else {
+                fcitx5_vnchkey_set_clipboard_text(engine, "")
+            }
+        }
+
         let handled = fcitx5_vnchkey_process_key(
             engine,
             scalar.value,

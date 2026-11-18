@@ -46,6 +46,8 @@ int fcitx5_vnchkey_process_key(
     char** out_commit
 );
 
+void fcitx5_vnchkey_set_clipboard_text(Fcitx5VnchkeyContext* ctx, const char* text);
+
 /// Flips the current composing word between processed Vietnamese and raw input strokes (Ctrl/Shift-Shift).
 int fcitx5_vnchkey_flip_word(
     Fcitx5VnchkeyContext* ctx,
