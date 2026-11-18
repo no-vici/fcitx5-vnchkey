@@ -91,7 +91,7 @@ mod win_app {
     const ID_OPEN_DICT: usize = 1051;
     const ID_RELOAD_FILES: usize = 1052;
 
-    const ID_ABOUT: usize = 1070;
+    const ID_ABOUT: usize = 1073;
     const ID_CHECK_UPDATE: usize = 1071;
     const ID_RESET_DEFAULTS: usize = 1072;
 
@@ -1247,7 +1247,15 @@ mod win_app {
                 let clean_latest = latest_tag.trim_start_matches('v').trim();
                 let clean_cur = cur_ver.trim_start_matches('v').trim();
 
-                if clean_latest > clean_cur {
+                let parse_ver = |s: &str| -> (u32, u32, u32) {
+                    let mut parts = s.split('.');
+                    let maj = parts.next().and_then(|p| p.parse().ok()).unwrap_or(0);
+                    let min = parts.next().and_then(|p| p.parse().ok()).unwrap_or(0);
+                    let pat = parts.next().and_then(|p| p.parse().ok()).unwrap_or(0);
+                    (maj, min, pat)
+                };
+
+                if parse_ver(clean_latest) > parse_ver(clean_cur) {
                     let msg = format!(
                         "Đã có phiên bản mới: {}\n(Phiên bản hiện tại của bạn: v{})\n\nBạn có muốn tự động tải và cập nhật VnCharKey ngay bây giờ không?",
                         latest_tag, cur_ver

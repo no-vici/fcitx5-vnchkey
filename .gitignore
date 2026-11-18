@@ -17,6 +17,7 @@ __pycache__/
 Thumbs.db
 .vscode/
 .idea/
+.agents/
 .aistudio/
 .antigravity/
 .antigravityignore

@@ -640,6 +640,8 @@ impl Engine {
         self.reset_word_buffers();
         self.reopen_state = None;
         self.last_keystroke_time_ms = 0.0;
+        self.last_delimiter = None;
+        self.last_delimiter_spaced = false;
     }
 
     /// Handles physical Backspace pressed by the user.
@@ -717,7 +719,7 @@ impl Engine {
         let (backspaces, commit_text) = compare_and_split_strings(&old_word, &self.current_word);
         Some(EngineOutput {
             backspaces,
-            commit_text,
+            commit_text: self.format_commit(&commit_text),
             consumed: true,
             auto_restored: true,
             macro_expanded: false,
@@ -781,7 +783,7 @@ impl Engine {
         let (backspaces, commit_text) = compare_and_split_strings(&old_word, &new_word);
         Some(EngineOutput {
             backspaces,
-            commit_text,
+            commit_text: self.format_commit(&commit_text),
             consumed: true,
             auto_restored: false,
             macro_expanded: false,

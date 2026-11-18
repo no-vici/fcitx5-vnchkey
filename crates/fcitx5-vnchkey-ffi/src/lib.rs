@@ -60,6 +60,12 @@ pub unsafe extern "C" fn fcitx5_vnchkey_process_key(
     out_backspaces: *mut usize,
     out_commit: *mut *mut c_char,
 ) -> c_int {
+    if !out_backspaces.is_null() {
+        *out_backspaces = 0;
+    }
+    if !out_commit.is_null() {
+        *out_commit = std::ptr::null_mut();
+    }
     if ctx.is_null() {
         return 0;
     }
@@ -163,6 +169,12 @@ pub unsafe extern "C" fn fcitx5_vnchkey_flip_word(
     out_backspaces: *mut usize,
     out_commit: *mut *mut c_char,
 ) -> c_int {
+    if !out_backspaces.is_null() {
+        *out_backspaces = 0;
+    }
+    if !out_commit.is_null() {
+        *out_commit = std::ptr::null_mut();
+    }
     if ctx.is_null() {
         return 0;
     }
@@ -189,6 +201,12 @@ pub unsafe extern "C" fn fcitx5_vnchkey_undo_macro(
     out_backspaces: *mut usize,
     out_commit: *mut *mut c_char,
 ) -> c_int {
+    if !out_backspaces.is_null() {
+        *out_backspaces = 0;
+    }
+    if !out_commit.is_null() {
+        *out_commit = std::ptr::null_mut();
+    }
     if ctx.is_null() {
         return 0;
     }
@@ -215,6 +233,12 @@ pub unsafe extern "C" fn fcitx5_vnchkey_undo_escape(
     out_backspaces: *mut usize,
     out_commit: *mut *mut c_char,
 ) -> c_int {
+    if !out_backspaces.is_null() {
+        *out_backspaces = 0;
+    }
+    if !out_commit.is_null() {
+        *out_commit = std::ptr::null_mut();
+    }
     if ctx.is_null() {
         return 0;
     }
@@ -629,6 +653,12 @@ pub unsafe extern "C" fn fcitx5_vnchkey_cycle_word_case(
     out_backspaces: *mut usize,
     out_commit: *mut *mut c_char,
 ) -> c_int {
+    if !out_backspaces.is_null() {
+        *out_backspaces = 0;
+    }
+    if !out_commit.is_null() {
+        *out_commit = std::ptr::null_mut();
+    }
     if ctx.is_null() {
         return 0;
     }
