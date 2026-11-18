@@ -1,15 +1,15 @@
 [package]
-name = "vncharkey-windows"
+name = "vnchkey-windows"
 version = "0.3.6"
-authors = ["VnCharKey Contributors"]
+authors = ["vnchKey Contributors"]
 edition = "2021"
 license = "GPL-3.0-or-later"
-description = "VnCharKey - Modern, High-Performance Vietnamese Input Method Engine for Windows"
+description = "vnchKey - Modern, High-Performance Vietnamese Input Method Engine for Windows"
 
 [workspace]
 
 [[bin]]
-name = "VnCharKey"
+name = "vnchKey"
 path = "src/main.rs"
 
 [dependencies]
