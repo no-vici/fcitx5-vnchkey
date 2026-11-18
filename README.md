@@ -327,7 +327,7 @@ Học hỏi và phát triển từ các công cụ thực chiến trên Wayland:
 
 ---
 
-### 3.15. Bộ Lọc & Đặc Trị Thực Chiến Linux / Wayland (Hardened Runtime Fixes)
+### 3.16. Bộ Lọc & Đặc Trị Thực Chiến Linux / Wayland (Hardened Runtime Fixes)
 Được tôi luyện qua hàng loạt tình huống thực tế trên môi trường Linux Wayland và X11:
 - **WPS Office (`hidesClientPreedit`)**: Bộ ứng dụng WPS Office (`wps`, `wpp`, `et`) tự vẽ giao diện nhập liệu riêng. vnchKey tự động phát hiện và áp dụng `hidesClientPreedit = true`, loại bỏ hoàn toàn hiện tượng hiển thị 2 dòng chữ chồng chéo lên nhau.
 - **Google Sheets (`deleteAfterChars`)**: Xử lý đặc thù cho bảng tính Google Docs/Sheets, tối ưu hoá chuỗi sự kiện xoá/chèn ký tự (`deleteAfterChars`) để tránh làm xáo trộn ô tính hoặc mất nội dung khi đang chỉnh sửa cell.
