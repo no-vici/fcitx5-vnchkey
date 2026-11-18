@@ -70,6 +70,8 @@ pub struct EngineConfig {
     pub enable_macro: bool,
     /// Idle keystroke timeout in milliseconds (0 = disabled, default = 0ms)
     pub idle_timeout_ms: u64,
+    /// Hardware key debounce filter in milliseconds (0 = disabled, default = 0ms)
+    pub debounce_ms: u64,
     /// Quick Telex consonants (cc->ch, gg->gi, kk->kh, nn->ng, pp->ph, qq->qu, tt->th)
     pub quick_telex: bool,
     /// Quick initial consonants (f->ph, j->gi, w->qu at start of word)
@@ -105,6 +107,7 @@ impl Default for EngineConfig {
             bracket_transform: false,
             enable_macro: true,
             idle_timeout_ms: 0,
+            debounce_ms: 0,
             quick_telex: false,
             quick_start_consonant: false,
             quick_end_consonant: false,
@@ -237,11 +240,13 @@ pub struct Engine {
     last_completed_word: Option<String>,
     last_macro: Option<LastMacroExpansion>,
     suppressed_macro: Option<String>,
-    reopen_state: Option<ReopenWordState>,
+    reopen_history: std::collections::VecDeque<ReopenWordState>,
     deleted_accented_candidate: Option<(String, String)>,
     last_delimiter: Option<char>,
     last_delimiter_spaced: bool,
     last_keystroke_time_ms: f64,
+    last_char: Option<char>,
+    prev_word_was_english: bool,
     stats: TypingStats,
 }
 
@@ -497,11 +502,13 @@ impl Engine {
             last_completed_word: None,
             last_macro: None,
             suppressed_macro: None,
-            reopen_state: None,
+            reopen_history: std::collections::VecDeque::with_capacity(16),
             deleted_accented_candidate: None,
             last_delimiter: None,
             last_delimiter_spaced: false,
             last_keystroke_time_ms: 0.0,
+            last_char: None,
+            prev_word_was_english: false,
             stats: TypingStats::default(),
         }
     }
@@ -742,8 +749,10 @@ impl Engine {
     /// Resets all internal buffers (e.g. on window unfocus or navigation key).
     pub fn reset(&mut self) {
         self.reset_word_buffers();
-        self.reopen_state = None;
+        self.reopen_history.clear();
         self.last_keystroke_time_ms = 0.0;
+        self.last_char = None;
+        self.prev_word_was_english = false;
         self.last_delimiter = None;
         self.last_delimiter_spaced = false;
     }
@@ -754,7 +763,7 @@ impl Engine {
     /// Returns true if a previously completed word was reopened.
     pub fn handle_backspace(&mut self) -> bool {
         if self.current_word.is_empty() {
-            if let Some(saved) = self.reopen_state.take() {
+            if let Some(saved) = self.reopen_history.pop_back() {
                 self.current_word = saved.current_word;
                 self.raw_strokes = saved.raw_strokes;
                 self.word_used_telex = saved.word_used_telex;
@@ -766,7 +775,6 @@ impl Engine {
             self.reset();
             false
         } else {
-            self.reopen_state = None;
             let was_accented = has_vietnamese_diacritic(&self.current_word)
                 && self.raw_strokes != self.current_word
                 && self.raw_strokes.len() >= 2;
@@ -1107,6 +1115,23 @@ impl Engine {
         // If the pause between keystrokes exceeds configured timeout, the user was thinking,
         // reading code, or navigating in Normal mode (e.g. Neovim 'u' -> pause -> 'i' -> '1').
         // Finalize/flush any existing buffer so stale navigation keys never leak across paused contexts.
+        if self.config.debounce_ms > 0
+            && timestamp_ms > 0.0
+            && self.last_keystroke_time_ms > 0.0
+            && self.last_char == Some(ch)
+            && (timestamp_ms - self.last_keystroke_time_ms) < (self.config.debounce_ms as f64)
+        {
+            return EngineOutput {
+                backspaces: 0,
+                commit_text: String::new(),
+                consumed: true,
+                auto_restored: false,
+                macro_expanded: false,
+                adaptive_delay_ms: 0,
+            };
+        }
+        self.last_char = Some(ch);
+
         let timeout_ms = self.config.idle_timeout_ms as f64;
         if timeout_ms > 0.0 && timestamp_ms > 0.0 && self.last_keystroke_time_ms > 0.0 {
             let elapsed = timestamp_ms - self.last_keystroke_time_ms;
@@ -1145,7 +1170,6 @@ impl Engine {
 
         // Inline Math Symbols & Emoji Prefix (:smile:, :alpha:, :check:)
         if ch == ':' {
-            self.reopen_state = None;
             self.last_delimiter = Some(':');
             self.last_delimiter_spaced = false;
 
@@ -1189,7 +1213,6 @@ impl Engine {
 
         // Developer-Aware: Underscore code identifier handling (e.g. _variable, __init__, snake_case)
         if ch == '_' {
-            self.reopen_state = None;
             self.last_delimiter = Some('_');
             self.last_delimiter_spaced = false;
 
@@ -1227,7 +1250,6 @@ impl Engine {
 
         // Developer-Aware: Hash prefix technical token handling (e.g. #hex colors #f97316, #ef4444, CSS IDs #app, hashtags)
         if ch == '#' {
-            self.reopen_state = None;
             self.last_delimiter = Some('#');
             self.last_delimiter_spaced = false;
 
@@ -1381,10 +1403,20 @@ impl Engine {
                         };
                     }
                 }
-                let is_known_english = self.config.auto_restore_english
-                    && !has_digits
+                let context_english_collision = self.prev_word_was_english
+                    && !self.manual_undo
+                    && (2..=4).contains(&self.raw_strokes.len())
                     && self.current_word != self.raw_strokes
-                    && self.auto_restore.is_english_keyword(&self.raw_strokes);
+                    && matches!(
+                        self.raw_strokes.to_lowercase().as_str(),
+                        "is" | "as" | "this" | "has" | "see"
+                    );
+
+                let is_known_english = context_english_collision
+                    || (self.config.auto_restore_english
+                        && !has_digits
+                        && self.current_word != self.raw_strokes
+                        && self.auto_restore.is_english_keyword(&self.raw_strokes));
 
                 let alphanumeric_trap = self.has_letter_after_digit
                     && !self.current_word.ends_with(|c: char| {
@@ -1423,6 +1455,7 @@ impl Engine {
                             compare_and_split_strings(&formatted_old, &formatted_target);
                         self.reset();
                         self.stats.english_restored += 1;
+                        self.prev_word_was_english = true;
                         self.last_completed_word = Some(target);
                         return EngineOutput {
                             backspaces,
@@ -1478,7 +1511,10 @@ impl Engine {
             let raw_target = format!("{}{}", self.current_word, ch);
             let formatted_target = self.format_commit(&raw_target);
             if ch == ' ' && has_word && self.raw_strokes.len() <= 32 {
-                self.reopen_state = Some(ReopenWordState {
+                if self.reopen_history.len() >= 16 {
+                    self.reopen_history.pop_front();
+                }
+                self.reopen_history.push_back(ReopenWordState {
                     current_word: self.current_word.clone(),
                     raw_strokes: self.raw_strokes.clone(),
                     word_used_telex: self.word_used_telex,
@@ -1486,12 +1522,11 @@ impl Engine {
                     manual_undo: self.manual_undo,
                     english_locked: self.english_locked,
                 });
-            } else {
-                self.reopen_state = None;
             }
             self.reset_word_buffers();
             if has_word {
                 self.stats.words_typed += 1;
+                self.prev_word_was_english = false;
                 self.last_completed_word = Some(formatted_target);
             }
             return EngineOutput {
@@ -1505,7 +1540,6 @@ impl Engine {
         }
 
         // Any non-delimiter key cancels pending reopen state
-        self.reopen_state = None;
 
         // Developer-Aware: Chained dot accessor detection (e.g. "db.collection.findOne")
         // If an alphanumeric key begins immediately after a dot without whitespace, lock English mode
