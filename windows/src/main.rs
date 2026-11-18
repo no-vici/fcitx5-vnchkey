@@ -1094,7 +1094,7 @@ mod win_app {
                 });
                 let desc_text = format!(
                     "• 100% Thuần Việt, Hiện Đại, Nhẹ & Tốc Độ Cao\n\
-                     • 100% Offline, bảo mật, không gửi dữ liệu ra ngoài\n\
+                     • 100% Offline, bảo mật, không gởi dữ liệu ra ngoài\n\
                      • Tự động khôi phục Tiếng Anh, Smart Casing, hồi sinh từ\n\
                      • Tối ưu cho Excel, Word, Trình duyệt & Lập trình\n\
                      • Phiên làm việc: {} từ đã gõ | {} từ Tiếng Anh đã cứu",

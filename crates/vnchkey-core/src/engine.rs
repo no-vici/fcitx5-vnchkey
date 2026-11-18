@@ -1203,7 +1203,13 @@ impl Engine {
                 // 1. Macro expansion check (suppressed if this word was just reverted via Backspace)
                 let is_suppressed = self.suppressed_macro.as_deref() == Some(&self.current_word);
                 if self.config.enable_macro && !is_suppressed {
-                    if let Some(expansion) = self.macro_table.expand(&self.current_word) {
+                    if let Some(expansion) = self.macro_table.expand(&self.current_word).or_else(|| {
+                        if !self.manual_undo {
+                            self.macro_table.expand(&self.raw_strokes)
+                        } else {
+                            None
+                        }
+                    }) {
                         let target = format!("{}{}", expansion, ch);
                         let formatted_old = self.format_commit(&self.current_word);
                         let formatted_target = self.format_commit(&target);

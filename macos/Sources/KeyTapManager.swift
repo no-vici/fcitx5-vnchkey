@@ -161,6 +161,7 @@ public class KeyTapManager {
 
     /// Chế độ thu phím tắt trực tiếp từ bàn phím người dùng (Live Key Recorder)
     public var isRecordingShortcut: Bool = false
+    private let eventSource = CGEventSource(stateID: .privateState)
     public var onShortcutRecorded: ((CustomToggleShortcut) -> Void)?
     private var recordedModifiersPeak: CGEventFlags = []
 
@@ -909,7 +910,7 @@ public class KeyTapManager {
     }
 
     private func emitOutput(backspaces: Int, commitPtr: UnsafeMutablePointer<CChar>?) {
-        let src = CGEventSource(stateID: .hidSystemState)
+        let src = eventSource
 
         // 1. Giả lập phím Backspace để xóa ký tự cũ
         if backspaces > 0 {
