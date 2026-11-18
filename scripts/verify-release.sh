@@ -13,6 +13,9 @@ echo -e "${BLUE}═════════════════════�
 echo -e "${YELLOW}  vnchKey: MULTI-LANGUAGE INTEGRATION & ASAN VERIFICATION SUITE       ${NC}"
 echo -e "${BLUE}══════════════════════════════════════════════════════════════════════${NC}"
 
+echo -e "\n${GREEN}==> [Tầng 0/3] Kiểm tra đồng bộ số phiên bản trên toàn bộ tệp cấu hình...${NC}"
+cargo run --quiet --bin set-version -- --check
+
 echo -e "\n${GREEN}==> [Tầng 1/3] Kiểm thử Hồi quy, Bẫy Tiếng Anh & Property-Based Fuzzing (Rust Core)...${NC}"
 cargo test --workspace
 

@@ -106,7 +106,10 @@ dmg: app
 	@mkdir -p $(BUILD_DIR)/dmg_root
 	@cp -R $(APP_BUNDLE) $(BUILD_DIR)/dmg_root/
 	@ln -s /Applications $(BUILD_DIR)/dmg_root/Applications
-	@hdiutil create -volname "$(APP_NAME)" -srcfolder $(BUILD_DIR)/dmg_root -ov -format UDZO $(DMG_NAME)
+	@for i in 1 2 3; do \
+		hdiutil create -volname "$(APP_NAME)" -srcfolder $(BUILD_DIR)/dmg_root -ov -format UDZO -fs HFS+ $(DMG_NAME) && break || sleep 3; \
+	done
+	@test -f $(DMG_NAME)
 	@rm -rf $(BUILD_DIR)/dmg_root
 	@echo "🎉 Hoàn tất! File cài đặt DMG: $(DMG_NAME)"
 
