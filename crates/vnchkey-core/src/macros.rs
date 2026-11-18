@@ -6,6 +6,7 @@ use std::collections::HashMap;
 #[derive(Debug, Clone)]
 pub struct MacroTable {
     entries: HashMap<String, String>,
+    clipboard_text: String,
 }
 
 impl MacroTable {
@@ -47,7 +48,10 @@ impl MacroTable {
         entries.insert("vnch".to_string(), "Việt Nam Cộng Hòa".to_string());
         entries.insert("xk".to_string(), "xuất khẩu".to_string());
         entries.insert("xl".to_string(), "xin lỗi".to_string());
-        Self { entries }
+        Self {
+            entries,
+            clipboard_text: String::new(),
+        }
     }
 
     /// Clears all entries.
@@ -81,11 +85,16 @@ impl MacroTable {
         }
     }
 
+    /// Updates the cached clipboard text for `$CLIPBOARD` macro expansion.
+    pub fn set_clipboard_text(&mut self, text: impl Into<String>) {
+        self.clipboard_text = text.into();
+    }
+
     /// Expands an abbreviation if present in the dictionary.
-    /// Automatically resolves dynamic date/time variables: $DATE, $TIME, $YEAR, $NOW, $DATETIME.
+    /// Automatically resolves dynamic variables: $DATE, $ISO_DATE, $TIME, $YEAR, $NOW, $DATETIME, $WEEKDAY, $CLIPBOARD.
     pub fn expand(&self, shortcut: &str) -> Option<String> {
         let raw = self.entries.get(shortcut.to_lowercase().as_str())?;
-        Some(resolve_dynamic_tokens(raw))
+        Some(resolve_dynamic_tokens_with_clipboard(raw, &self.clipboard_text))
     }
 
     /// Inserts a new shorthand entry.
@@ -100,28 +109,46 @@ impl Default for MacroTable {
     }
 }
 
-/// Resolves dynamic date and time variables ($DATE, $TIME, $YEAR, $NOW, $DATETIME)
+/// Resolves dynamic date, time, weekday, and clipboard variables
 /// using the system's local time and timezone.
 pub fn resolve_dynamic_tokens(text: &str) -> String {
+    resolve_dynamic_tokens_with_clipboard(text, "")
+}
+
+/// Resolves dynamic variables including `$ISO_DATE`, `$WEEKDAY`, and `$CLIPBOARD`.
+pub fn resolve_dynamic_tokens_with_clipboard(text: &str, clipboard: &str) -> String {
     if !text.contains('$') {
         return text.to_string();
     }
-    let (year, month, day, hour, min) = get_local_datetime();
+    let (year, month, day, hour, min, weekday_idx) = get_local_datetime_full();
     let date_str = format!("{:02}/{:02}/{:04}", day, month, year);
+    let iso_date_str = format!("{:04}-{:02}-{:02}", year, month, day);
     let time_str = format!("{:02}:{:02}", hour, min);
     let year_str = format!("{:04}", year);
     let now_str = format!("{} {}", date_str, time_str);
+    let weekday_str = match weekday_idx {
+        0 => "Chủ Nhật",
+        1 => "Thứ Hai",
+        2 => "Thứ Ba",
+        3 => "Thứ Tư",
+        4 => "Thứ Năm",
+        5 => "Thứ Sáu",
+        _ => "Thứ Bảy",
+    };
 
     text.replace("$DATETIME", &now_str)
         .replace("$NOW", &now_str)
+        .replace("$ISO_DATE", &iso_date_str)
         .replace("$DATE", &date_str)
         .replace("$TIME", &time_str)
         .replace("$YEAR", &year_str)
+        .replace("$WEEKDAY", weekday_str)
+        .replace("$CLIPBOARD", clipboard)
 }
 
-/// Retrieves the system's local date and time according to the operating system's configured timezone.
+/// Retrieves the system's local date, time, and weekday (0 = Sunday .. 6 = Saturday).
 /// Pure in-process implementation: reads system timezone offset without spawning subprocesses (0ms overhead).
-fn get_local_datetime() -> (i32, u32, u32, u32, u32) {
+fn get_local_datetime_full() -> (i32, u32, u32, u32, u32, u32) {
     let now = std::time::SystemTime::now();
     let unix_secs = now
         .duration_since(std::time::UNIX_EPOCH)
@@ -130,8 +157,10 @@ fn get_local_datetime() -> (i32, u32, u32, u32, u32) {
 
     let offset_secs = get_local_tz_offset(unix_secs);
     let local_secs = unix_secs + (offset_secs as i64);
-
-    get_civil_datetime_from_secs(local_secs)
+    let (y, m, d, hour, min) = get_civil_datetime_from_secs(local_secs);
+    let days = local_secs.div_euclid(86400);
+    let weekday = ((days + 4).rem_euclid(7)) as u32;
+    (y, m, d, hour, min, weekday)
 }
 
 /// Discovers local timezone offset (in seconds from UTC) using zero-dependency, safe platform methods.

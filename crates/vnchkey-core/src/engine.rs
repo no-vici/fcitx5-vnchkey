@@ -82,6 +82,12 @@ pub struct EngineConfig {
     pub habit_promote_threshold: u32,
     /// Harmonize syllable casing based on initial character (ĐƯợc/ĐƯỢc -> Được, đƯỢc -> được). Defaults to false.
     pub initial_case_anchor: bool,
+    /// Automatically capitalize the first letter of a new sentence (after `.`, `?`, `!`, `\n`). Defaults to false.
+    pub auto_capitalize: bool,
+    /// Automatically complete missing circumflex/horn on unambiguous closed syllables (e.g. `truongf` -> `trường`). Defaults to false.
+    pub smart_fuzzy_vowel: bool,
+    /// Protect ALL-CAPS acronyms (2..=5 chars, e.g. OS, IOS, VPS, AWS) from Telex tone distortion. Defaults to true.
+    pub acronym_bypass: bool,
 }
 
 impl Default for EngineConfig {
@@ -105,6 +111,9 @@ impl Default for EngineConfig {
             habit_learning_enabled: true,
             habit_promote_threshold: 4,
             initial_case_anchor: false,
+            auto_capitalize: false,
+            smart_fuzzy_vowel: false,
+            acronym_bypass: true,
         }
     }
 }
@@ -135,6 +144,76 @@ pub struct TypingStats {
     pub english_restored: u64,
     /// Total macro expansions triggered
     pub macros_expanded: u64,
+    /// Total keystrokes saved by macro expansion
+    pub keystrokes_saved: u64,
+}
+
+impl TypingStats {
+    /// Serializes stats in compact `key=value` format for persistent storage.
+    pub fn serialize_compact(&self) -> String {
+        format!(
+            "words_typed={}\nenglish_restored={}\nmacros_expanded={}\nkeystrokes_saved={}\n",
+            self.words_typed, self.english_restored, self.macros_expanded, self.keystrokes_saved
+        )
+    }
+
+    /// Parses stats from compact `key=value` format.
+    pub fn parse_compact(content: &str) -> Self {
+        let mut st = Self::default();
+        for line in content.lines() {
+            if let Some((k, v)) = line.trim().split_once('=') {
+                let val = v.trim().parse::<u64>().unwrap_or(0);
+                match k.trim() {
+                    "words_typed" => st.words_typed = val,
+                    "english_restored" => st.english_restored = val,
+                    "macros_expanded" => st.macros_expanded = val,
+                    "keystrokes_saved" => st.keystrokes_saved = val,
+                    _ => {}
+                }
+            }
+        }
+        st
+    }
+}
+
+/// Thử suy luận dấu mũ/móc bị thiếu trên các vần trung gian duy nhất của tiếng Việt
+/// khi người dùng bật `smart_fuzzy_vowel`.
+fn try_resolve_fuzzy_intermediate_vowel(word: &str, tone_style: ToneStyle) -> Option<String> {
+    let mut parsed = crate::syllable_parser::parse_syllable(word)?;
+    if parsed.tone == crate::syllable_parser::ToneMark::None || parsed.coda.is_empty() {
+        return None;
+    }
+
+    let nuc_lower = parsed.nucleus.to_lowercase();
+    let is_upper_second = parsed.nucleus.chars().nth(1).map(|c| c.is_uppercase()).unwrap_or(false);
+    let is_upper_first = parsed.nucleus.chars().next().map(|c| c.is_uppercase()).unwrap_or(false);
+
+    let resolved_nucleus = match nuc_lower.as_str() {
+        "uo" if matches!(parsed.coda.to_lowercase().as_str(), "ng" | "t" | "m" | "p") => {
+            let u_ch = if is_upper_first { 'Ư' } else { 'ư' };
+            let o_ch = if is_upper_second { 'Ơ' } else { 'ơ' };
+            format!("{}{}", u_ch, o_ch)
+        }
+        "ye" => {
+            let y_ch = parsed.nucleus.chars().next().unwrap_or('y');
+            let e_ch = if is_upper_second { 'Ê' } else { 'ê' };
+            format!("{}{}", y_ch, e_ch)
+        }
+        "ie" => {
+            let i_ch = parsed.nucleus.chars().next().unwrap_or('i');
+            let e_ch = if is_upper_second { 'Ê' } else { 'ê' };
+            format!("{}{}", i_ch, e_ch)
+        }
+        _ => return None,
+    };
+
+    parsed.nucleus = resolved_nucleus;
+    let candidate = parsed.reconstruct(tone_style);
+    if is_in_vietnamese_dictionary(&candidate) {
+        Some(candidate)
+    } else {
+        None
+    }
 }
 
 /// Main Vietnamese Input Engine holding working state.
@@ -152,6 +231,7 @@ pub struct Engine {
     word_used_telex: bool,
     word_used_vni: bool,
     has_letter_after_digit: bool,
+    sentence_start_pending: bool,
     manual_undo: bool,
     english_locked: bool,
     last_completed_word: Option<String>,
@@ -411,6 +491,7 @@ impl Engine {
             word_used_telex: false,
             word_used_vni: false,
             has_letter_after_digit: false,
+            sentence_start_pending: false,
             manual_undo: false,
             english_locked: false,
             last_completed_word: None,
@@ -553,6 +634,26 @@ impl Engine {
     /// Enables or disables macro expansion.
     pub fn set_enable_macro(&mut self, enabled: bool) {
         self.config.enable_macro = enabled;
+    }
+
+    /// Updates cached clipboard text for `$CLIPBOARD` macro expansion.
+    pub fn set_clipboard_text(&mut self, text: impl Into<String>) {
+        self.macro_table.set_clipboard_text(text);
+    }
+
+    /// Enables or disables automatic sentence-start capitalization.
+    pub fn set_auto_capitalize(&mut self, enabled: bool) {
+        self.config.auto_capitalize = enabled;
+    }
+
+    /// Enables or disables smart fuzzy vowel completion on Space.
+    pub fn set_smart_fuzzy_vowel(&mut self, enabled: bool) {
+        self.config.smart_fuzzy_vowel = enabled;
+    }
+
+    /// Enables or disables ALL-CAPS acronym bypass protection.
+    pub fn set_acronym_bypass(&mut self, enabled: bool) {
+        self.config.acronym_bypass = enabled;
     }
 
     /// Returns whether macro expansion is enabled.
@@ -999,7 +1100,7 @@ impl Engine {
     }
 
     /// Process a key press event.
-    pub fn process_key(&mut self, ch: char, timestamp_ms: f64) -> EngineOutput {
+    pub fn process_key(&mut self, mut ch: char, timestamp_ms: f64) -> EngineOutput {
         self.last_completed_word = None;
 
         // Keystroke Idle Timeout:
@@ -1163,6 +1264,18 @@ impl Engine {
 
         // Word delimiter check (Space, Enter, Punctuation)
         if !ch.is_alphanumeric() && !is_bracket {
+            if matches!(ch, '.' | '?' | '!' | '\n') {
+                let prev_lower = self.raw_strokes.to_lowercase();
+                let is_abbrev_or_number = prev_lower.chars().any(|c| c.is_ascii_digit())
+                    || matches!(
+                        prev_lower.as_str(),
+                        "vd" | "tp" | "mr" | "mrs" | "ms" | "dr" | "vs" | "etc" | "st" | "ts" | "ths"
+                    );
+                self.sentence_start_pending =
+                    ch == '\n' || (!is_abbrev_or_number && !self.raw_strokes.is_empty());
+            } else if ch != ' ' {
+                self.sentence_start_pending = false;
+            }
             self.last_delimiter = Some(ch);
             self.last_delimiter_spaced = ch == ' ';
 
@@ -1220,6 +1333,9 @@ impl Engine {
                         let formatted_target = self.format_commit(&target);
                         let (backspaces, commit_text) =
                             compare_and_split_strings(&formatted_old, &formatted_target);
+                        let saved = expansion.chars().count().saturating_sub(trigger.chars().count()) as u64;
+                        self.stats.macros_expanded += 1;
+                        self.stats.keystrokes_saved += saved;
                         self.reset();
                         self.last_macro = Some(LastMacroExpansion {
                             trigger,
@@ -1245,6 +1361,26 @@ impl Engine {
                 // Valid Vietnamese words formed with digits (e.g. gio72 -> giờ, duoc975 -> được) are never restored.
                 let has_digits = self.raw_strokes.chars().any(|c| c.is_ascii_digit());
                 let is_invalid_syllable = !is_valid_vietnamese_syllable(&self.current_word);
+                if ch == ' ' && is_invalid_syllable && self.config.smart_fuzzy_vowel && !self.manual_undo {
+                    if let Some(resolved) = try_resolve_fuzzy_intermediate_vowel(&self.current_word, self.config.tone_style) {
+                        let target = format!("{}{}", resolved, ch);
+                        let formatted_old = self.format_commit(&self.current_word);
+                        let formatted_target = self.format_commit(&target);
+                        let (backspaces, commit_text) =
+                            compare_and_split_strings(&formatted_old, &formatted_target);
+                        self.reset();
+                        self.stats.words_typed += 1;
+                        self.last_completed_word = Some(target);
+                        return EngineOutput {
+                            backspaces,
+                            commit_text,
+                            consumed: true,
+                            auto_restored: false,
+                            macro_expanded: false,
+                            adaptive_delay_ms: 0,
+                        };
+                    }
+                }
                 let is_known_english = self.config.auto_restore_english
                     && !has_digits
                     && self.current_word != self.raw_strokes
@@ -1263,10 +1399,11 @@ impl Engine {
                     let learned_restore = !has_digits && self.habit_learner.is_learned_word(&self.raw_strokes);
                     let dict_restore = !has_digits
                         && self.config.enable_dictionary
-                        && self.auto_restore.should_restore(
+                        && self.auto_restore.should_restore_with_options(
                             &self.raw_strokes,
                             &self.current_word,
                             true,
+                            self.config.acronym_bypass,
                         );
                     // Invalid intermediate syllables (duòng, tién, nuóc) MUST auto-restore on Space even if auto_restore_english is false.
                     let english_or_spell_restore = is_known_english
@@ -1377,6 +1514,20 @@ impl Engine {
         }
 
         // Developer-Aware: Technical Token Protection (e.g. CSS units like "10px", "2rem", "50vh", variables with digits "v1s", "sha256", "md5")
+        if self.config.auto_capitalize
+            && self.sentence_start_pending
+            && self.current_word.is_empty()
+            && ch.is_ascii_lowercase()
+        {
+            let is_chained_dot = self.last_delimiter == Some('.') && !self.last_delimiter_spaced;
+            if !is_chained_dot {
+                ch = ch.to_ascii_uppercase();
+            }
+            self.sentence_start_pending = false;
+        } else if !self.current_word.is_empty() {
+            self.sentence_start_pending = false;
+        }
+
         // If the token starts with '#' or contains digits in Telex mode and a letter arrives, lock English mode.
         // In VNI/Auto mode, a digit could be a tone modifier (e.g. "biet61"), so we only lock if method is Telex/SimpleTelex,
         // or if the token starts with '#', or if digits are already followed by non-transforming letters.
@@ -1819,7 +1970,12 @@ impl Engine {
             && self.config.enable_dictionary
             && self
                 .auto_restore
-                .should_restore(&self.raw_strokes, &new_word, true);
+                .should_restore_with_options(
+                    &self.raw_strokes,
+                    &new_word,
+                    true,
+                    false,
+                );
 
         if !self.manual_undo
             && !is_vni_word

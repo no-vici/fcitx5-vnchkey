@@ -227,14 +227,39 @@ impl EnglishAutoRestore {
     /// Determines if `current_word` (transformed from `raw_strokes`) should be restored
     /// to `raw_strokes` based on the User Dictionary and Built-in Vietnamese Dictionary.
     pub fn should_restore(&self, raw_strokes: &str, current_word: &str, use_dictionary: bool) -> bool {
-        with_stack_lowercase(raw_strokes, |raw_clean| {
-            with_stack_lowercase(current_word, |cur_clean| {
+        self.should_restore_with_options(raw_strokes, current_word, use_dictionary, true)
+    }
+
+    /// Extended `should_restore` with explicit `acronym_bypass` toggle.
+    pub fn should_restore_with_options(
+        &self,
+        raw_strokes: &str,
+        current_word: &str,
+        use_dictionary: bool,
+        acronym_bypass: bool,
+    ) -> bool {
+        let raw_trimmed = raw_strokes.trim();
+        let cur_trimmed = current_word.trim();
+        with_stack_lowercase(raw_trimmed, |raw_clean| {
+            with_stack_lowercase(cur_trimmed, |cur_clean| {
                 // Rule 1: Never restore VNI digit sequences or very short words (< 2 raw strokes or <= 1 char result)
                 if raw_clean.len() < 2
                     || cur_clean.chars().count() <= 1
                     || raw_clean.chars().any(|c| c.is_ascii_digit())
                 {
                     return false;
+                }
+
+                // Rule 1b: Protect ALL-CAPS acronyms (2..=5 chars, e.g. OS, IOS, VPS, NAS, AWS, FPS)
+                // when the transformed result is not a valid Vietnamese dictionary word.
+                if acronym_bypass {
+                    let is_all_caps_acronym = raw_trimmed.len() >= 2
+                        && raw_trimmed.len() <= 5
+                        && raw_trimmed.chars().all(|c| c.is_ascii_uppercase())
+                        && raw_trimmed != cur_trimmed;
+                    if is_all_caps_acronym && !is_in_vietnamese_dictionary(cur_clean) {
+                        return true;
+                    }
                 }
 
                 // Rule 2: Protect common Vietnamese collision words ("this" -> "thí", "these" -> "thế", "there" -> "thể")

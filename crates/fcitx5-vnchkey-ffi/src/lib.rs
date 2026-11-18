@@ -710,6 +710,80 @@ pub unsafe extern "C" fn fcitx5_vnchkey_cycle_text_case(
     0
 }
 
+/// Updates cached clipboard text for `$CLIPBOARD` macro expansion.
+#[no_mangle]
+pub unsafe extern "C" fn fcitx5_vnchkey_set_clipboard_text(
+    ctx: *mut Fcitx5VnchkeyContext,
+    text: *const c_char,
+) {
+    if ctx.is_null() || text.is_null() {
+        return;
+    }
+    if let Ok(s) = CStr::from_ptr(text).to_str() {
+        (*ctx).engine.set_clipboard_text(s);
+    }
+}
+
+/// Enables or disables automatic sentence-start capitalization.
+#[no_mangle]
+pub unsafe extern "C" fn fcitx5_vnchkey_set_auto_capitalize(
+    ctx: *mut Fcitx5VnchkeyContext,
+    enabled: bool,
+) {
+    if !ctx.is_null() {
+        (*ctx).engine.set_auto_capitalize(enabled);
+    }
+}
+
+/// Enables or disables smart fuzzy vowel completion on Space.
+#[no_mangle]
+pub unsafe extern "C" fn fcitx5_vnchkey_set_smart_fuzzy_vowel(
+    ctx: *mut Fcitx5VnchkeyContext,
+    enabled: bool,
+) {
+    if !ctx.is_null() {
+        (*ctx).engine.set_smart_fuzzy_vowel(enabled);
+    }
+}
+
+/// Enables or disables ALL-CAPS acronym bypass protection.
+#[no_mangle]
+pub unsafe extern "C" fn fcitx5_vnchkey_set_acronym_bypass(
+    ctx: *mut Fcitx5VnchkeyContext,
+    enabled: bool,
+) {
+    if !ctx.is_null() {
+        (*ctx).engine.set_acronym_bypass(enabled);
+    }
+}
+
+/// Reads typing statistics from the engine.
+#[no_mangle]
+pub unsafe extern "C" fn fcitx5_vnchkey_get_stats(
+    ctx: *const Fcitx5VnchkeyContext,
+    words_typed: *mut u64,
+    english_restored: *mut u64,
+    macros_expanded: *mut u64,
+    keystrokes_saved: *mut u64,
+) {
+    if ctx.is_null() {
+        return;
+    }
+    let st = (*ctx).engine.stats();
+    if !words_typed.is_null() {
+        *words_typed = st.words_typed;
+    }
+    if !english_restored.is_null() {
+        *english_restored = st.english_restored;
+    }
+    if !macros_expanded.is_null() {
+        *macros_expanded = st.macros_expanded;
+    }
+    if !keystrokes_saved.is_null() {
+        *keystrokes_saved = st.keystrokes_saved;
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
