@@ -2028,6 +2028,23 @@ impl SettingsApp {
                     .size(24.0)
                     .color(egui::Color32::from_rgb(0xcd, 0xd6, 0xf4)),
             );
+
+            ui.add_space(12.0);
+            ui.group(|ui| {
+                ui.label(egui::RichText::new("Live Inspector (Debug)").strong());
+                let id = egui::Id::new("live_inspector_input");
+                let mut input = ui.data_mut(|d| d.get_temp::<String>(id).unwrap_or_default());
+                ui.horizontal(|ui| {
+                    ui.label("Gõ thử:");
+                    ui.text_edit_singleline(&mut input);
+                });
+                ui.data_mut(|d| d.insert_temp(id, input.clone()));
+                let mut eng = vnchkey_core::Engine::new(vnchkey_core::EngineConfig::default());
+                for ch in input.chars() {
+                    eng.process_key(ch, 0.0);
+                }
+                ui.label(egui::RichText::new(eng.inspect_state()).monospace().size(11.5));
+            });
             ui.add_space(6.0);
 
             // Version Pill
