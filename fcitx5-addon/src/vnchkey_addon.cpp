@@ -1889,7 +1889,8 @@ void VnchkeyEngine::startIpcServer() {
                     buf[n] = '\0';
                     handleIpcCommand(std::string(buf, n));
                     const char reply[] = "OK\n";
-                    (void)write(client_fd, reply, sizeof(reply) - 1);
+                    ssize_t written = write(client_fd, reply, sizeof(reply) - 1);
+                    (void)written;
                 }
                 close(client_fd);
             }
