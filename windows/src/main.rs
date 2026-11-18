@@ -20,8 +20,7 @@ mod win_app {
     use std::path::PathBuf;
     use std::process::Command;
     use std::ptr::null_mut;
-    use std::thread::sleep;
-    use std::time::{Duration, SystemTime, UNIX_EPOCH};
+    use std::time::{SystemTime, UNIX_EPOCH};
 
     use vnchkey_core::{Charset, Engine, EngineConfig, InputMethod, ToneStyle};
     use windows_sys::Win32::Foundation::{HWND, LPARAM, LRESULT, POINT, WPARAM};
@@ -91,6 +90,7 @@ mod win_app {
     const ID_OPEN_DICT: usize = 1051;
     const ID_RELOAD_FILES: usize = 1052;
 
+    type HANDLE = *mut std::ffi::c_void;
     const WM_APP_RELOAD_MACROS: u32 = 0x8002;
     const FILE_NOTIFY_CHANGE_FILE_NAME: u32 = 0x00000001;
     const FILE_NOTIFY_CHANGE_SIZE: u32 = 0x00000008;
