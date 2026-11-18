@@ -663,6 +663,28 @@ impl Engine {
         self.config.acronym_bypass = enabled;
     }
 
+    /// Returns a compact live-inspector snapshot of the current engine state and syllable breakdown.
+    pub fn inspect_state(&self) -> String {
+        let syllable_info = if let Some(p) = crate::syllable_parser::parse_syllable(&self.current_word) {
+            format!(
+                "onset={:?}, glide={:?}, nucleus={:?}, coda={:?}, tone={:?}",
+                p.onset, p.glide, p.nucleus, p.coda, p.tone
+            )
+        } else {
+            "unparsed".to_string()
+        };
+        format!(
+            "raw={:?} | word={:?} | locked={} | undo={} | prev_en={} | reopen_buf={} | {}",
+            self.raw_strokes,
+            self.current_word,
+            self.english_locked,
+            self.manual_undo,
+            self.prev_word_was_english,
+            self.reopen_history.len(),
+            syllable_info
+        )
+    }
+
     /// Returns whether macro expansion is enabled.
     pub fn macro_enabled(&self) -> bool {
         self.config.enable_macro
