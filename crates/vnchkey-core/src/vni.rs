@@ -301,9 +301,14 @@ impl VniEngine {
         fallback.push(ch);
 
         letters.push(ch);
-        if can_modify_syllable(&letters) && current_tone > 0 {
+        let has_horned_o = letters
+            .iter()
+            .any(|&c| matches!(decompose_vowel(c), Some(('ơ', _, _))));
+        if can_modify_syllable(&letters) && (current_tone > 0 || has_horned_o) {
             let mut changed = apply_smart_uo_horn(&mut letters);
-            rebalance_tone(&mut letters, current_tone, self.tone_style);
+            if current_tone > 0 {
+                rebalance_tone(&mut letters, current_tone, self.tone_style);
+            }
             changed |= letters != fallback;
             if changed {
                 return (letters.into_iter().collect(), true, false);

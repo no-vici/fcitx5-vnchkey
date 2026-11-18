@@ -423,9 +423,14 @@ impl TelexEngine {
         fallback.push(ch);
 
         letters.push(ch);
-        if can_modify_syllable(&letters) && current_tone > 0 {
+        let has_horned_o = letters
+            .iter()
+            .any(|&c| matches!(decompose_vowel(c), Some(('ơ', _, _))));
+        if can_modify_syllable(&letters) && (current_tone > 0 || has_horned_o) {
             let mut changed = apply_smart_uo_horn(&mut letters);
-            rebalance_tone(&mut letters, current_tone, self.tone_style);
+            if current_tone > 0 {
+                rebalance_tone(&mut letters, current_tone, self.tone_style);
+            }
             changed |= letters != fallback;
             if changed {
                 return (letters.into_iter().collect(), true, false);
@@ -572,6 +577,18 @@ pub fn apply_smart_uo_horn(letters: &mut [char]) -> bool {
             return false;
         }
 
+        let (u_base, u_tone, u_up) = decompose_vowel(letters[u_idx]).unwrap();
+        let (o_base, o_tone, o_up) = decompose_vowel(letters[o_idx]).unwrap();
+
+        // If 'ơ' was already horned in an open syllable ('thuơ', 'huơ') and the user subsequently
+        // appends a coda consonant or semivowel (e.g. 'thuowng' -> 'thương', 'huowu' -> 'hươu'),
+        // 'uơ' is no longer open and must promote 'u' -> 'ư' into the standard 'ươ' diphthong.
+        if u_base == 'u' && o_base == 'ơ' && o_idx + 1 < letters.len() {
+            let target_u_up = u_up && o_up;
+            letters[u_idx] = compose_vowel('ư', u_tone, target_u_up);
+            return true;
+        }
+
         let has_consonant_coda =
             o_idx + 1 < letters.len() && !is_vietnamese_vowel(letters[o_idx + 1]);
         if has_consonant_coda {
@@ -587,8 +604,6 @@ pub fn apply_smart_uo_horn(letters: &mut [char]) -> bool {
                 return false;
             }
 
-            let (u_base, u_tone, u_up) = decompose_vowel(letters[u_idx]).unwrap();
-            let (o_base, o_tone, o_up) = decompose_vowel(letters[o_idx]).unwrap();
             // Only auto-promote if 'o' is not explicitly circumflexed ('ô' as in 'cuộc', 'muốn')
             if o_base != 'ô' && (u_base == 'u' || o_base == 'o') {
                 // TitleCase / Shift-bleed guard: if 'o' (and rest of syllable) is lowercase,
@@ -1226,6 +1241,10 @@ mod tests {
         assert_eq!(telex.feed("daaus").0, "dấu");
         assert_eq!(telex.feed("nguowif").0, "người");
         assert_eq!(telex.feed("nguoiwf").0, "người");
+        assert_eq!(telex.feed("thuowng").0, "thương");
+        assert_eq!(telex.feed("thuowngf").0, "thường");
+        assert_eq!(telex.feed("huowng").0, "hương");
+        assert_eq!(telex.feed("huowu").0, "hươu");
         assert_eq!(telex.feed("vieetj").0, "việt");
         assert_eq!(telex.feed("muoons").0, "muốn");
         assert_eq!(telex.feed("cuoocj").0, "cuộc");
