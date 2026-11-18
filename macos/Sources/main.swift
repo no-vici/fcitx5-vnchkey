@@ -1046,6 +1046,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         let domain = Bundle.main.bundleIdentifier ?? "com.vnchkey.macos"
         defaults.removePersistentDomain(forName: domain)
         defaults.synchronize()
+        if let km = keyManager {
+            try? FileManager.default.removeItem(atPath: km.habitLogFilePath())
+        }
         defaults.set(false, forKey: "vnchkey.quick_telex")
         defaults.set(false, forKey: "vnchkey.quick_start")
         defaults.set(false, forKey: "vnchkey.quick_end")
