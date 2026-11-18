@@ -443,11 +443,13 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         let excludeRootItem = NSMenuItem(title: "Danh sách ứng dụng bị loại trừ", action: nil, keyEquivalent: "")
         let excludeSubmenu = NSMenu()
         let excluded = defaults.stringArray(forKey: "vnchkey.excludedApps") ?? []
-        if !currentAppBundleId.isEmpty {
-            let isExcluded = excluded.contains(currentAppBundleId)
-            let appLabel = NSWorkspace.shared.frontmostApplication?.localizedName ?? currentAppBundleId
+        let frontApp = NSWorkspace.shared.frontmostApplication
+        let frontBundleId = frontApp?.bundleIdentifier ?? ""
+        if !frontBundleId.isEmpty {
+            let isExcluded = excluded.contains(frontBundleId)
+            let appLabel = frontApp?.localizedName ?? frontBundleId
             let curExItem = NSMenuItem(title: "Loại trừ: \(appLabel)", action: #selector(toggleExcludeCurrentApp(_:)), keyEquivalent: "")
-            curExItem.state = isExcluded ? .on : .off
+            curExItem.state = isExcluded ? NSControl.StateValue.on : NSControl.StateValue.off
             excludeSubmenu.addItem(curExItem)
             excludeSubmenu.addItem(NSMenuItem.separator())
         }
@@ -1565,13 +1567,14 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     @objc func toggleExcludeCurrentApp(_ sender: NSMenuItem) {
-        guard !currentAppBundleId.isEmpty else { return }
+        let frontBundleId = NSWorkspace.shared.frontmostApplication?.bundleIdentifier ?? ""
+        guard !frontBundleId.isEmpty else { return }
         var excluded = defaults.stringArray(forKey: "vnchkey.excludedApps") ?? []
-        if let idx = excluded.firstIndex(of: currentAppBundleId) {
+        if let idx = excluded.firstIndex(of: frontBundleId) {
             excluded.remove(at: idx)
         } else {
-            excluded.append(currentAppBundleId)
-            keyTapManager?.setEnabled(false)
+            excluded.append(frontBundleId)
+            keyManager?.setEnabled(false)
             updateStatusButton()
         }
         defaults.set(excluded, forKey: "vnchkey.excludedApps")
