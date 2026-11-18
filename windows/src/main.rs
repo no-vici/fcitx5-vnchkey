@@ -208,6 +208,7 @@ mod win_app {
         hwnd: HWND,
         macro_dlg_hwnd: HWND,
         about_dlg_hwnd: HWND,
+        last_macros_mtime: Option<std::time::SystemTime>,
         chord_armed: bool,
         other_key_during_chord: bool,
     }
@@ -240,6 +241,7 @@ mod win_app {
             hwnd: null_mut(),
             macro_dlg_hwnd: null_mut(),
             about_dlg_hwnd: null_mut(),
+            last_macros_mtime: None,
             chord_armed: false,
             other_key_during_chord: false,
         });
@@ -905,6 +907,22 @@ mod win_app {
                 DestroyWindow(hwnd);
                 0
             }
+            WM_TIMER => {
+                if wparam == 2 {
+                    let cur_mtime = macros_path().metadata().and_then(|m| m.modified()).ok();
+                    STATE.with(|s| {
+                        if let Ok(mut st) = s.try_borrow_mut() {
+                            if cur_mtime.is_some() && cur_mtime != st.last_macros_mtime {
+                                st.last_macros_mtime = cur_mtime;
+                                if let Some(p) = macros_path().to_str() {
+                                    st.engine.load_macros_from_file(p);
+                                }
+                            }
+                        }
+                    });
+                }
+                0
+            }
             WM_DESTROY => {
                 STATE.with(|s| {
                     if let Ok(mut st) = s.try_borrow_mut() {
@@ -1155,6 +1173,22 @@ mod win_app {
                 DestroyWindow(hwnd);
                 0
             }
+            WM_TIMER => {
+                if wparam == 2 {
+                    let cur_mtime = macros_path().metadata().and_then(|m| m.modified()).ok();
+                    STATE.with(|s| {
+                        if let Ok(mut st) = s.try_borrow_mut() {
+                            if cur_mtime.is_some() && cur_mtime != st.last_macros_mtime {
+                                st.last_macros_mtime = cur_mtime;
+                                if let Some(p) = macros_path().to_str() {
+                                    st.engine.load_macros_from_file(p);
+                                }
+                            }
+                        }
+                    });
+                }
+                0
+            }
             WM_DESTROY => {
                 STATE.with(|s| {
                     if let Ok(mut st) = s.try_borrow_mut() {
@@ -1168,12 +1202,11 @@ mod win_app {
     }
 
     /// Hiển thị hộp thoại About chuyên nghiệp với logo bộ gõ chính thức thay cho biểu tượng (i) hệ thống
-    unsafe fn show_about_dialog(parent_hwnd: HWND) {
-        let existing = STATE.with(|s| s.borrow().about_dlg_hwnd);
+    unsafe fn show_about_dialog(parent_hwnd: HWND, existing: HWND) -> HWND {
         if !existing.is_null() && IsWindow(existing) != 0 {
             SetForegroundWindow(existing);
             SetActiveWindow(existing);
-            return;
+            return existing;
         }
 
         let hinstance = GetModuleHandleW(null_mut());
@@ -1220,14 +1253,10 @@ mod win_app {
         );
 
         if !hwnd_dlg.is_null() {
-            STATE.with(|s| {
-                if let Ok(mut st) = s.try_borrow_mut() {
-                    st.about_dlg_hwnd = hwnd_dlg;
-                }
-            });
             SetForegroundWindow(hwnd_dlg);
             SetActiveWindow(hwnd_dlg);
         }
+        hwnd_dlg
     }
 
     /// Kiểm tra phiên bản mới từ GitHub Releases và tự động tải/cập nhật
@@ -1381,9 +1410,10 @@ Start-Process -FilePath $batch -WindowStyle Hidden;
                 size_of::<INPUT>() as i32,
             );
 
-            // Micro-pause: allow Excel/Word/Browser message loop & caret repositioning to settle
+            // Micro-yield: allow Excel/Word/Browser message loop & caret repositioning to settle
+            // without incurring Windows' 15.6ms default sleep(1) timer tick penalty.
             if !utf16.is_empty() {
-                sleep(Duration::from_millis(1));
+                std::thread::yield_now();
             }
         }
 
@@ -2621,7 +2651,10 @@ Start-Process -FilePath $batch -WindowStyle Hidden;
                             set_autorun_enabled(!current);
                         }
                         ID_ABOUT => {
-                            show_about_dialog(hwnd);
+                            let new_dlg = show_about_dialog(hwnd, st.about_dlg_hwnd);
+                            if !new_dlg.is_null() {
+                                st.about_dlg_hwnd = new_dlg;
+                            }
                         }
                         ID_CHECK_UPDATE => {
                             check_for_updates(hwnd, false);
@@ -2650,6 +2683,22 @@ Start-Process -FilePath $batch -WindowStyle Hidden;
                         to_wstring(title).as_ptr(),
                         MB_OK | MB_ICONINFORMATION,
                     );
+                }
+                0
+            }
+            WM_TIMER => {
+                if wparam == 2 {
+                    let cur_mtime = macros_path().metadata().and_then(|m| m.modified()).ok();
+                    STATE.with(|s| {
+                        if let Ok(mut st) = s.try_borrow_mut() {
+                            if cur_mtime.is_some() && cur_mtime != st.last_macros_mtime {
+                                st.last_macros_mtime = cur_mtime;
+                                if let Some(p) = macros_path().to_str() {
+                                    st.engine.load_macros_from_file(p);
+                                }
+                            }
+                        }
+                    });
                 }
                 0
             }
@@ -2793,6 +2842,7 @@ Start-Process -FilePath $batch -WindowStyle Hidden;
             }
         });
         add_tray_icon(hwnd);
+        SetTimer(hwnd, 2, 2000, None);
 
         let kbd_hook = SetWindowsHookExW(WH_KEYBOARD_LL, Some(keyboard_hook_proc), hinstance, 0);
         let mouse_hook = SetWindowsHookExW(WH_MOUSE_LL, Some(mouse_hook_proc), hinstance, 0);
