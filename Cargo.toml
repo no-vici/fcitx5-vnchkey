@@ -16,7 +16,6 @@ authors = ["vnchKey Contributors <freedom@vnchkey.org>"]
 edition = "2021"
 license = "GPL-3.0-or-later"
 repository = "https://github.com/no-vici/fcitx5-vnchkey"
-description = "High-performance, memory-safe Vietnamese input engine for Linux (vnchKey / Fcitx5 / Wayland / X11)"
 
 [profile.release]
 opt-level = 3
