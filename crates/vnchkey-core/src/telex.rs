@@ -423,10 +423,10 @@ impl TelexEngine {
         fallback.push(ch);
 
         letters.push(ch);
-        let has_horned_o = letters
+        let has_horned_uo = letters
             .iter()
-            .any(|&c| matches!(decompose_vowel(c), Some(('ơ', _, _))));
-        if can_modify_syllable(&letters) && (current_tone > 0 || has_horned_o) {
+            .any(|&c| matches!(decompose_vowel(c), Some(('ơ' | 'ư', _, _))));
+        if can_modify_syllable(&letters) && (current_tone > 0 || has_horned_uo) {
             let mut changed = apply_smart_uo_horn(&mut letters);
             if current_tone > 0 {
                 rebalance_tone(&mut letters, current_tone, self.tone_style);
@@ -586,6 +586,17 @@ pub fn apply_smart_uo_horn(letters: &mut [char]) -> bool {
         if u_base == 'u' && o_base == 'ơ' && o_idx + 1 < letters.len() {
             let target_u_up = u_up && o_up;
             letters[u_idx] = compose_vowel('ư', u_tone, target_u_up);
+            return true;
+        }
+        // If 'ư' was already horned and the user types 'o' followed by a consonant coda
+        // (e.g. 'thuwon' -> 'thươn', 'thuwong' -> 'thương'), promote 'o' -> 'ơ'.
+        // Keep vowel codas like 'buwouws' -> 'bướu' untouched so the trailing 'w' works as expected.
+        if u_base == 'ư'
+            && o_base == 'o'
+            && o_idx + 1 < letters.len()
+            && !is_vietnamese_vowel(letters[o_idx + 1])
+        {
+            letters[o_idx] = compose_vowel('ơ', o_tone, o_up);
             return true;
         }
 
@@ -1245,6 +1256,9 @@ mod tests {
         assert_eq!(telex.feed("thuowngf").0, "thường");
         assert_eq!(telex.feed("huowng").0, "hương");
         assert_eq!(telex.feed("huowu").0, "hươu");
+        assert_eq!(telex.feed("thuwon").0, "thươn");
+        assert_eq!(telex.feed("thuwong").0, "thương");
+        assert_eq!(telex.feed("thuwongf").0, "thường");
         assert_eq!(telex.feed("vieetj").0, "việt");
         assert_eq!(telex.feed("muoons").0, "muốn");
         assert_eq!(telex.feed("cuoocj").0, "cuộc");
