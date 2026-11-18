@@ -697,7 +697,11 @@ pub unsafe extern "C" fn fcitx5_vnchkey_cycle_text_case(
         return 0;
     }
     if let Ok(c_str) = CStr::from_ptr(text).to_str() {
-        let converted = vnchkey_core::cycle_text_casing(c_str);
+        let has_combining = c_str.chars().any(|c| ('\u{0300}'..='\u{036F}').contains(&c));
+        let mut converted = vnchkey_core::cycle_text_casing(c_str);
+        if has_combining {
+            converted = vnchkey_core::engine::to_composite_unicode(&converted);
+        }
         if let Ok(res_c) = CString::new(converted) {
             *out_cased = res_c.into_raw();
             return 1;

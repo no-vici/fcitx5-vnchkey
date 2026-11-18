@@ -1549,8 +1549,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
         currentActiveBundleId = bundleId
 
-        // Khôi phục trạng thái cho ứng dụng mới (mặc định true nếu chưa có trong bộ nhớ)
-        let nextState = appStates[bundleId] ?? true
+        // Khôi phục trạng thái cho ứng dụng mới (tắt nếu nằm trong danh sách loại trừ)
+        let excluded = UserDefaults.standard.stringArray(forKey: "vnchkey.excludedApps") ?? []
+        let nextState = excluded.contains(bundleId) ? false : (appStates[bundleId] ?? true)
         if km.isEnabled != nextState {
             km.isEnabled = nextState
             updateStatusButton()

@@ -510,6 +510,13 @@ mod win_app {
                         "case_converter_shortcut" => {
                             st.case_converter_shortcut = v.to_string();
                         }
+                        "excluded_apps" => {
+                            st.excluded_apps = v
+                                .split(',')
+                                .map(|s| s.trim().to_string())
+                                .filter(|s| !s.is_empty())
+                                .collect();
+                        }
                         "initial_case_anchor" => {
                             let val = v == "true" || v == "1";
                             st.engine.set_initial_case_anchor(val);
@@ -569,7 +576,8 @@ mod win_app {
              flip_alt={}\n\
              flip_win={}\n\
              flip_vk={}\n\
-             case_converter_shortcut={}\n",
+             case_converter_shortcut={}\n\
+             excluded_apps={}\n",
             method_str,
             charset_str,
             tone_str,
@@ -588,7 +596,8 @@ mod win_app {
             st.per_app,
             st.shortcut.ctrl, st.shortcut.shift, st.shortcut.alt, st.shortcut.win, st.shortcut.key_code,
             st.flip_shortcut.ctrl, st.flip_shortcut.shift, st.flip_shortcut.alt, st.flip_shortcut.win, st.flip_shortcut.key_code,
-            st.case_converter_shortcut
+            st.case_converter_shortcut,
+            st.excluded_apps.join(",")
         );
         let _ = fs::write(&path, content);
     }

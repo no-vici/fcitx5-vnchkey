@@ -1556,8 +1556,10 @@ impl Engine {
                     self.english_locked = false;
                     self.manual_undo |= was_undo;
                     self.raw_strokes.push(ch);
+                    let formatted_old = self.format_commit(&self.current_word);
+                    let formatted_new = self.format_commit(&new_word);
                     let (backspaces, commit_text) =
-                        compare_and_split_strings(&self.current_word, &new_word);
+                        compare_and_split_strings(&formatted_old, &formatted_new);
                     self.current_word = new_word;
                     let consumed = backspaces > 0 || commit_text != ch.to_string();
                     return EngineOutput {
@@ -1624,8 +1626,10 @@ impl Engine {
                     self.english_locked = false;
                     self.manual_undo |= was_undo;
                     self.raw_strokes.push(ch);
+                    let formatted_old = self.format_commit(&self.current_word);
+                    let formatted_new = self.format_commit(&new_word);
                     let (backspaces, commit_text) =
-                        compare_and_split_strings(&self.current_word, &new_word);
+                        compare_and_split_strings(&formatted_old, &formatted_new);
                     self.current_word = new_word;
                     let consumed = backspaces > 0 || commit_text != ch.to_string();
                     return EngineOutput {
