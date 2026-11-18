@@ -10,6 +10,7 @@ PKGNAME="fcitx5-vnchkey"
 ARCH="amd64"
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 BUILD_DIR="$ROOT_DIR/target/deb-pkg"
+trap 'rm -rf "$BUILD_DIR"' EXIT
 PKG_DIR="$BUILD_DIR/${PKGNAME}_${VERSION}_${ARCH}"
 OUTPUT_DEB="$ROOT_DIR/${PKGNAME}_${VERSION}_${ARCH}.deb"
 
