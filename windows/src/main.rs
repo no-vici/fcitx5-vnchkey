@@ -952,7 +952,7 @@ mod win_app {
 
     /// Hiển thị hộp thoại thêm Gõ Tắt mới (kiểu xKey)
     unsafe fn show_add_macro_dialog(parent_hwnd: HWND) {
-        let existing = STATE.with(|s| s.borrow().macro_dlg_hwnd);
+        let existing = STATE.with(|s| s.try_borrow().map(|st| st.macro_dlg_hwnd).unwrap_or(null_mut()));
         if !existing.is_null() && IsWindow(existing) != 0 {
             SetForegroundWindow(existing);
             SetActiveWindow(existing);
@@ -1084,14 +1084,21 @@ mod win_app {
                     null_mut(),
                 );
 
-                let stats = STATE.with(|s| s.borrow().engine.stats());
+                let (words_typed, english_restored) = STATE.with(|s| {
+                    s.try_borrow()
+                        .map(|st| {
+                            let st_stats = st.engine.stats();
+                            (st_stats.words_typed, st_stats.english_restored)
+                        })
+                        .unwrap_or((0, 0))
+                });
                 let desc_text = format!(
                     "• 100% Thuần Việt, Hiện Đại, Nhẹ & Tốc Độ Cao\n\
                      • 100% Offline, bảo mật, không gửi dữ liệu ra ngoài\n\
                      • Tự động khôi phục Tiếng Anh, Smart Casing, hồi sinh từ\n\
                      • Tối ưu cho Excel, Word, Trình duyệt & Lập trình\n\
                      • Phiên làm việc: {} từ đã gõ | {} từ Tiếng Anh đã cứu",
-                    stats.words_typed, stats.english_restored
+                    words_typed, english_restored
                 );
                 let h_desc = CreateWindowExW(
                     0,
@@ -1215,11 +1222,12 @@ mod win_app {
     }
 
     /// Hiển thị hộp thoại About chuyên nghiệp với logo bộ gõ chính thức thay cho biểu tượng (i) hệ thống
-    unsafe fn show_about_dialog(parent_hwnd: HWND, existing: HWND) -> HWND {
+    unsafe fn show_about_dialog(parent_hwnd: HWND) {
+        let existing = STATE.with(|s| s.try_borrow().map(|st| st.about_dlg_hwnd).unwrap_or(null_mut()));
         if !existing.is_null() && IsWindow(existing) != 0 {
             SetForegroundWindow(existing);
             SetActiveWindow(existing);
-            return existing;
+            return;
         }
 
         let hinstance = GetModuleHandleW(null_mut());
@@ -1266,10 +1274,14 @@ mod win_app {
         );
 
         if !hwnd_dlg.is_null() {
+            STATE.with(|s| {
+                if let Ok(mut st) = s.try_borrow_mut() {
+                    st.about_dlg_hwnd = hwnd_dlg;
+                }
+            });
             SetForegroundWindow(hwnd_dlg);
             SetActiveWindow(hwnd_dlg);
         }
-        hwnd_dlg
     }
 
     /// Kiểm tra phiên bản mới từ GitHub Releases và tự động tải/cập nhật
@@ -1943,10 +1955,13 @@ Start-Process -FilePath $batch -WindowStyle Hidden;
             per_app_label.as_ptr(),
         );
         let (cur_app_name, is_excluded, excluded_list) = STATE.with(|s| {
-            let st = s.borrow();
-            let cur = st.current_app.clone();
-            let ex = !cur.is_empty() && st.excluded_apps.iter().any(|a| a.eq_ignore_ascii_case(&cur));
-            (cur, ex, st.excluded_apps.clone())
+            if let Ok(st) = s.try_borrow() {
+                let cur = st.current_app.clone();
+                let ex = !cur.is_empty() && st.excluded_apps.iter().any(|a| a.eq_ignore_ascii_case(&cur));
+                (cur, ex, st.excluded_apps.clone())
+            } else {
+                (String::new(), false, Vec::new())
+            }
         });
         let exclude_sub = CreatePopupMenu();
         if !cur_app_name.is_empty() {
@@ -2612,9 +2627,6 @@ Start-Process -FilePath $batch -WindowStyle Hidden;
                             st.engine.set_enable_macro(val);
                             save_app_config(&st);
                         }
-                        ID_ADD_MACRO => {
-                            show_add_macro_dialog(hwnd);
-                        }
                         ID_OPEN_MACROS => {
                             open_file_in_notepad(macros_path());
                         }
@@ -2663,12 +2675,6 @@ Start-Process -FilePath $batch -WindowStyle Hidden;
                             let current = is_autorun_enabled();
                             set_autorun_enabled(!current);
                         }
-                        ID_ABOUT => {
-                            let new_dlg = show_about_dialog(hwnd, st.about_dlg_hwnd);
-                            if !new_dlg.is_null() {
-                                st.about_dlg_hwnd = new_dlg;
-                            }
-                        }
                         ID_CHECK_UPDATE => {
                             check_for_updates(hwnd, false);
                         }
@@ -2689,6 +2695,11 @@ Start-Process -FilePath $batch -WindowStyle Hidden;
                         _ => {}
                     }
                 });
+                if id == ID_ADD_MACRO {
+                    show_add_macro_dialog(hwnd);
+                } else if id == ID_ABOUT {
+                    show_about_dialog(hwnd);
+                }
                 if let Some((body, title)) = record_dialog {
                     MessageBoxW(
                         hwnd,
@@ -2896,8 +2907,9 @@ Start-Process -FilePath $batch -WindowStyle Hidden;
         let mut msg: MSG = std::mem::zeroed();
         while GetMessageW(&mut msg, null_mut(), 0, 0) > 0 {
             let (dlg_macro, dlg_about) = STATE.with(|s| {
-                let st = s.borrow();
-                (st.macro_dlg_hwnd, st.about_dlg_hwnd)
+                s.try_borrow()
+                    .map(|st| (st.macro_dlg_hwnd, st.about_dlg_hwnd))
+                    .unwrap_or((null_mut(), null_mut()))
             });
             if !dlg_macro.is_null() && IsWindow(dlg_macro) != 0 && IsDialogMessageW(dlg_macro, &msg) != 0 {
                 continue;
