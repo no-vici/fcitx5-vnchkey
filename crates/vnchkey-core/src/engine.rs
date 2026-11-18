@@ -716,10 +716,12 @@ impl Engine {
             self.auto_restore.add_keyword(&self.raw_strokes);
         }
 
-        let (backspaces, commit_text) = compare_and_split_strings(&old_word, &self.current_word);
+        let formatted_old = self.format_commit(&old_word);
+        let formatted_new = self.format_commit(&self.current_word);
+        let (backspaces, commit_text) = compare_and_split_strings(&formatted_old, &formatted_new);
         Some(EngineOutput {
             backspaces,
-            commit_text: self.format_commit(&commit_text),
+            commit_text,
             consumed: true,
             auto_restored: true,
             macro_expanded: false,
@@ -780,10 +782,12 @@ impl Engine {
             self.current_word.clone()
         };
 
-        let (backspaces, commit_text) = compare_and_split_strings(&old_word, &new_word);
+        let formatted_old = self.format_commit(&old_word);
+        let formatted_new = self.format_commit(&new_word);
+        let (backspaces, commit_text) = compare_and_split_strings(&formatted_old, &formatted_new);
         Some(EngineOutput {
             backspaces,
-            commit_text: self.format_commit(&commit_text),
+            commit_text,
             consumed: true,
             auto_restored: false,
             macro_expanded: false,
@@ -810,10 +814,12 @@ impl Engine {
         let raw_cased = crate::casing::cycle_text_casing(&self.raw_strokes);
         self.raw_strokes = raw_cased;
 
-        let (backspaces, commit_text) = compare_and_split_strings(&old_word, &new_word);
+        let formatted_old = self.format_commit(&old_word);
+        let formatted_new = self.format_commit(&new_word);
+        let (backspaces, commit_text) = compare_and_split_strings(&formatted_old, &formatted_new);
         Some(EngineOutput {
             backspaces,
-            commit_text: self.format_commit(&commit_text),
+            commit_text,
             consumed: true,
             auto_restored: false,
             macro_expanded: false,
@@ -838,10 +844,11 @@ impl Engine {
                 Some((1, String::new()))
             } else {
                 // Step 2 (or non-space delimiter): revert back to original trigger
+                let exp_len = self.format_commit(&macro_state.expansion).chars().count();
                 let delete_count = if macro_state.stage == MacroUndoStage::TrailingSpaceRemoved {
-                    macro_state.expansion.chars().count()
+                    exp_len
                 } else {
-                    1 + macro_state.expansion.chars().count()
+                    1 + exp_len
                 };
                 let commit = macro_state.trigger.clone();
                 self.suppressed_macro = Some(macro_state.trigger.clone());
@@ -1806,7 +1813,9 @@ impl Engine {
             new_word = crate::casing::harmonize_syllable_case(&new_word);
         }
 
-        let (backspaces, commit_text) = compare_and_split_strings(&self.current_word, &new_word);
+        let formatted_old = self.format_commit(&self.current_word);
+        let formatted_new = self.format_commit(&new_word);
+        let (backspaces, commit_text) = compare_and_split_strings(&formatted_old, &formatted_new);
         self.current_word = new_word;
 
         // If a VNI word already has diacritics and a subsequent character (such as Neovim's `jk` escape

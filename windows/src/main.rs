@@ -587,7 +587,8 @@ mod win_app {
             st.engine.initial_case_anchor(),
             st.per_app,
             st.shortcut.ctrl, st.shortcut.shift, st.shortcut.alt, st.shortcut.win, st.shortcut.key_code,
-            st.flip_shortcut.ctrl, st.flip_shortcut.shift, st.flip_shortcut.alt, st.flip_shortcut.win, st.flip_shortcut.key_code
+            st.flip_shortcut.ctrl, st.flip_shortcut.shift, st.flip_shortcut.alt, st.flip_shortcut.win, st.flip_shortcut.key_code,
+            st.case_converter_shortcut
         );
         let _ = fs::write(&path, content);
     }
