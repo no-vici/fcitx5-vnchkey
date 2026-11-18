@@ -1838,7 +1838,7 @@ impl Engine {
 
         EngineOutput {
             backspaces,
-            commit_text: self.format_commit(&commit_text),
+            commit_text,
             consumed,
             auto_restored,
             macro_expanded: false,

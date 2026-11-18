@@ -819,7 +819,8 @@ public class KeyTapManager {
             if fcitx5_vnchkey_has_active_word(engine) && flipWord() {
                 return nil
             }
-            return nil
+            resetEngine()
+            return Unmanaged.passRetained(event)
         }
 
         // Hỗ trợ Chuyển đổi HOA / thường theo cấu hình phím tắt khi đang có từ gõ dở
@@ -837,7 +838,8 @@ public class KeyTapManager {
             if fcitx5_vnchkey_has_active_word(engine) && cycleWordCase() {
                 return nil
             }
-            return nil
+            resetEngine()
+            return Unmanaged.passRetained(event)
         }
 
         if isCmd || isCtrl || isOpt {
