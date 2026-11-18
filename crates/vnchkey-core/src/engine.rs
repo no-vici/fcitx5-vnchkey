@@ -1514,6 +1514,7 @@ impl Engine {
         }
 
         // Developer-Aware: Technical Token Protection (e.g. CSS units like "10px", "2rem", "50vh", variables with digits "v1s", "sha256", "md5")
+        let mut auto_cap_consumed = false;
         if self.config.auto_capitalize
             && self.sentence_start_pending
             && self.current_word.is_empty()
@@ -1522,6 +1523,7 @@ impl Engine {
             let is_chained_dot = self.last_delimiter == Some('.') && !self.last_delimiter_spaced;
             if !is_chained_dot {
                 ch = ch.to_ascii_uppercase();
+                auto_cap_consumed = true;
             }
             self.sentence_start_pending = false;
         } else if !self.current_word.is_empty() {
@@ -1542,7 +1544,7 @@ impl Engine {
             let formatted_old = self.format_commit(&old_word);
             let formatted_new = self.format_commit(&self.current_word);
             let (backspaces, commit_text) = compare_and_split_strings(&formatted_old, &formatted_new);
-            let consumed = backspaces > 0 || commit_text != ch.to_string();
+            let consumed = backspaces > 0 || commit_text != ch.to_string() || auto_cap_consumed;
             return EngineOutput {
                 backspaces,
                 commit_text,
@@ -1644,7 +1646,7 @@ impl Engine {
                     let formatted_old = self.format_commit(&old_word);
             let formatted_new = self.format_commit(&self.current_word);
             let (backspaces, commit_text) = compare_and_split_strings(&formatted_old, &formatted_new);
-                    let consumed = backspaces > 0 || commit_text != ch.to_string();
+                    let consumed = backspaces > 0 || commit_text != ch.to_string() || auto_cap_consumed;
                     return EngineOutput {
                         backspaces,
                         commit_text,
@@ -1698,7 +1700,7 @@ impl Engine {
                                 let (backspaces, commit_text) =
                                     compare_and_split_strings(&formatted_old, &formatted_new);
                                 self.current_word = new_tail;
-                                let consumed = backspaces > 0 || commit_text != ch.to_string();
+                                let consumed = backspaces > 0 || commit_text != ch.to_string() || auto_cap_consumed;
                                 return EngineOutput {
                                     backspaces,
                                     commit_text,
@@ -1728,7 +1730,7 @@ impl Engine {
                     let (backspaces, commit_text) =
                         compare_and_split_strings(&formatted_old, &formatted_new);
                     self.current_word = new_word;
-                    let consumed = backspaces > 0 || commit_text != ch.to_string();
+                    let consumed = backspaces > 0 || commit_text != ch.to_string() || auto_cap_consumed;
                     return EngineOutput {
                         backspaces,
                         commit_text,
@@ -1768,7 +1770,7 @@ impl Engine {
                                 let (backspaces, commit_text) =
                                     compare_and_split_strings(&formatted_old, &formatted_new);
                                 self.current_word = new_tail;
-                                let consumed = backspaces > 0 || commit_text != ch.to_string();
+                                let consumed = backspaces > 0 || commit_text != ch.to_string() || auto_cap_consumed;
                                 return EngineOutput {
                                     backspaces,
                                     commit_text,
@@ -1798,7 +1800,7 @@ impl Engine {
                     let (backspaces, commit_text) =
                         compare_and_split_strings(&formatted_old, &formatted_new);
                     self.current_word = new_word;
-                    let consumed = backspaces > 0 || commit_text != ch.to_string();
+                    let consumed = backspaces > 0 || commit_text != ch.to_string() || auto_cap_consumed;
                     return EngineOutput {
                         backspaces,
                         commit_text,

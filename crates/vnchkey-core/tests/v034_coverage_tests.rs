@@ -256,3 +256,29 @@ fn test_04_habit_learner_disk_persistence_rotation_and_unlearn() {
         );
     }
 }
+
+#[test]
+fn test_05_v037_productivity_features_and_guards() {
+    // 1. Dynamic Macro Tokens ($ISO_DATE, $WEEKDAY, $CLIPBOARD)
+    let mut table = vnchkey_core::MacroTable::new();
+    table.set_clipboard_text("https://vnchkey.org");
+    table.insert("today".to_string(), "$WEEKDAY, $ISO_DATE - $CLIPBOARD".to_string());
+    let expanded = table.expand("today").unwrap();
+    assert!(expanded.contains("Thứ ") || expanded.contains("Chủ Nhật"));
+    assert!(expanded.contains("- https://vnchkey.org"));
+
+    // 2. Acronym Bypass (IOS, AWS được bảo vệ; VIỆT giữ nguyên)
+    let mut engine = Engine::new(EngineConfig {
+        method: InputMethod::Telex,
+        acronym_bypass: true,
+        ..EngineConfig::default()
+    });
+    assert_eq!(type_stream(&mut engine, "IOS "), "IOS ");
+    engine.reset();
+    assert_eq!(type_stream(&mut engine, "VIEEJT "), "VIỆT ");
+
+    // 3. Smart Fuzzy Vowel Completion
+    engine.reset();
+    engine.set_smart_fuzzy_vowel(true);
+    assert_eq!(type_stream(&mut engine, "truongf chuyenj "), "trường chuyện ");
+}
