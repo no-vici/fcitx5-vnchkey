@@ -6,6 +6,51 @@
 
 use crate::vietnamese_dict::is_in_vietnamese_dictionary;
 use std::collections::HashSet;
+use std::hash::{BuildHasherDefault, Hasher};
+
+#[derive(Default, Debug, Clone)]
+pub struct FxHasher {
+    hash: usize,
+}
+
+impl Hasher for FxHasher {
+    #[inline]
+    fn finish(&self) -> u64 {
+        self.hash as u64
+    }
+
+    #[inline]
+    fn write(&mut self, bytes: &[u8]) {
+        const K: usize = 0x517cc1b727220a95;
+        for &b in bytes {
+            self.hash = (self.hash.rotate_left(5) ^ (b as usize)).wrapping_mul(K);
+        }
+    }
+}
+
+pub type FastHashSet<T> = HashSet<T, BuildHasherDefault<FxHasher>>;
+
+/// Chuyển chuỗi sang chữ thường trên Stack (Zero Heap Allocation) cho từ ASCII <= 64 bytes.
+#[inline]
+pub fn with_stack_lowercase<F, R>(s: &str, f: F) -> R
+where
+    F: FnOnce(&str) -> R,
+{
+    let trimmed = s.trim();
+    if trimmed.is_ascii() && trimmed.len() <= 64 {
+        let mut buf = [0u8; 64];
+        for (i, &b) in trimmed.as_bytes().iter().enumerate() {
+            buf[i] = b.to_ascii_lowercase();
+        }
+        let lower_str = std::str::from_utf8(&buf[..trimmed.len()]).unwrap_or("");
+        f(lower_str)
+    } else if trimmed.chars().all(|c| c.is_lowercase()) {
+        f(trimmed)
+    } else {
+        let lower = trimmed.to_lowercase();
+        f(&lower)
+    }
+}
 use std::fs;
 
 /// Built-in default list of common English and technical words bypassed by default
@@ -112,13 +157,16 @@ const VIETNAMESE_COLLISION_EXCEPTIONS: &[&str] = &[
 /// High-speed dictionary for English auto-restore and user custom bypass words.
 #[derive(Debug, Clone)]
 pub struct EnglishAutoRestore {
-    keywords: HashSet<String>,
+    keywords: FastHashSet<String>,
 }
 
 impl EnglishAutoRestore {
     /// Creates a new auto-restore dictionary loaded with the built-in English bypass words.
     pub fn new() -> Self {
-        let mut keywords = HashSet::with_capacity(DEFAULT_ENGLISH_WORDS.len() + 64);
+        let mut keywords = FastHashSet::with_capacity_and_hasher(
+            DEFAULT_ENGLISH_WORDS.len() + 64,
+            BuildHasherDefault::default(),
+        );
         for &word in DEFAULT_ENGLISH_WORDS {
             let clean = word.trim().to_lowercase();
             if !clean.is_empty() {
@@ -165,47 +213,49 @@ impl EnglishAutoRestore {
     /// Checks if the raw keystroke sequence forms an English or user-bypassed keyword.
     #[inline]
     pub fn is_english_keyword(&self, raw: &str) -> bool {
-        let clean = raw.trim().to_lowercase();
-        if clean.len() < 2 || clean.chars().any(|c| c.is_ascii_digit()) {
-            return false;
-        }
-        if VIETNAMESE_COLLISION_EXCEPTIONS.contains(&clean.as_str()) {
-            return false;
-        }
-        self.keywords.contains(&clean)
+        with_stack_lowercase(raw, |clean| {
+            if clean.len() < 2 || clean.chars().any(|c| c.is_ascii_digit()) {
+                return false;
+            }
+            if VIETNAMESE_COLLISION_EXCEPTIONS.contains(&clean) {
+                return false;
+            }
+            self.keywords.contains(clean)
+        })
     }
 
     /// Determines if `current_word` (transformed from `raw_strokes`) should be restored
     /// to `raw_strokes` based on the User Dictionary and Built-in Vietnamese Dictionary.
     pub fn should_restore(&self, raw_strokes: &str, current_word: &str, use_dictionary: bool) -> bool {
-        let raw_clean = raw_strokes.trim().to_lowercase();
-        let cur_clean = current_word.trim().to_lowercase();
+        with_stack_lowercase(raw_strokes, |raw_clean| {
+            with_stack_lowercase(current_word, |cur_clean| {
+                // Rule 1: Never restore VNI digit sequences or very short words (< 2 raw strokes or <= 1 char result)
+                if raw_clean.len() < 2
+                    || cur_clean.chars().count() <= 1
+                    || raw_clean.chars().any(|c| c.is_ascii_digit())
+                {
+                    return false;
+                }
 
-        // Rule 1: Never restore VNI digit sequences or very short words (< 2 raw strokes or <= 1 char result)
-        if raw_clean.len() < 2
-            || cur_clean.chars().count() <= 1
-            || raw_clean.chars().any(|c| c.is_ascii_digit())
-        {
-            return false;
-        }
+                // Rule 2: Protect common Vietnamese collision words ("this" -> "thí", "these" -> "thế", "there" -> "thể")
+                if VIETNAMESE_COLLISION_EXCEPTIONS.contains(&raw_clean)
+                    && is_in_vietnamese_dictionary(cur_clean)
+                {
+                    return false;
+                }
 
-        // Rule 2: Protect common Vietnamese collision words ("this" -> "thí", "these" -> "thế", "there" -> "thể")
-        if VIETNAMESE_COLLISION_EXCEPTIONS.contains(&raw_clean.as_str())
-            && is_in_vietnamese_dictionary(&cur_clean)
-        {
-            return false;
-        }
+                // Rule 3: If User Dictionary is enabled and raw_strokes is in the English/User dictionary:
+                // - Restore if raw_strokes is >= 4 chars (e.g. "text", "post", "cost", "user", "window", "linux")
+                // - Or restore if the resulting 2-3 letter word is NOT in the Vietnamese dictionary (e.g. "fix" -> "fĩ", "web" -> "ưeb", "yes" -> "ýe")
+                if use_dictionary && self.keywords.contains(raw_clean) {
+                    if raw_clean.len() >= 4 || !is_in_vietnamese_dictionary(cur_clean) {
+                        return true;
+                    }
+                }
 
-        // Rule 3: If User Dictionary is enabled and raw_strokes is in the English/User dictionary:
-        // - Restore if raw_strokes is >= 4 chars (e.g. "text", "post", "cost", "user", "window", "linux")
-        // - Or restore if the resulting 2-3 letter word is NOT in the Vietnamese dictionary (e.g. "fix" -> "fĩ", "web" -> "ưeb", "yes" -> "ýe")
-        if use_dictionary && self.keywords.contains(&raw_clean) {
-            if raw_clean.len() >= 4 || !is_in_vietnamese_dictionary(&cur_clean) {
-                return true;
-            }
-        }
-
-        false
+                false
+            })
+        })
     }
 }
 
