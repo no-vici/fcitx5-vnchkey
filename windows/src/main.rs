@@ -91,6 +91,23 @@ mod win_app {
     const ID_OPEN_DICT: usize = 1051;
     const ID_RELOAD_FILES: usize = 1052;
 
+    const WM_APP_RELOAD_MACROS: u32 = 0x8002;
+    const FILE_NOTIFY_CHANGE_FILE_NAME: u32 = 0x00000001;
+    const FILE_NOTIFY_CHANGE_SIZE: u32 = 0x00000008;
+    const FILE_NOTIFY_CHANGE_LAST_WRITE: u32 = 0x00000010;
+    const INFINITE: u32 = 0xFFFFFFFF;
+
+    #[link(name = "kernel32")]
+    extern "system" {
+        fn FindFirstChangeNotificationW(
+            lpPathName: *const u16,
+            bWatchSubtree: i32,
+            dwNotifyFilter: u32,
+        ) -> HANDLE;
+        fn FindNextChangeNotification(hChangeHandle: HANDLE) -> i32;
+        fn WaitForSingleObject(hHandle: HANDLE, dwMilliseconds: u32) -> u32;
+    }
+
     const ID_ABOUT: usize = 1073;
     const ID_CHECK_UPDATE: usize = 1071;
     const ID_RESET_DEFAULTS: usize = 1072;
@@ -907,20 +924,18 @@ mod win_app {
                 DestroyWindow(hwnd);
                 0
             }
-            WM_TIMER => {
-                if wparam == 2 {
-                    let cur_mtime = macros_path().metadata().and_then(|m| m.modified()).ok();
-                    STATE.with(|s| {
-                        if let Ok(mut st) = s.try_borrow_mut() {
-                            if cur_mtime.is_some() && cur_mtime != st.last_macros_mtime {
-                                st.last_macros_mtime = cur_mtime;
-                                if let Some(p) = macros_path().to_str() {
-                                    st.engine.load_macros_from_file(p);
-                                }
+            WM_APP_RELOAD_MACROS => {
+                let cur_mtime = macros_path().metadata().and_then(|m| m.modified()).ok();
+                STATE.with(|s| {
+                    if let Ok(mut st) = s.try_borrow_mut() {
+                        if cur_mtime.is_some() && cur_mtime != st.last_macros_mtime {
+                            st.last_macros_mtime = cur_mtime;
+                            if let Some(p) = macros_path().to_str() {
+                                st.engine.load_macros_from_file(p);
                             }
                         }
-                    });
-                }
+                    }
+                });
                 0
             }
             WM_DESTROY => {
@@ -1173,20 +1188,18 @@ mod win_app {
                 DestroyWindow(hwnd);
                 0
             }
-            WM_TIMER => {
-                if wparam == 2 {
-                    let cur_mtime = macros_path().metadata().and_then(|m| m.modified()).ok();
-                    STATE.with(|s| {
-                        if let Ok(mut st) = s.try_borrow_mut() {
-                            if cur_mtime.is_some() && cur_mtime != st.last_macros_mtime {
-                                st.last_macros_mtime = cur_mtime;
-                                if let Some(p) = macros_path().to_str() {
-                                    st.engine.load_macros_from_file(p);
-                                }
+            WM_APP_RELOAD_MACROS => {
+                let cur_mtime = macros_path().metadata().and_then(|m| m.modified()).ok();
+                STATE.with(|s| {
+                    if let Ok(mut st) = s.try_borrow_mut() {
+                        if cur_mtime.is_some() && cur_mtime != st.last_macros_mtime {
+                            st.last_macros_mtime = cur_mtime;
+                            if let Some(p) = macros_path().to_str() {
+                                st.engine.load_macros_from_file(p);
                             }
                         }
-                    });
-                }
+                    }
+                });
                 0
             }
             WM_DESTROY => {
@@ -2686,20 +2699,18 @@ Start-Process -FilePath $batch -WindowStyle Hidden;
                 }
                 0
             }
-            WM_TIMER => {
-                if wparam == 2 {
-                    let cur_mtime = macros_path().metadata().and_then(|m| m.modified()).ok();
-                    STATE.with(|s| {
-                        if let Ok(mut st) = s.try_borrow_mut() {
-                            if cur_mtime.is_some() && cur_mtime != st.last_macros_mtime {
-                                st.last_macros_mtime = cur_mtime;
-                                if let Some(p) = macros_path().to_str() {
-                                    st.engine.load_macros_from_file(p);
-                                }
+            WM_APP_RELOAD_MACROS => {
+                let cur_mtime = macros_path().metadata().and_then(|m| m.modified()).ok();
+                STATE.with(|s| {
+                    if let Ok(mut st) = s.try_borrow_mut() {
+                        if cur_mtime.is_some() && cur_mtime != st.last_macros_mtime {
+                            st.last_macros_mtime = cur_mtime;
+                            if let Some(p) = macros_path().to_str() {
+                                st.engine.load_macros_from_file(p);
                             }
                         }
-                    });
-                }
+                    }
+                });
                 0
             }
             WM_DESTROY => {
@@ -2842,7 +2853,31 @@ Start-Process -FilePath $batch -WindowStyle Hidden;
             }
         });
         add_tray_icon(hwnd);
-        SetTimer(hwnd, 2, 2000, None);
+        // Event-driven filesystem watcher (0% CPU when idle) for macros.conf changes
+        let hwnd_watch = hwnd as usize;
+        std::thread::spawn(move || {
+            let dir = config_dir();
+            let _ = std::fs::create_dir_all(&dir);
+            if let Some(dir_str) = dir.to_str() {
+                let dir_w = to_wstring(dir_str);
+                let handle = FindFirstChangeNotificationW(
+                    dir_w.as_ptr(),
+                    0,
+                    FILE_NOTIFY_CHANGE_LAST_WRITE | FILE_NOTIFY_CHANGE_SIZE | FILE_NOTIFY_CHANGE_FILE_NAME,
+                );
+                if !handle.is_null() && handle != (-1isize as HANDLE) {
+                    loop {
+                        if WaitForSingleObject(handle, INFINITE) != 0 {
+                            break;
+                        }
+                        PostMessageW(hwnd_watch as HWND, WM_APP_RELOAD_MACROS, 0, 0);
+                        if FindNextChangeNotification(handle) == 0 {
+                            break;
+                        }
+                    }
+                }
+            }
+        });
 
         let kbd_hook = SetWindowsHookExW(WH_KEYBOARD_LL, Some(keyboard_hook_proc), hinstance, 0);
         let mouse_hook = SetWindowsHookExW(WH_MOUSE_LL, Some(mouse_hook_proc), hinstance, 0);
