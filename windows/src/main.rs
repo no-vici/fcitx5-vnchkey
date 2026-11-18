@@ -92,6 +92,7 @@ mod win_app {
 
     const ID_ABOUT: usize = 1070;
     const ID_CHECK_UPDATE: usize = 1071;
+    const ID_RESET_DEFAULTS: usize = 1072;
 
     const ID_TRAY_EXIT: usize = 1099;
 
@@ -2240,6 +2241,12 @@ Start-Process -FilePath $batch -WindowStyle Hidden;
             ID_ABOUT,
             to_wstring("Thông tin VnCharKey (About)...").as_ptr(),
         );
+        AppendMenuW(
+            menu,
+            MF_STRING,
+            ID_RESET_DEFAULTS,
+            to_wstring("Khôi phục mặc định").as_ptr(),
+        );
 
         AppendMenuW(menu, MF_SEPARATOR, 0, null_mut());
 
@@ -2533,6 +2540,16 @@ Start-Process -FilePath $batch -WindowStyle Hidden;
                         }
                         ID_CHECK_UPDATE => {
                             check_for_updates(hwnd, false);
+                        }
+                        ID_RESET_DEFAULTS => {
+                            let _ = std::fs::remove_file(config_path());
+                            st.engine = Engine::new();
+                            st.enabled = true;
+                            st.method = InputMethod::Auto;
+                            st.charset = Charset::Unicode;
+                            st.tone_style = ToneStyle::Old;
+                            save_app_config(&st);
+                            update_tray_icon(hwnd, st.enabled);
                         }
                         ID_TRAY_EXIT => {
                             remove_tray_icon(hwnd);
