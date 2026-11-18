@@ -476,6 +476,7 @@ impl ConfigManager {
         let _ = Self::save_config(&VnchkeyConfig::default());
         let _ = fs::remove_file(Self::macro_path());
         let _ = fs::remove_file(Self::dict_path());
+        let _ = fs::remove_file(Self::habit_log_path());
         let _ = fs::remove_file(Self::app_modes_path());
         let _ = fs::remove_file(Self::legacy_app_modes_path());
         Self::reload_fcitx5();
