@@ -1308,7 +1308,7 @@ void VnchkeyEngine::keyEvent(const fcitx::InputMethodEntry &entry, fcitx::KeyEve
         else if (ic && ic->capabilityFlags().test(fcitx::CapabilityFlag::SurroundingText) &&
                  ic->surroundingText().isValid()) {
             const auto& surrounding = ic->surroundingText();
-            if (surrounding.cursor() != surrounding.anchor()) {
+            if (surrounding.cursor() >= 0 && surrounding.anchor() >= 0 && surrounding.cursor() != surrounding.anchor()) {
                 std::string sel = surrounding.selectedText();
                 if (!sel.empty() && sel.length() <= 1024) {
                     char* cased = nullptr;
@@ -1595,7 +1595,7 @@ void VnchkeyEngine::keyEvent(const fcitx::InputMethodEntry &entry, fcitx::KeyEve
         ic->capabilityFlags().test(fcitx::CapabilityFlag::SurroundingText) &&
         ic->surroundingText().isValid()) {
         const auto& surrounding = ic->surroundingText();
-        if (surrounding.cursor() != surrounding.anchor()) {
+        if (surrounding.cursor() >= 0 && surrounding.anchor() >= 0 && surrounding.cursor() != surrounding.anchor()) {
             std::string sel = surrounding.selectedText();
             if (!sel.empty() && sel.length() <= 80) {
                 char* transformed = nullptr;

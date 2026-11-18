@@ -1100,7 +1100,9 @@ impl Engine {
                 self.raw_strokes.push('_');
                 self.current_word = self.raw_strokes.clone();
                 self.english_locked = true;
-                let (backspaces, commit_text) = compare_and_split_strings(&old_word, &self.current_word);
+                let formatted_old = self.format_commit(&old_word);
+            let formatted_new = self.format_commit(&self.current_word);
+            let (backspaces, commit_text) = compare_and_split_strings(&formatted_old, &formatted_new);
                 return EngineOutput {
                     backspaces,
                     commit_text: self.format_commit(&commit_text),
@@ -1135,7 +1137,9 @@ impl Engine {
                 self.raw_strokes.push('#');
                 self.current_word = self.raw_strokes.clone();
                 self.english_locked = true;
-                let (backspaces, commit_text) = compare_and_split_strings(&old_word, &self.current_word);
+                let formatted_old = self.format_commit(&old_word);
+            let formatted_new = self.format_commit(&self.current_word);
+            let (backspaces, commit_text) = compare_and_split_strings(&formatted_old, &formatted_new);
                 return EngineOutput {
                     backspaces,
                     commit_text: self.format_commit(&commit_text),
@@ -1361,7 +1365,9 @@ impl Engine {
             self.raw_strokes.push(ch);
             self.current_word = self.raw_strokes.clone();
             self.english_locked = true;
-            let (backspaces, commit_text) = compare_and_split_strings(&old_word, &self.current_word);
+            let formatted_old = self.format_commit(&old_word);
+            let formatted_new = self.format_commit(&self.current_word);
+            let (backspaces, commit_text) = compare_and_split_strings(&formatted_old, &formatted_new);
             return EngineOutput {
                 backspaces,
                 commit_text: self.format_commit(&commit_text),
@@ -1401,7 +1407,9 @@ impl Engine {
             self.raw_strokes.push(ch);
             self.current_word = self.raw_strokes.clone();
             self.english_locked = true;
-            let (backspaces, commit_text) = compare_and_split_strings(&old_word, &self.current_word);
+            let formatted_old = self.format_commit(&old_word);
+            let formatted_new = self.format_commit(&self.current_word);
+            let (backspaces, commit_text) = compare_and_split_strings(&formatted_old, &formatted_new);
             return EngineOutput {
                 backspaces,
                 commit_text,
@@ -1458,7 +1466,9 @@ impl Engine {
                     self.raw_strokes.push(ch);
                     self.current_word = self.raw_strokes.clone();
                     self.english_locked = true;
-                    let (backspaces, commit_text) = compare_and_split_strings(&old_word, &self.current_word);
+                    let formatted_old = self.format_commit(&old_word);
+            let formatted_new = self.format_commit(&self.current_word);
+            let (backspaces, commit_text) = compare_and_split_strings(&formatted_old, &formatted_new);
                     return EngineOutput {
                         backspaces,
                         commit_text: self.format_commit(&commit_text),
@@ -1663,7 +1673,9 @@ impl Engine {
                         self.current_word.pop();
                         self.current_word.push_str(rep);
                         self.raw_strokes.push(ch);
-                        let (backspaces, commit_text) = compare_and_split_strings(&old_word, &self.current_word);
+                        let formatted_old = self.format_commit(&old_word);
+            let formatted_new = self.format_commit(&self.current_word);
+            let (backspaces, commit_text) = compare_and_split_strings(&formatted_old, &formatted_new);
                         return EngineOutput {
                             backspaces,
                             commit_text: self.format_commit(&commit_text),
@@ -1694,7 +1706,9 @@ impl Engine {
                             let old_word = self.current_word.clone();
                             self.current_word.push_str(rep);
                             self.raw_strokes.push(ch);
-                            let (backspaces, commit_text) = compare_and_split_strings(&old_word, &self.current_word);
+                            let formatted_old = self.format_commit(&old_word);
+            let formatted_new = self.format_commit(&self.current_word);
+            let (backspaces, commit_text) = compare_and_split_strings(&formatted_old, &formatted_new);
                             return EngineOutput {
                                 backspaces,
                                 commit_text: self.format_commit(&commit_text),

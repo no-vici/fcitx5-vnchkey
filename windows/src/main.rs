@@ -1648,11 +1648,12 @@ Start-Process -FilePath $batch -WindowStyle Hidden;
         // Cycles word casing (lower -> UPPER -> Title Case) when active word exists!
         let case_cycled = STATE.with(|s| {
             let Ok(mut st) = s.try_borrow_mut() else { return false; };
-            let case_triggered = match st.case_converter_shortcut.as_str() {
-                "Ctrl+Shift+C" => ctrl_down && shift_down && !alt_down && !win_down && vk == 'C' as u16,
-                "Alt+C" => !ctrl_down && !shift_down && alt_down && !win_down && vk == 'C' as u16,
-                "Ctrl+Alt+U" => ctrl_down && !shift_down && alt_down && !win_down && vk == 'U' as u16,
-                "Disabled" => false,
+            let sc_lower = st.case_converter_shortcut.to_ascii_lowercase();
+            let case_triggered = match sc_lower.as_str() {
+                "ctrl+shift+c" => ctrl_down && shift_down && !alt_down && !win_down && vk == 'C' as u16,
+                "alt+c" => !ctrl_down && !shift_down && alt_down && !win_down && vk == 'C' as u16,
+                "ctrl+alt+u" => ctrl_down && !shift_down && alt_down && !win_down && vk == 'U' as u16,
+                "disabled" => false,
                 _ => ctrl_down && shift_down && !alt_down && !win_down && vk == 'U' as u16,
             };
             if st.enabled && case_triggered && st.engine.has_active_word() {

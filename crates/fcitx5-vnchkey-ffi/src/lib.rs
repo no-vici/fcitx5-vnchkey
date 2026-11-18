@@ -690,6 +690,9 @@ pub unsafe extern "C" fn fcitx5_vnchkey_cycle_text_case(
     text: *const c_char,
     out_cased: *mut *mut c_char,
 ) -> c_int {
+    if !out_cased.is_null() {
+        *out_cased = std::ptr::null_mut();
+    }
     if text.is_null() || out_cased.is_null() {
         return 0;
     }
