@@ -1574,7 +1574,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             excluded.remove(at: idx)
         } else {
             excluded.append(frontBundleId)
-            keyManager?.setEnabled(false)
+            keyManager?.isEnabled = false
             updateStatusButton()
         }
         defaults.set(excluded, forKey: "vnchkey.excludedApps")
