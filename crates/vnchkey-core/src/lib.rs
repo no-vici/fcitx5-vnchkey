@@ -25,7 +25,7 @@ pub use casing::{cycle_text_casing, harmonize_syllable_case, to_title_case, Case
 pub use glyph::{base_ascii, QualityModifier, ToneMark as GlyphToneMark, VietnameseGlyph};
 pub use engine::{
     to_composite_unicode, Charset, Engine, EngineConfig, EngineOutput, InputMethod, ToneStyle,
-    W2UType,
+    TypingStats, W2UType,
 };
 pub use habit_learner::{
     CorrectionKind, HabitLearner, DEFAULT_MAX_LOG_BYTES, DEFAULT_PROMOTE_THRESHOLD,

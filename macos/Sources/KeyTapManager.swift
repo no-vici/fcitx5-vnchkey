@@ -820,8 +820,18 @@ public class KeyTapManager {
             }
         }
 
-        // Hỗ trợ Chuyển đổi HOA / thường bằng Ctrl+Shift+U (keyCode 32 = 'U') khi đang có từ gõ dở
-        if isCtrl && isShift && !isCmd && !isOpt && keyCode == 32 {
+        // Hỗ trợ Chuyển đổi HOA / thường theo cấu hình phím tắt khi đang có từ gõ dở
+        let caseShortcut = UserDefaults.standard.string(forKey: "vnchkey.case_converter_shortcut") ?? "Ctrl+Shift+U"
+        let caseTriggered: Bool = {
+            switch caseShortcut {
+            case "Ctrl+Shift+C": return isCtrl && isShift && !isCmd && !isOpt && keyCode == 8
+            case "Alt+C": return !isCtrl && !isShift && !isCmd && isOpt && keyCode == 8
+            case "Ctrl+Alt+U": return isCtrl && !isShift && !isCmd && isOpt && keyCode == 32
+            case "Disabled": return false
+            default: return isCtrl && isShift && !isCmd && !isOpt && keyCode == 32 // Ctrl+Shift+U
+            }
+        }()
+        if caseTriggered {
             if fcitx5_vnchkey_has_active_word(engine) && cycleWordCase() {
                 return nil
             }

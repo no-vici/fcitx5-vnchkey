@@ -126,6 +126,17 @@ pub struct EngineOutput {
     pub adaptive_delay_ms: u64,
 }
 
+/// Offline typing statistics tracked by the engine.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub struct TypingStats {
+    /// Total Vietnamese words committed
+    pub words_typed: u64,
+    /// Total times Smart English Restore rescued an English word
+    pub english_restored: u64,
+    /// Total macro expansions triggered
+    pub macros_expanded: u64,
+}
+
 /// Main Vietnamese Input Engine holding working state.
 #[derive(Debug)]
 pub struct Engine {
@@ -150,6 +161,7 @@ pub struct Engine {
     last_delimiter: Option<char>,
     last_delimiter_spaced: bool,
     last_keystroke_time_ms: f64,
+    stats: TypingStats,
 }
 
 /// Saved state of the previous word completed with a single Space,
@@ -407,7 +419,13 @@ impl Engine {
             last_delimiter: None,
             last_delimiter_spaced: false,
             last_keystroke_time_ms: 0.0,
+            stats: TypingStats::default(),
         }
+    }
+
+    /// Returns offline typing statistics for the current session.
+    pub fn stats(&self) -> TypingStats {
+        self.stats
     }
 
     /// Loads custom macros from configuration file.
@@ -1234,6 +1252,7 @@ impl Engine {
                         let (backspaces, commit_text) =
                             compare_and_split_strings(&self.current_word, &target);
                         self.reset();
+                        self.stats.english_restored += 1;
                         self.last_completed_word = Some(target);
                         return EngineOutput {
                             backspaces,
@@ -1302,6 +1321,7 @@ impl Engine {
             }
             self.reset_word_buffers();
             if has_word {
+                self.stats.words_typed += 1;
                 self.last_completed_word = Some(formatted_target);
             }
             return EngineOutput {

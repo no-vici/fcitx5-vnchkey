@@ -201,6 +201,8 @@ mod win_app {
         current_app: String,
         shortcut: CustomShortcut,
         flip_shortcut: CustomShortcut,
+        case_converter_shortcut: String,
+        excluded_apps: Vec<String>,
         recording_mode: RecordingMode,
         hwnd: HWND,
         macro_dlg_hwnd: HWND,
@@ -227,6 +229,12 @@ mod win_app {
             current_app: String::new(),
             shortcut: CustomShortcut::default(),
             flip_shortcut: CustomShortcut::from_modifiers_and_key(true, true, false, false, 0x5A),
+            case_converter_shortcut: "Ctrl+Shift+U".to_string(),
+            excluded_apps: vec![
+                "League of Legends.exe".to_string(),
+                "VALORANT-Win64-Shipping.exe".to_string(),
+                "cs2.exe".to_string(),
+            ],
             recording_mode: RecordingMode::None,
             hwnd: null_mut(),
             macro_dlg_hwnd: null_mut(),
@@ -1028,15 +1036,19 @@ mod win_app {
                     null_mut(),
                 );
 
-                let desc_text = "• 100% Thuần Việt, Hiện Đại, Nhẹ & Tốc Độ Cao\n\
-                                 • 100% Offline, bảo mật, không gửi dữ liệu ra ngoài\n\
-                                 • Tự động khôi phục Tiếng Anh, Smart Casing, hồi sinh từ\n\
-                                 • Tối ưu cho Excel, Word, Trình duyệt & Lập trình\n\
-                                 • Hoạt động độc lập, không cần cài đặt (Portable Mode)";
+                let stats = STATE.with(|s| s.borrow().engine.stats());
+                let desc_text = format!(
+                    "• 100% Thuần Việt, Hiện Đại, Nhẹ & Tốc Độ Cao\n\
+                     • 100% Offline, bảo mật, không gửi dữ liệu ra ngoài\n\
+                     • Tự động khôi phục Tiếng Anh, Smart Casing, hồi sinh từ\n\
+                     • Tối ưu cho Excel, Word, Trình duyệt & Lập trình\n\
+                     • Phiên làm việc: {} từ đã gõ | {} từ Tiếng Anh đã cứu",
+                    stats.words_typed, stats.english_restored
+                );
                 let h_desc = CreateWindowExW(
                     0,
                     to_wstring("STATIC").as_ptr(),
-                    to_wstring(desc_text).as_ptr(),
+                    to_wstring(&desc_text).as_ptr(),
                     WS_CHILD | WS_VISIBLE,
                     24,
                     90,
@@ -1623,14 +1635,14 @@ Start-Process -FilePath $batch -WindowStyle Hidden;
         // Cycles word casing (lower -> UPPER -> Title Case) when active word exists!
         let case_cycled = STATE.with(|s| {
             let Ok(mut st) = s.try_borrow_mut() else { return false; };
-            if st.enabled
-                && ctrl_down
-                && shift_down
-                && !alt_down
-                && !win_down
-                && vk == 'U' as u16
-                && st.engine.has_active_word()
-            {
+            let case_triggered = match st.case_converter_shortcut.as_str() {
+                "Ctrl+Shift+C" => ctrl_down && shift_down && !alt_down && !win_down && vk == 'C' as u16,
+                "Alt+C" => !ctrl_down && !shift_down && alt_down && !win_down && vk == 'C' as u16,
+                "Ctrl+Alt+U" => ctrl_down && !shift_down && alt_down && !win_down && vk == 'U' as u16,
+                "Disabled" => false,
+                _ => ctrl_down && shift_down && !alt_down && !win_down && vk == 'U' as u16,
+            };
+            if st.enabled && case_triggered && st.engine.has_active_word() {
                 if let Some(out) = st.engine.cycle_current_word_case() {
                     emit_output(out.backspaces, &out.commit_text);
                     return true;
@@ -2746,6 +2758,7 @@ Start-Process -FilePath $batch -WindowStyle Hidden;
     }
 }
 
+#[cfg_attr(not(windows), allow(dead_code))]
 fn add_or_update_macro_file(
     p: &std::path::Path,
     shortcut: &str,
