@@ -785,6 +785,7 @@ public class KeyTapManager {
                 }
                 return nil
             }
+            return nil
         }
 
         // Nếu có phím thường được bấm trong lúc đang giữ tổ hợp modifier, huỷ kích hoạt chord
@@ -818,6 +819,7 @@ public class KeyTapManager {
             if fcitx5_vnchkey_has_active_word(engine) && flipWord() {
                 return nil
             }
+            return nil
         }
 
         // Hỗ trợ Chuyển đổi HOA / thường theo cấu hình phím tắt khi đang có từ gõ dở
@@ -835,6 +837,7 @@ public class KeyTapManager {
             if fcitx5_vnchkey_has_active_word(engine) && cycleWordCase() {
                 return nil
             }
+            return nil
         }
 
         if isCmd || isCtrl || isOpt {

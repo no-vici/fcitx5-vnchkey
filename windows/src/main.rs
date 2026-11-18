@@ -507,6 +507,9 @@ mod win_app {
                             let val = v.parse::<u32>().unwrap_or(4).max(1);
                             st.engine.set_habit_promote_threshold(val);
                         }
+                        "case_converter_shortcut" => {
+                            st.case_converter_shortcut = v.to_string();
+                        }
                         "initial_case_anchor" => {
                             let val = v == "true" || v == "1";
                             st.engine.set_initial_case_anchor(val);
@@ -565,7 +568,8 @@ mod win_app {
              flip_shift={}\n\
              flip_alt={}\n\
              flip_win={}\n\
-             flip_vk={}\n",
+             flip_vk={}\n\
+             case_converter_shortcut={}\n",
             method_str,
             charset_str,
             tone_str,

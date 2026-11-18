@@ -920,7 +920,7 @@ impl Engine {
         }
 
         if output != text {
-            Some(output)
+            Some(self.format_commit(&output))
         } else {
             None
         }
@@ -982,7 +982,7 @@ impl Engine {
         };
 
         if transformed && new_word != last_word {
-            Some(format!("{}{}{}", preceding, new_word, trailing_spaces))
+            Some(self.format_commit(&format!("{}{}{}", preceding, new_word, trailing_spaces)))
         } else {
             None
         }
@@ -1194,8 +1194,10 @@ impl Engine {
                 if self.config.enable_macro && !is_suppressed {
                     if let Some(expansion) = self.macro_table.expand(&self.current_word) {
                         let target = format!("{}{}", expansion, ch);
+                        let formatted_old = self.format_commit(&self.current_word);
+                        let formatted_target = self.format_commit(&target);
                         let (backspaces, commit_text) =
-                            compare_and_split_strings(&self.current_word, &target);
+                            compare_and_split_strings(&formatted_old, &formatted_target);
                         let trigger = self.current_word.clone();
                         self.reset();
                         self.last_macro = Some(LastMacroExpansion {
@@ -1251,8 +1253,10 @@ impl Engine {
 
                     if learned_restore || dict_restore || english_or_spell_restore {
                         let target = format!("{}{}", self.raw_strokes, ch);
+                        let formatted_old = self.format_commit(&self.current_word);
+                        let formatted_target = self.format_commit(&target);
                         let (backspaces, commit_text) =
-                            compare_and_split_strings(&self.current_word, &target);
+                            compare_and_split_strings(&formatted_old, &formatted_target);
                         self.reset();
                         self.stats.english_restored += 1;
                         self.last_completed_word = Some(target);

@@ -265,6 +265,9 @@ pub unsafe extern "C" fn fcitx5_vnchkey_rescue_sentence(
     text: *const c_char,
     out_rescued: *mut *mut c_char,
 ) -> c_int {
+    if !out_rescued.is_null() {
+        *out_rescued = std::ptr::null_mut();
+    }
     if ctx.is_null() || text.is_null() || out_rescued.is_null() {
         return 0;
     }
@@ -288,6 +291,9 @@ pub unsafe extern "C" fn fcitx5_vnchkey_apply_accent_to_selection(
     ch: u32,
     out_transformed: *mut *mut c_char,
 ) -> c_int {
+    if !out_transformed.is_null() {
+        *out_transformed = std::ptr::null_mut();
+    }
     if ctx.is_null() || selection.is_null() || out_transformed.is_null() {
         return 0;
     }
