@@ -440,14 +440,30 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         perAppItem.state = isPerAppEnabled() ? .on : .off
         menu.addItem(perAppItem)
 
+        let excludeRootItem = NSMenuItem(title: "Danh sách ứng dụng bị loại trừ", action: nil, keyEquivalent: "")
+        let excludeSubmenu = NSMenu()
+        let excluded = defaults.stringArray(forKey: "vnchkey.excludedApps") ?? []
         if !currentAppBundleId.isEmpty {
-            let excluded = defaults.stringArray(forKey: "vnchkey.excludedApps") ?? []
             let isExcluded = excluded.contains(currentAppBundleId)
             let appLabel = NSWorkspace.shared.frontmostApplication?.localizedName ?? currentAppBundleId
-            let excludeItem = NSMenuItem(title: "Loại trừ ứng dụng (\(appLabel))", action: #selector(toggleExcludeCurrentApp(_:)), keyEquivalent: "")
-            excludeItem.state = isExcluded ? .on : .off
-            menu.addItem(excludeItem)
+            let curExItem = NSMenuItem(title: "Loại trừ: \(appLabel)", action: #selector(toggleExcludeCurrentApp(_:)), keyEquivalent: "")
+            curExItem.state = isExcluded ? .on : .off
+            excludeSubmenu.addItem(curExItem)
+            excludeSubmenu.addItem(NSMenuItem.separator())
         }
+        if excluded.isEmpty {
+            let emptyItem = NSMenuItem(title: "(Chưa có ứng dụng nào)", action: nil, keyEquivalent: "")
+            emptyItem.isEnabled = false
+            excludeSubmenu.addItem(emptyItem)
+        } else {
+            for bundleId in excluded {
+                let item = NSMenuItem(title: "Bỏ loại trừ: \(bundleId)", action: #selector(removeExcludedAppFromMenu(_:)), keyEquivalent: "")
+                item.representedObject = bundleId
+                excludeSubmenu.addItem(item)
+            }
+        }
+        excludeRootItem.submenu = excludeSubmenu
+        menu.addItem(excludeRootItem)
 
         let loginItem = NSMenuItem(title: "Khởi động cùng máy (Open at login)", action: #selector(toggleOpenAtLoginFromMenu(_:)), keyEquivalent: "")
         loginItem.state = isOpenAtLoginEnabled() ? .on : .off
@@ -1558,6 +1574,15 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             keyTapManager?.setEnabled(false)
             updateStatusButton()
         }
+        defaults.set(excluded, forKey: "vnchkey.excludedApps")
+        rebuildMenu()
+        syncDashboardControls()
+    }
+
+    @objc func removeExcludedAppFromMenu(_ sender: NSMenuItem) {
+        guard let bundleId = sender.representedObject as? String else { return }
+        var excluded = defaults.stringArray(forKey: "vnchkey.excludedApps") ?? []
+        excluded.removeAll { $0 == bundleId }
         defaults.set(excluded, forKey: "vnchkey.excludedApps")
         rebuildMenu()
         syncDashboardControls()

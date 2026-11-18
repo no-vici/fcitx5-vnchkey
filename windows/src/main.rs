@@ -1876,21 +1876,41 @@ Start-Process -FilePath $batch -WindowStyle Hidden;
             ID_TOGGLE_PER_APP,
             per_app_label.as_ptr(),
         );
-        let (cur_app_name, is_excluded) = STATE.with(|s| {
+        let (cur_app_name, is_excluded, excluded_list) = STATE.with(|s| {
             let st = s.borrow();
             let cur = st.current_app.clone();
             let ex = !cur.is_empty() && st.excluded_apps.iter().any(|a| a.eq_ignore_ascii_case(&cur));
-            (cur, ex)
+            (cur, ex, st.excluded_apps.clone())
         });
+        let exclude_sub = CreatePopupMenu();
         if !cur_app_name.is_empty() {
-            let ex_label = to_wstring(&format!("Loại trừ ứng dụng ({})", cur_app_name));
+            let ex_label = to_wstring(&format!("Loại trừ: {}", cur_app_name));
             AppendMenuW(
-                menu,
+                exclude_sub,
                 MF_STRING | if is_excluded { MF_CHECKED } else { MF_UNCHECKED },
                 ID_TOGGLE_EXCLUDE_APP,
                 ex_label.as_ptr(),
             );
+            AppendMenuW(exclude_sub, MF_SEPARATOR, 0, null_mut());
         }
+        if excluded_list.is_empty() {
+            AppendMenuW(exclude_sub, MF_STRING | MF_GRAYED, 0, to_wstring("(Chưa có ứng dụng nào)").as_ptr());
+        } else {
+            for app in &excluded_list {
+                AppendMenuW(
+                    exclude_sub,
+                    MF_STRING | MF_CHECKED,
+                    0,
+                    to_wstring(app).as_ptr(),
+                );
+            }
+        }
+        AppendMenuW(
+            menu,
+            MF_POPUP,
+            exclude_sub as usize,
+            to_wstring("Danh sách ứng dụng bị loại trừ").as_ptr(),
+        );
         AppendMenuW(menu, MF_SEPARATOR, 0, null_mut());
 
         // 2. Kiểu Gõ Submenu
