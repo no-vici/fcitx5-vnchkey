@@ -440,6 +440,15 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         perAppItem.state = isPerAppEnabled() ? .on : .off
         menu.addItem(perAppItem)
 
+        if !currentAppBundleId.isEmpty {
+            let excluded = defaults.stringArray(forKey: "vnchkey.excludedApps") ?? []
+            let isExcluded = excluded.contains(currentAppBundleId)
+            let appLabel = NSWorkspace.shared.frontmostApplication?.localizedName ?? currentAppBundleId
+            let excludeItem = NSMenuItem(title: "Loại trừ ứng dụng (\(appLabel))", action: #selector(toggleExcludeCurrentApp(_:)), keyEquivalent: "")
+            excludeItem.state = isExcluded ? .on : .off
+            menu.addItem(excludeItem)
+        }
+
         let loginItem = NSMenuItem(title: "Khởi động cùng máy (Open at login)", action: #selector(toggleOpenAtLoginFromMenu(_:)), keyEquivalent: "")
         loginItem.state = isOpenAtLoginEnabled() ? .on : .off
         menu.addItem(loginItem)
@@ -1535,6 +1544,21 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     @objc func togglePerAppFromMenu(_ sender: NSMenuItem) {
         let next = !isPerAppEnabled()
         defaults.set(next, forKey: "vnchkey.perApp")
+        rebuildMenu()
+        syncDashboardControls()
+    }
+
+    @objc func toggleExcludeCurrentApp(_ sender: NSMenuItem) {
+        guard !currentAppBundleId.isEmpty else { return }
+        var excluded = defaults.stringArray(forKey: "vnchkey.excludedApps") ?? []
+        if let idx = excluded.firstIndex(of: currentAppBundleId) {
+            excluded.remove(at: idx)
+        } else {
+            excluded.append(currentAppBundleId)
+            keyTapManager?.setEnabled(false)
+            updateStatusButton()
+        }
+        defaults.set(excluded, forKey: "vnchkey.excludedApps")
         rebuildMenu()
         syncDashboardControls()
     }

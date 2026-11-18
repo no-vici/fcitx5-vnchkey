@@ -39,6 +39,7 @@ mod win_app {
     // Menu Action IDs
     const ID_TRAY_TOGGLE: usize = 1001;
     const ID_TOGGLE_PER_APP: usize = 1006;
+    const ID_TOGGLE_EXCLUDE_APP: usize = 1070;
 
     const ID_METHOD_AUTO: usize = 1002;
     const ID_METHOD_TELEX: usize = 1003;
@@ -1875,6 +1876,21 @@ Start-Process -FilePath $batch -WindowStyle Hidden;
             ID_TOGGLE_PER_APP,
             per_app_label.as_ptr(),
         );
+        let (cur_app_name, is_excluded) = STATE.with(|s| {
+            let st = s.borrow();
+            let cur = st.current_app.clone();
+            let ex = !cur.is_empty() && st.excluded_apps.iter().any(|a| a.eq_ignore_ascii_case(&cur));
+            (cur, ex)
+        });
+        if !cur_app_name.is_empty() {
+            let ex_label = to_wstring(&format!("Loại trừ ứng dụng ({})", cur_app_name));
+            AppendMenuW(
+                menu,
+                MF_STRING | if is_excluded { MF_CHECKED } else { MF_UNCHECKED },
+                ID_TOGGLE_EXCLUDE_APP,
+                ex_label.as_ptr(),
+            );
+        }
         AppendMenuW(menu, MF_SEPARATOR, 0, null_mut());
 
         // 2. Kiểu Gõ Submenu
@@ -2344,6 +2360,19 @@ Start-Process -FilePath $batch -WindowStyle Hidden;
                             st.per_app = !st.per_app;
                             save_app_config(&st);
                         }
+                        ID_TOGGLE_EXCLUDE_APP => {
+                            let cur = st.current_app.clone();
+                            if !cur.is_empty() {
+                                if let Some(pos) = st.excluded_apps.iter().position(|a| a.eq_ignore_ascii_case(&cur)) {
+                                    st.excluded_apps.remove(pos);
+                                } else {
+                                    st.excluded_apps.push(cur);
+                                    st.enabled = false;
+                                    st.engine.reset();
+                                    update_tray_tooltip(hwnd, st.enabled, st.method);
+                                }
+                            }
+                        }
                         ID_METHOD_AUTO => {
                             st.method = InputMethod::Auto;
                             st.engine.set_method(InputMethod::Auto);
@@ -2649,8 +2678,13 @@ Start-Process -FilePath $batch -WindowStyle Hidden;
 
                         st.current_app = proc_name.clone();
 
-                        // Restore state for newly focused app (default to true)
-                        let next_state = *st.app_states.get(&proc_name).unwrap_or(&true);
+                        // Restore state for newly focused app (excluded apps always force false)
+                        let is_excluded = st.excluded_apps.iter().any(|a| a.eq_ignore_ascii_case(&proc_name));
+                        let next_state = if is_excluded {
+                            false
+                        } else {
+                            *st.app_states.get(&proc_name).unwrap_or(&true)
+                        };
                         if st.enabled != next_state {
                             st.enabled = next_state;
                             st.engine.reset();
