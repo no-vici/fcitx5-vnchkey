@@ -466,3 +466,36 @@ assert!(
 "HabitLearner must NOT learn partial Vietnamese backspace edits!"
 );
 }
+
+#[test]
+fn test_09_accented_macro_and_auto_mode_alphanumeric_traps() {
+    let mut engine = Engine::new(EngineConfig {
+        method: InputMethod::Auto,
+        enable_macro: true,
+        auto_restore_english: true,
+        ..EngineConfig::default()
+    });
+    let macro_path = std::env::temp_dir().join("vnchkey_test09_macros.conf");
+    std::fs::write(&macro_path, "as=ánh sáng\nms=mới xong\n").unwrap();
+    engine.load_macros_from_file(macro_path.to_str().unwrap());
+    let _ = std::fs::remove_file(&macro_path);
+
+    // 1. Accented Macro Collision: `as` -> `á` during typing, Space expands to `ánh sáng `
+    assert_eq!(type_stream(&mut engine, "as "), "ánh sáng ");
+    engine.reset();
+    assert_eq!(type_stream(&mut engine, "ms "), "mới xong ");
+
+    // 2. Undo macro twice restores `as` (raw_strokes) and suppresses re-expansion
+    engine.reset();
+    assert_eq!(type_with_controls(&mut engine, "as \x08\x08 "), "as ");
+
+    // 3. Auto-Mode Alphanumeric Trap: `b2c ` must NOT keep Vietnamese tone
+    engine.reset();
+    assert_eq!(type_stream(&mut engine, "b2c "), "b2c ");
+
+    // 4. Valid VNI in Auto mode still works (`to1an ` -> `toán `, `ibie6t1 ` -> `ibiết `)
+    engine.reset();
+    assert_eq!(type_stream(&mut engine, "to1an "), "toán ");
+    engine.reset();
+    assert_eq!(type_stream(&mut engine, "ibie6t1 "), "ibiết ");
+}

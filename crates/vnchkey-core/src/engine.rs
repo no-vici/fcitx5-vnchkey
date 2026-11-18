@@ -151,6 +151,7 @@ pub struct Engine {
     raw_strokes: String,
     word_used_telex: bool,
     word_used_vni: bool,
+    has_letter_after_digit: bool,
     manual_undo: bool,
     english_locked: bool,
     last_completed_word: Option<String>,
@@ -409,6 +410,7 @@ impl Engine {
             raw_strokes: String::with_capacity(32),
             word_used_telex: false,
             word_used_vni: false,
+            has_letter_after_digit: false,
             manual_undo: false,
             english_locked: false,
             last_completed_word: None,
@@ -629,6 +631,7 @@ impl Engine {
         self.casing.reset();
         self.word_used_telex = false;
         self.word_used_vni = false;
+        self.has_letter_after_digit = false;
         self.manual_undo = false;
         self.english_locked = false;
         self.last_completed_word = None;
@@ -1201,21 +1204,22 @@ impl Engine {
                 }
 
                 // 1. Macro expansion check (suppressed if this word was just reverted via Backspace)
-                let is_suppressed = self.suppressed_macro.as_deref() == Some(&self.current_word);
+                let is_suppressed = self.suppressed_macro.as_deref() == Some(&self.current_word)
+                    || self.suppressed_macro.as_deref() == Some(&self.raw_strokes);
                 if self.config.enable_macro && !is_suppressed {
-                    if let Some(expansion) = self.macro_table.expand(&self.current_word).or_else(|| {
+                    let expansion_opt = self.macro_table.expand(&self.current_word).map(|e| (e, self.current_word.clone())).or_else(|| {
                         if !self.manual_undo {
-                            self.macro_table.expand(&self.raw_strokes)
+                            self.macro_table.expand(&self.raw_strokes).map(|e| (e, self.raw_strokes.clone()))
                         } else {
                             None
                         }
-                    }) {
+                    });
+                    if let Some((expansion, trigger)) = expansion_opt {
                         let target = format!("{}{}", expansion, ch);
                         let formatted_old = self.format_commit(&self.current_word);
                         let formatted_target = self.format_commit(&target);
                         let (backspaces, commit_text) =
                             compare_and_split_strings(&formatted_old, &formatted_target);
-                        let trigger = self.current_word.clone();
                         self.reset();
                         self.last_macro = Some(LastMacroExpansion {
                             trigger,
@@ -1246,9 +1250,14 @@ impl Engine {
                     && self.current_word != self.raw_strokes
                     && self.auto_restore.is_english_keyword(&self.raw_strokes);
 
+                let alphanumeric_trap = self.has_letter_after_digit
+                    && !self.current_word.ends_with(|c: char| {
+                        matches!(c, 'c' | 'k' | 'm' | 'n' | 'p' | 't' | 'g' | 'h' | 'i' | 'o' | 'u' | 'y')
+                    });
+
                 if is_known_english
                     || (!self.manual_undo
-                        && (!has_digits || is_invalid_syllable)
+                        && (!has_digits || is_invalid_syllable || alphanumeric_trap)
                         && has_vietnamese_diacritic(&self.current_word))
                 {
                     let learned_restore = !has_digits && self.habit_learner.is_learned_word(&self.raw_strokes);
@@ -1262,6 +1271,7 @@ impl Engine {
                     // Invalid intermediate syllables (duòng, tién, nuóc) MUST auto-restore on Space even if auto_restore_english is false.
                     let english_or_spell_restore = is_known_english
                         || is_invalid_syllable
+                        || alphanumeric_trap
                         || (self.config.auto_restore_english
                             && !has_digits
                             && (has_phonology_violation(&self.current_word)
@@ -1781,6 +1791,9 @@ impl Engine {
             InputMethod::Vni => self.vni.apply_key(&self.current_word, ch),
         };
 
+        if has_prior_digits && ch.is_ascii_alphabetic() && !was_transformed {
+            self.has_letter_after_digit = true;
+        }
         self.raw_strokes.push(ch);
         self.casing.track(ch);
         self.manual_undo |= was_undo;
