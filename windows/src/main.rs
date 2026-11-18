@@ -2414,6 +2414,7 @@ Start-Process -FilePath $batch -WindowStyle Hidden;
                                     st.engine.reset();
                                     update_tray_tooltip(hwnd, st.enabled, st.method);
                                 }
+                                save_app_config(&st);
                             }
                         }
                         ID_METHOD_AUTO => {
