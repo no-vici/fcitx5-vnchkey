@@ -4,7 +4,7 @@ Tất cả những thay đổi nổi bật của dự án **vnchKey** (**fcitx5-
 
 ---
 
-## [Unreleased]
+## [0.3.7] - 2026-11-19
 
 ### 🐛 Sửa Lỗi (Bug Fixes)
 - **Bảo Toàn Nguyên Âm Đơn Có Dấu Đi Sau `đ` Trong Kiểu Gõ VNI / Auto (`engine.rs`, `vietc_regression_tests.rs`)**:

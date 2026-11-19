@@ -100,14 +100,28 @@ fcitx5-vnchkey/
 │           ├── doctor.rs            # [Mới] Trình kiểm tra môi trường Fcitx5 & /proc/PID Electron Advisor
 │           └── config.rs            # Trình đọc/ghi cấu hình ~/.config/fcitx5/conf/
 │
-├── fcitx5-addon/                    # [Fcitx5 Native Addon] Module C++ cho Fcitx5
+├── fcitx5-addon/                    # [Linux] Module C++ cho Fcitx5 (Wayland & X11)
 │   ├── CMakeLists.txt
 │   └── src/
 │       ├── vnchkey_addon.h          # Khai báo lớp VnchkeyEngine kế thừa InputMethodEngineV2
-│       └── vnchkey_addon.cpp        # Đăng ký sự kiện phím, StatusArea và Menu tùy chọn
+│       └── vnchkey_addon.cpp        # Đăng ký sự kiện phím, StatusArea, Menu & Live Trace IPC
 │
+├── macos/                           # [macOS] Ứng dụng Swift + CGEventTap (Universal x86_64 + arm64)
+│   ├── Makefile                     # Đóng gói .app và .dmg
+│   ├── Bridging-Header.h            # Khai báo C-ABI FFI sang libfcitx5_vnchkey_ffi.a
+│   └── Sources/
+│       ├── main.swift               # Menu Bar, Settings, Live Inspector (NSPanel), Trace Export
+│       └── KeyTapManager.swift      # CGEventTap hook, NSPasteboard ($CLIPBOARD) & Trace Ring Buffer
+│
+├── windows/                         # [Windows] Ứng dụng Win32 API thuần Rust (WH_KEYBOARD_LL + SendInput)
+│   ├── Cargo.toml
+│   └── src/
+│       └── main.rs                  # System Tray, Win32 Hook, Clipboard, Live Inspector & Trace Export
+│
+├── presets/                         # Bộ từ điển & Macro mẫu (Sài Gòn Xưa, Dev/Git, Toán Học)
+├── scripts/                         # verify-release.sh (kiểm thử 3 tầng), sync_to_vncharkey.py, build-deb.sh
 ├── data/                            # Desktop entries, metadata & icon packs
-├── install.sh                       # Script biên dịch và cài đặt tự động 1-Click
+├── install.sh                       # Script biên dịch và cài đặt tự động 1-Click trên Linux
 └── PKGBUILD                         # Script đóng gói chuẩn cho Arch Linux
 ```
 
