@@ -1648,7 +1648,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     @objc func showLiveInspector() {
         let alert = NSAlert()
         alert.messageText = "vnchKey - Live Inspector (Debug)"
-        alert.informativeText = KeyTapManager.shared.inspectState()
+        alert.informativeText = keyManager?.inspectState() ?? "Engine chưa sẵn sàng"
         alert.alertStyle = .informational
         alert.addButton(withTitle: "Đóng")
         NSApp.activate(ignoringOtherApps: true)
