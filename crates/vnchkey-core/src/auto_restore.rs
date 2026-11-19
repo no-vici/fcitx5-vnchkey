@@ -8,6 +8,7 @@ use crate::vietnamese_dict::is_in_vietnamese_dictionary;
 use std::collections::HashSet;
 use std::hash::{BuildHasherDefault, Hasher};
 
+/// Minimal FNV/FxHasher implementation for fast English bypass lookup.
 #[derive(Default, Debug, Clone)]
 pub struct FxHasher {
     hash: usize,
@@ -28,6 +29,7 @@ impl Hasher for FxHasher {
     }
 }
 
+/// High-speed `HashSet` using `FxHasher` for O(1) dictionary lookups.
 pub type FastHashSet<T> = HashSet<T, BuildHasherDefault<FxHasher>>;
 
 /// Chuyển chuỗi sang chữ thường trên Stack (Zero Heap Allocation) cho từ ASCII <= 64 bytes.
@@ -85,13 +87,33 @@ pub const DEFAULT_ENGLISH_WORDS: &[&str] = &[
     "their", "under", "user", "vapor", "vector", "vigor", "water", "wear",
     "worker", "year", "your",
     // Telex trap: words with 'w' (horn/breve: ơ, ư, ă)
-    "wait", "wall", "want", "warm", "warn", "wash", "waste", "watch", "wave",
-    "way", "wayland", "web", "webpack", "website", "week", "well", "west",
-    "whale", "what", "wheat", "wheel", "when", "where", "which", "while",
-    "whip", "whisper", "white", "who", "why", "wide", "wife", "wifi", "wild",
-    "will", "wind", "window", "windows", "wine", "wing", "wire", "wise", "wish",
-    "with", "within", "without", "wood", "wool", "word", "work", "world",
-    "worth", "worthy", "would", "wrap", "write", "wrong",
+    "award", "aware", "away", "awkward", "awkwardly", "bandwidth", "between",
+    "down", "downward", "downwards", "dwarf", "forward", "framework", "hardware",
+    "homework", "inward", "keyword", "keywords", "malware", "middleware",
+    "network", "nowhere", "onward", "outward", "owe", "owes", "password", "passwords",
+    "power", "raw", "reward", "saw", "software", "somewhere", "steward", "Subway", "subway",
+    "swear", "sweat", "sweater", "sweep", "sweet", "swim", "swing", "switch", "switches",
+    "sword", "swore", "sworn", "taiwan", "toward", "towards", "twee", "tweet", "tweets",
+    "twice", "twin", "twins", "twist", "twitter", "upward",
+    "wait", "wake", "walk", "wall", "wallet", "wallpaper", "want", "war", "ward", "ware",
+    "warehouse", "warm", "warn", "warning", "warp", "warranty", "warrior", "wash", "waste",
+    "watch", "water", "wave", "wax", "way", "wayland", "weak", "wealth", "weapon", "wear",
+    "weather", "web", "webcam", "webhook", "webkit", "webpack", "websocket", "website",
+    "wedding", "wednesday", "weed", "week", "weekend", "weekly", "weee", "weigh", "weight",
+    "weird", "welcome", "welfare", "well", "went", "were", "west", "western",
+    "whale", "what", "whatever", "wheat", "wheel", "when", "whenever", "where", "whereas",
+    "wherever", "whether", "which", "while", "whip", "whisper", "whistle", "white",
+    "whitelist", "who", "whole", "wholesale", "whom", "whose", "why", "wide", "widely",
+    "widget", "widgets", "widow", "width", "wife", "wifi", "wiki", "wikipedia", "wild",
+    "wildlife", "will", "willing", "win", "wind", "window", "windows", "wine", "wing",
+    "winner", "winter", "wipe", "wire", "wireless", "wiring", "wisdom", "wise", "wish",
+    "with", "withdraw", "within", "without", "witness", "wizard", "wolf", "woman", "women",
+    "wonder", "wonderful", "wood", "wooden", "wool", "word", "words", "wore", "work",
+    "workbook", "worker", "workers", "workflow", "working", "workload", "workout",
+    "workplace", "Model", "workspace", "workspaces", "workstation", "world", "worldwide",
+    "worm", "worn", "worry", "worse", "worship", "worst", "worth", "worthy", "would",
+    "wound", "wrap", "wrapper", "wrath", "wreck", "wrestle", "wrist", "write", "writer",
+    "writing", "written", "wrong",
     // Telex trap: words with 'f' (huyền)
     "face", "fact", "fail", "fair", "fall", "false", "farm", "fast", "feat",
     "feed", "feel", "feet", "fell", "felt", "few", "figma", "file", "fill",
@@ -150,7 +172,7 @@ pub const DEFAULT_ENGLISH_WORDS: &[&str] = &[
 const VIETNAMESE_COLLISION_EXCEPTIONS: &[&str] = &[
     "as", "is", "os", "us",
     "this", "these", "there", "those", "has", "his", "bus", "her", "see", "can", "man", "son", "con",
-    "chaos", "its", "boss", "less", "reset",
+    "chaos", "its", "boss", "less", "reset", "must",
     "max", "mix", "sex", "six", "var",
 ];
 

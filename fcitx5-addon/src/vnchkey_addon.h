@@ -73,6 +73,8 @@ extern "C" {
     void fcitx5_vnchkey_unlearn_word(void* ctx, const char* word);
     void fcitx5_vnchkey_set_initial_case_anchor(void* ctx, bool enabled);
     bool fcitx5_vnchkey_get_initial_case_anchor(void* ctx);
+    void fcitx5_vnchkey_set_developer_mode(void* ctx, bool enabled);
+    bool fcitx5_vnchkey_get_developer_mode(void* ctx);
 
     char* fcitx5_vnchkey_get_current_word(void* ctx);
     char* fcitx5_vnchkey_get_completed_word(void* ctx);
@@ -145,6 +147,7 @@ private:
     bool config_select_and_replace_web_ = true;
     bool config_word_rescue_ = true;
     bool config_initial_case_anchor_ = false;
+    bool config_developer_mode_ = true;
     bool config_learn_typing_habits_ = true;
     uint32_t config_habit_promote_threshold_ = 4;
 

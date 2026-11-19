@@ -275,10 +275,18 @@ impl TelexEngine {
                         rebalance_tone(&mut letters, current_tone, self.tone_style);
                         return (letters.into_iter().collect(), true, true);
                     } else {
-                        // Promote plain or horn/breve vowel to circumflex
-                        letters[idx] = compose_vowel(hat_base, 0, is_up || ch.is_uppercase());
-                        rebalance_tone(&mut letters, current_tone, self.tone_style);
-                        return (letters.into_iter().collect(), true, false);
+                        // Prevent turning elongated vowels after horn vowels ư/ơ (e.g. 'uwfaaa' -> 'ừaaa', 'owfaaa' -> 'ờaaa', 'muwaaaa' -> 'mưaaaa')
+                        // into circumflex â/ê when the syllable ALREADY has a horned vowel ('ư' or 'ơ').
+                        let has_preceding_horn = letters[..idx]
+                            .iter()
+                            .any(|&c| matches!(decompose_vowel(c), Some(('ư' | 'ơ', _, _))));
+                        let is_adjacent_elongation = idx + 1 == letters.len() && has_preceding_horn;
+                        if !is_adjacent_elongation {
+                            // Promote plain or horn/breve vowel to circumflex
+                            letters[idx] = compose_vowel(hat_base, 0, is_up || ch.is_uppercase());
+                            rebalance_tone(&mut letters, current_tone, self.tone_style);
+                            return (letters.into_iter().collect(), true, false);
+                        }
                     }
                 }
             }
@@ -318,6 +326,20 @@ impl TelexEngine {
                     }
 
                     if u_base == 'ư' && o_base == 'ơ' {
+                        let last_raw_is_w = raw_strokes
+                            .chars()
+                            .last()
+                            .map(|c| c.eq_ignore_ascii_case(&'w'))
+                            .unwrap_or(false);
+                        let has_coda = o_idx + 1 < letters.len();
+                        let is_completed_syllable =
+                            (has_coda || current_tone > 0) && is_valid_vietnamese_syllable(word);
+                        if !last_raw_is_w && is_completed_syllable {
+                            // Policy 3B+ Semantic Saturation: on a completed syllable (e.g. 'dduowcjw' -> 'đượcw', 'thuowngfw' -> 'thườngw'),
+                            // emit literal 'w' without stripping horn so Backspace restores 'được'/'thường'.
+                            letters.push(ch);
+                            return (letters.into_iter().collect(), false, true);
+                        }
                         // Toggle off: 'ươ' -> 'uo' + 'w'
                         letters[u_idx] = compose_vowel('u', 0, u_up);
                         letters[o_idx] = compose_vowel('o', 0, o_up);
@@ -338,6 +360,15 @@ impl TelexEngine {
                 if let Some((u1_idx, _u2_idx)) = find_adjacent_uu(&letters) {
                     let (u1_base, _, u1_up) = decompose_vowel(letters[u1_idx]).unwrap();
                     if u1_base == 'ư' {
+                        let last_raw_is_w = raw_strokes
+                            .chars()
+                            .last()
+                            .map(|c| c.eq_ignore_ascii_case(&'w'))
+                            .unwrap_or(false);
+                        if !last_raw_is_w && current_tone > 0 && is_valid_vietnamese_syllable(word) {
+                            letters.push(ch);
+                            return (letters.into_iter().collect(), false, true);
+                        }
                         letters[u1_idx] = compose_vowel('u', 0, u1_up);
                         letters.push(ch);
                         rebalance_tone(&mut letters, current_tone, self.tone_style);
@@ -355,6 +386,18 @@ impl TelexEngine {
                     let (a_base, _, _) = decompose_vowel(letters[a_idx]).unwrap();
                     if a_base == 'a' {
                         if u_base == 'ư' {
+                            let last_raw_is_w = raw_strokes
+                                .chars()
+                                .last()
+                                .map(|c| c.eq_ignore_ascii_case(&'w'))
+                                .unwrap_or(false);
+                            if !last_raw_is_w
+                                && current_tone > 0
+                                && is_valid_vietnamese_syllable(word)
+                            {
+                                letters.push(ch);
+                                return (letters.into_iter().collect(), false, true);
+                            }
                             letters[u_idx] = compose_vowel('u', 0, u_up);
                             letters.push(ch);
                             rebalance_tone(&mut letters, current_tone, self.tone_style);
@@ -382,6 +425,20 @@ impl TelexEngine {
                                 _ => unreachable!(),
                             };
                             if base == target_base {
+                                let last_raw_is_w = raw_strokes
+                                    .chars()
+                                    .last()
+                                    .map(|c| c.eq_ignore_ascii_case(&'w'))
+                                    .unwrap_or(false);
+                                let has_coda = idx + 1 < letters.len();
+                                if !last_raw_is_w
+                                    && has_coda
+                                    && current_tone > 0
+                                    && is_valid_vietnamese_syllable(word)
+                                {
+                                    letters.push(ch);
+                                    return (letters.into_iter().collect(), false, true);
+                                }
                                 // Check if this 'ư' at the end of the word was created by standalone 'w'
                                 let raw_has_u = raw_strokes
                                     .chars()
@@ -422,11 +479,23 @@ impl TelexEngine {
         let mut fallback = letters.clone();
         fallback.push(ch);
 
+        let is_repeated_vowel_elongation = letters.len() >= 2
+            && letters
+                .last()
+                .map(|c| c.eq_ignore_ascii_case(&ch) && is_vietnamese_vowel(*c))
+                .unwrap_or(false)
+            && letters
+                .iter()
+                .any(|&c| matches!(decompose_vowel(c), Some(('ơ' | 'ư', _, _))));
+
         letters.push(ch);
         let has_horned_uo = letters
             .iter()
             .any(|&c| matches!(decompose_vowel(c), Some(('ơ' | 'ư', _, _))));
-        if can_modify_syllable(&letters) && (current_tone > 0 || has_horned_uo) {
+        if !is_repeated_vowel_elongation
+            && can_modify_syllable(&letters)
+            && (current_tone > 0 || has_horned_uo)
+        {
             let mut changed = apply_smart_uo_horn(&mut letters);
             if current_tone > 0 {
                 rebalance_tone(&mut letters, current_tone, self.tone_style);
@@ -1084,6 +1153,52 @@ pub fn extract_last_syllable_index(word: &str) -> usize {
     }
 
     from_idx
+}
+
+/// Checks if `word` is an emotive elongated form of a valid accented Vietnamese open syllable
+/// (e.g. `ừaaa`, `ờaaa`, `mưaaaa`, `trờiiii`, `ừeee`, `nhéeee`, `điiiii`),
+/// where the trailing identical plain ASCII vowels (`a`, `e`, `i`, `o`, `u`, `y`) repeat the final vowel of a valid accented Vietnamese stem.
+pub fn is_valid_elongated_vietnamese_word(word: &str) -> bool {
+    let chars: Vec<char> = word.chars().collect();
+    if chars.len() < 3 {
+        return false;
+    }
+    let last_ch = chars[chars.len() - 1];
+    let last_lower = last_ch.to_ascii_lowercase();
+    if !matches!(last_lower, 'a' | 'e' | 'i' | 'o' | 'u' | 'y') {
+        return false;
+    }
+    let mut split_idx = chars.len();
+    while split_idx > 1 && chars[split_idx - 1].to_ascii_lowercase() == last_lower {
+        split_idx -= 1;
+    }
+    // Check if the character immediately before the plain tail is in the same vowel family
+    // (e.g. 'ừ' + 'aaa' where 'ừ' is in 'u' family and 'aaa' is 'a' -> stem is "ừa" = chars[..=split_idx];
+    //  or 'trờ' + 'iiii' where 'i' is off-glide of "trời" = chars[..=split_idx];
+    //  or 'nhé' + 'eee' where 'é' is in 'e' family -> stem is "nhé" = chars[..split_idx]).
+    let candidates: [usize; 2] = [split_idx, (split_idx + 1).min(chars.len() - 1)];
+    for &stem_len in &candidates {
+        if stem_len < 1 || stem_len >= chars.len() {
+            continue;
+        }
+        let stem: String = chars[..stem_len].iter().collect();
+        if !has_vietnamese_diacritic(&stem) {
+            continue;
+        }
+        // Only preserve elongation for syllables that have an explicit horn/breve/circumflex/đ or tone mark
+        // AND are in the Vietnamese dictionary (or valid open horned syllable like 'ừa', 'ờa', 'ừe').
+        let has_horn_or_stroke = stem.chars().any(|c| {
+            c == 'đ'
+                || c == 'Đ'
+                || matches!(decompose_vowel(c), Some(('ă' | 'â' | 'ê' | 'ô' | 'ơ' | 'ư', _, _)))
+        });
+        let stem_in_dict = crate::vietnamese_dict::is_in_vietnamese_dictionary(&stem);
+        let stem_valid_horned = has_horn_or_stroke && is_valid_vietnamese_syllable(&stem);
+        if stem_in_dict || stem_valid_horned {
+            return true;
+        }
+    }
+    false
 }
 
 /// Checks if `s` contains any transformed Vietnamese character (accented vowel or `đ`/`Đ`).

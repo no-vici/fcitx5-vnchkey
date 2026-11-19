@@ -6,8 +6,8 @@ use crate::habit_learner::{CorrectionKind, HabitLearner};
 use crate::macros::MacroTable;
 pub use crate::telex::W2UType;
 use crate::telex::{
-    extract_last_syllable_index, has_vietnamese_diacritic, is_valid_in_progress_syllable,
-    is_valid_vietnamese_syllable, TelexEngine,
+    extract_last_syllable_index, has_vietnamese_diacritic, is_valid_elongated_vietnamese_word,
+    is_valid_in_progress_syllable, is_valid_vietnamese_syllable, TelexEngine,
 };
 use crate::vietnamese_dict::{has_phonology_violation, is_in_vietnamese_dictionary};
 use crate::vni::VniEngine;
@@ -90,6 +90,8 @@ pub struct EngineConfig {
     pub smart_fuzzy_vowel: bool,
     /// Protect ALL-CAPS acronyms (2..=5 chars, e.g. OS, IOS, VPS, AWS) from Telex tone distortion. Defaults to true.
     pub acronym_bypass: bool,
+    /// Developer Mode: automatically bypass Vietnamese diacritics and macro expansion inside Markdown inline (`` `...` ``) and fenced (```` ```...``` ````) code blocks. Defaults to true.
+    pub developer_mode: bool,
 }
 
 impl Default for EngineConfig {
@@ -117,6 +119,7 @@ impl Default for EngineConfig {
             auto_capitalize: false,
             smart_fuzzy_vowel: false,
             acronym_bypass: true,
+            developer_mode: true,
         }
     }
 }
@@ -244,6 +247,12 @@ pub struct Engine {
     deleted_accented_candidate: Option<(String, String)>,
     last_delimiter: Option<char>,
     last_delimiter_spaced: bool,
+    preceded_by_tech_delimiter: bool,
+    preceded_by_leading_slash: bool,
+    dev_code_state: DevCodeState,
+    in_english_context: bool,
+    in_vietnamese_context: bool,
+    math_context_words_remaining: u8,
     last_keystroke_time_ms: f64,
     last_char: Option<char>,
     prev_word_was_english: bool,
@@ -295,6 +304,610 @@ pub struct LastMacroExpansion {
 #[inline]
 pub fn is_snappable_punctuation(ch: char) -> bool {
     matches!(ch, ',' | '.' | '!' | '?' | ';' | ':' | ')' | ']' | '}' | '>')
+}
+
+/// Returns `true` when `ch` is a technical delimiter (URL, path, email, variable, code syntax)
+/// that should suppress shorthand macro expansion immediately before or after a token
+/// (e.g. `google.com.vn`, `https://vn`, `user@vn`, `user_vn`, `dc()`).
+#[inline]
+pub fn is_macro_technical_delimiter(ch: char) -> bool {
+    ch.is_ascii_digit()
+        || matches!(
+            ch,
+            '.' | ':' | '/' | '@' | '_' | '-' | '#' | '\\' | '=' | '$' | '~' | '`'
+        )
+}
+
+/// Returns `true` when shorthand macro expansion must be suppressed due to technical context.
+#[inline]
+pub fn should_suppress_macro_expansion(
+    preceded_by_tech_delimiter: bool,
+    boundary_char: char,
+) -> bool {
+    if preceded_by_tech_delimiter {
+        return true;
+    }
+    is_macro_technical_delimiter(boundary_char) || matches!(boundary_char, '(' | '[' | '{' | '<')
+}
+
+/// Returns `true` if `raw_lower` is a common CLI/chat slash command or Unix path component
+/// that must remain raw English when immediately preceded by a leading `/` (e.g. `/compact`, `/aws`, `/os`, `/usr`).
+pub fn is_leading_slash_command_or_path_token(raw_lower: &str) -> bool {
+    matches!(
+        raw_lower,
+        "add"
+            | "agents"
+            | "api"
+            | "app"
+            | "apps"
+            | "ar"
+            | "as"
+            | "aw"
+            | "awk"
+            | "aws"
+            | "bash"
+            | "bin"
+            | "boost"
+            | "boot"
+            | "browser"
+            | "bug"
+            | "build"
+            | "cast"
+            | "cash"
+            | "clear"
+            | "compact"
+            | "config"
+            | "core"
+            | "cost"
+            | "dash"
+            | "dev"
+            | "diff"
+            | "dist"
+            | "doc"
+            | "docs"
+            | "doctor"
+            | "down"
+            | "env"
+            | "es"
+            | "etc"
+            | "ex"
+            | "exit"
+            | "fast"
+            | "git"
+            | "goal"
+            | "grill"
+            | "hash"
+            | "help"
+            | "home"
+            | "host"
+            | "if"
+            | "image"
+            | "info"
+            | "init"
+            | "ir"
+            | "is"
+            | "ix"
+            | "last"
+            | "learn"
+            | "lib"
+            | "list"
+            | "log"
+            | "login"
+            | "logout"
+            | "logs"
+            | "loop"
+            | "lost"
+            | "mask"
+            | "mcp"
+            | "memory"
+            | "mnt"
+            | "model"
+            | "models"
+            | "more"
+            | "most"
+            | "new"
+            | "of"
+            | "opt"
+            | "or"
+            | "os"
+            | "out"
+            | "permissions"
+            | "pist"
+            | "pkg"
+            | "plan"
+            | "plugin"
+            | "port"
+            | "post"
+            | "pr"
+            | "proc"
+            | "quit"
+            | "raw"
+            | "reset"
+            | "review"
+            | "room"
+            | "root"
+            | "run"
+            | "sbin"
+            | "schedule"
+            | "search"
+            | "share"
+            | "sort"
+            | "src"
+            | "srv"
+            | "ssh"
+            | "start"
+            | "status"
+            | "stop"
+            | "store"
+            | "sys"
+            | "task"
+            | "tasks"
+            | "teamwork"
+            | "terminal"
+            | "test"
+            | "tests"
+            | "tmp"
+            | "tool"
+            | "tools"
+            | "ur"
+            | "us"
+            | "user"
+            | "users"
+            | "usr"
+            | "var"
+            | "vim"
+            | "voice"
+            | "war"
+            | "was"
+            | "web"
+            | "zoom"
+    )
+}
+
+/// Finite State Machine tracking Markdown inline (`` `...` ``) and fenced (```` ```...``` ````) code blocks.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub struct DevCodeState {
+    consecutive_backticks: u8,
+    in_inline_code: bool,
+    in_fenced_code: bool,
+}
+
+impl DevCodeState {
+    /// Resets the code block state machine.
+    pub fn reset(&mut self) {
+        self.consecutive_backticks = 0;
+        self.in_inline_code = false;
+        self.in_fenced_code = false;
+    }
+
+    /// Updates the FSM when a backtick (`` ` ``) is typed.
+    pub fn on_backtick(&mut self) {
+        self.consecutive_backticks = self.consecutive_backticks.saturating_add(1);
+        if self.consecutive_backticks >= 3 {
+            self.in_fenced_code = !self.in_fenced_code;
+            self.in_inline_code = false;
+            self.consecutive_backticks = 0;
+        } else if !self.in_fenced_code {
+            self.in_inline_code = !self.in_inline_code;
+        }
+    }
+
+    /// Updates the FSM when any non-backtick character is typed.
+    pub fn on_non_backtick(&mut self) {
+        self.consecutive_backticks = 0;
+    }
+
+    /// Updates the FSM on newline (`\n` or `\r`), closing any unclosed inline code span while keeping fenced blocks open.
+    pub fn on_newline(&mut self) {
+        self.consecutive_backticks = 0;
+        self.in_inline_code = false;
+    }
+
+    /// Returns `true` if the cursor is currently inside an inline or fenced Markdown code block.
+    pub fn is_bypassing(&self) -> bool {
+        self.in_inline_code || self.in_fenced_code
+    }
+}
+
+/// Returns `true` if `word_lower` is a high-frequency English function/anchor word
+/// that establishes English sentence momentum for subsequent ambiguous collision words.
+pub fn is_english_context_anchor(word_lower: &str) -> bool {
+    matches!(
+        word_lower,
+        "a"
+            | "about"
+            | "after"
+            | "already"
+            | "also"
+            | "although"
+            | "always"
+            | "am"
+            | "an"
+            | "and"
+            | "are"
+            | "at"
+            | "be"
+            | "because"
+            | "been"
+            | "before"
+            | "being"
+            | "between"
+            | "but"
+            | "by"
+            | "can"
+            | "could"
+            | "did"
+            | "do"
+            | "does"
+            | "during"
+            | "even"
+            | "for"
+            | "from"
+            | "get"
+            | "go"
+            | "had"
+            | "has"
+            | "have"
+            | "having"
+            | "he"
+            | "her"
+            | "here"
+            | "his"
+            | "i"
+            | "in"
+            | "into"
+            | "is"
+            | "it"
+            | "its"
+            | "make"
+            | "might"
+            | "must"
+            | "my"
+            | "never"
+            | "not"
+            | "on"
+            | "our"
+            | "safe"
+            | "shall"
+            | "she"
+            | "should"
+            | "state"
+            | "still"
+            | "take"
+            | "that"
+            | "the"
+            | "their"
+            | "there"
+            | "these"
+            | "they"
+            | "this"
+            | "those"
+            | "though"
+            | "through"
+            | "to"
+            | "under"
+            | "unless"
+            | "until"
+            | "was"
+            | "we"
+            | "were"
+            | "what"
+            | "when"
+            | "where"
+            | "whether"
+            | "which"
+            | "while"
+            | "who"
+            | "whom"
+            | "whose"
+            | "will"
+            | "with"
+            | "without"
+            | "would"
+            | "you"
+            | "your"
+    )
+}
+
+/// Returns `true` if `word_lower` is a common Vietnamese word (including ASCII-only Vietnamese syllables)
+/// that resets English sentence momentum back to Vietnamese.
+pub fn is_vietnamese_context_reset(word_lower: &str) -> bool {
+    matches!(
+        word_lower,
+        "anh"
+            | "bạn"
+            | "bộ"
+            | "chưa"
+            | "chắc"
+            | "chị"
+            | "con"
+            | "cá"
+            | "các"
+            | "cũng"
+            | "em"
+            | "hai"
+            | "hẳn"
+            | "họ"
+            | "không"
+            | "liệu"
+            | "lùn"
+            | "mai"
+            | "mình"
+            | "một"
+            | "nhỏ"
+            | "những"
+            | "nó"
+            | "ông"
+            | "rất"
+            | "sao"
+            | "ta"
+            | "thì"
+            | "tôi"
+            | "tui"
+            | "và"
+            | "với"
+    )
+}
+
+/// Returns `true` if `word_lower` is a trigonometric/math function anchor (`sin`, `cos`, `tan`, `cot`, etc.).
+pub fn is_math_function_anchor(word_lower: &str) -> bool {
+    matches!(
+        word_lower,
+        "sin" | "cos" | "tan" | "cot" | "sine" | "cosine" | "tangent" | "trig" | "trigonometry"
+    )
+}
+
+/// Returns `true` if `raw_lower` is a bilingual collision word that is valid in Vietnamese without context
+/// (e.g. `tree` -> `trê`, `is` -> `í`, `seen` -> `sên`, `cost` -> `cót`, `room` -> `rôm`, `must` -> `mút`, `rust` -> `rút`)
+/// and should resolve to English when preceded by English sentence momentum.
+pub fn is_context_english_collision_word(raw_lower: &str) -> bool {
+    matches!(
+        raw_lower,
+        "air"
+            | "am"
+            | "an"
+            | "arm"
+            | "arms"
+            | "arts"
+            | "as"
+            | "at"
+            | "bar"
+            | "barn"
+            | "bars"
+            | "be"
+            | "bee"
+            | "been"
+            | "beer"
+            | "bees"
+            | "best"
+            | "bist"
+            | "bits"
+            | "boom"
+            | "boost"
+            | "boots"
+            | "born"
+            | "bow"
+            | "box"
+            | "burn"
+            | "burns"
+            | "burst"
+            | "bus"
+            | "by"
+            | "cans"
+            | "caps"
+            | "car"
+            | "cars"
+            | "cast"
+            | "cats"
+            | "chair"
+            | "chairs"
+            | "chaos"
+            | "char"
+            | "charm"
+            | "charts"
+            | "cheers"
+            | "chef"
+            | "chest"
+            | "chips"
+            | "choir"
+            | "chose"
+            | "chown"
+            | "conf"
+            | "cons"
+            | "corn"
+            | "corps"
+            | "cors"
+            | "cos"
+            | "cost"
+            | "cow"
+            | "cups"
+            | "cuts"
+            | "dawn"
+            | "days"
+            | "deer"
+            | "def"
+            | "dir"
+            | "dist"
+            | "do"
+            | "docs"
+            | "dos"
+            | "dust"
+            | "est"
+            | "gaps"
+            | "gas"
+            | "gif"
+            | "go"
+            | "hair"
+            | "hangs"
+            | "harm"
+            | "has"
+            | "hats"
+            | "he"
+            | "her"
+            | "here"
+            | "hero"
+            | "his"
+            | "hist"
+            | "hits"
+            | "horn"
+            | "host"
+            | "how"
+            | "if"
+            | "in"
+            | "inf"
+            | "is"
+            | "ist"
+            | "it"
+            | "its"
+            | "keen"
+            | "keeps"
+            | "kist"
+            | "kits"
+            | "laos"
+            | "last"
+            | "lawn"
+            | "lays"
+            | "lee"
+            | "lens"
+            | "les"
+            | "lets"
+            | "lips"
+            | "list"
+            | "loans"
+            | "longs"
+            | "loops"
+            | "lose"
+            | "lots"
+            | "low"
+            | "mans"
+            | "mar"
+            | "mars"
+            | "mats"
+            | "max"
+            | "me"
+            | "meets"
+            | "mere"
+            | "mist"
+            | "mix"
+            | "moon"
+            | "must"
+            | "my"
+            | "nest"
+            | "nextjs"
+            | "nist"
+            | "no"
+            | "noon"
+            | "nor"
+            | "norm"
+            | "now"
+            | "nuts"
+            | "of"
+            | "on"
+            | "oops"
+            | "or"
+            | "os"
+            | "own"
+            | "owns"
+            | "par"
+            | "parts"
+            | "past"
+            | "pee"
+            | "per"
+            | "pest"
+            | "pets"
+            | "pics"
+            | "queen"
+            | "queens"
+            | "quest"
+            | "rams"
+            | "rats"
+            | "rays"
+            | "reef"
+            | "ref"
+            | "refer"
+            | "refers"
+            | "res"
+            | "reset"
+            | "rest"
+            | "rist"
+            | "roms"
+            | "roof"
+            | "room"
+            | "roots"
+            | "row"
+            | "rows"
+            | "runs"
+            | "rust"
+            | "sans"
+            | "see"
+            | "seen"
+            | "seer"
+            | "sets"
+            | "sex"
+            | "sir"
+            | "six"
+            | "so"
+            | "sofa"
+            | "songs"
+            | "sons"
+            | "sorts"
+            | "suns"
+            | "surf"
+            | "tar"
+            | "tax"
+            | "taxi"
+            | "tee"
+            | "teen"
+            | "term"
+            | "terms"
+            | "test"
+            | "tex"
+            | "texts"
+            | "thats"
+            | "thee"
+            | "there"
+            | "these"
+            | "this"
+            | "thus"
+            | "tips"
+            | "tist"
+            | "to"
+            | "toes"
+            | "too"
+            | "tops"
+            | "tos"
+            | "town"
+            | "towns"
+            | "trans"
+            | "tree"
+            | "trust"
+            | "turn"
+            | "tust"
+            | "up"
+            | "ups"
+            | "uri"
+            | "us"
+            | "usa"
+            | "usr"
+            | "vans"
+            | "var"
+            | "vary"
+            | "vast"
+            | "ver"
+            | "verse"
+            | "virus"
+            | "visa"
+            | "vist"
+            | "wa"
+            | "wars"
+            | "was"
+            | "we"
+            | "wr"
+            | "ws"
+            | "wu"
+            | "xerox"
+            | "yrs"
+    )
 }
 
 /// Converts precomposed Vietnamese characters to decomposed Unicode (NFD / Unicode Tổ Hợp).
@@ -506,6 +1119,12 @@ impl Engine {
             deleted_accented_candidate: None,
             last_delimiter: None,
             last_delimiter_spaced: false,
+            preceded_by_tech_delimiter: false,
+            preceded_by_leading_slash: false,
+            dev_code_state: DevCodeState::default(),
+            in_english_context: false,
+            in_vietnamese_context: false,
+            math_context_words_remaining: 0,
             last_keystroke_time_ms: 0.0,
             last_char: None,
             prev_word_was_english: false,
@@ -663,6 +1282,19 @@ impl Engine {
         self.config.acronym_bypass = enabled;
     }
 
+    /// Enables or disables Developer Mode (Markdown inline `` `...` `` & fenced ```` ```...``` ```` code bypass).
+    pub fn set_developer_mode(&mut self, enabled: bool) {
+        self.config.developer_mode = enabled;
+        if !enabled {
+            self.dev_code_state.reset();
+        }
+    }
+
+    /// Returns whether Developer Mode is enabled.
+    pub fn developer_mode(&self) -> bool {
+        self.config.developer_mode
+    }
+
     /// Returns a compact live-inspector snapshot of the current engine state and syllable breakdown.
     pub fn inspect_state(&self) -> String {
         let syllable_info = if let Some(p) = crate::syllable_parser::parse_syllable(&self.current_word) {
@@ -777,6 +1409,58 @@ impl Engine {
         self.prev_word_was_english = false;
         self.last_delimiter = None;
         self.last_delimiter_spaced = false;
+        self.preceded_by_tech_delimiter = false;
+        self.preceded_by_leading_slash = false;
+        self.dev_code_state.reset();
+        self.in_english_context = false;
+        self.in_vietnamese_context = false;
+        self.math_context_words_remaining = 0;
+    }
+
+    fn update_sentence_context_after_word(
+        &mut self,
+        raw_lower: &str,
+        final_word: &str,
+        was_english_restore: bool,
+        delimiter: char,
+    ) {
+        if matches!(delimiter, '.' | '!' | '?' | '\n' | '\r') {
+            self.in_english_context = false;
+            self.in_vietnamese_context = false;
+            self.math_context_words_remaining = 0;
+            self.prev_word_was_english = false;
+            return;
+        }
+        let has_non_ascii = !final_word.is_ascii();
+        let final_lower = final_word.to_lowercase();
+        let is_anchor = !has_non_ascii && is_english_context_anchor(raw_lower);
+
+        if !has_non_ascii && is_math_function_anchor(raw_lower) {
+            self.math_context_words_remaining = 4;
+        } else if has_non_ascii {
+            self.math_context_words_remaining = 0;
+        } else if self.math_context_words_remaining > 0 {
+            let is_joiner = matches!(raw_lower, "and" | "or" | "plus" | "minus");
+            if is_joiner {
+                self.math_context_words_remaining -= 1;
+            } else {
+                self.math_context_words_remaining = 0;
+            }
+        }
+
+        if has_non_ascii || is_vietnamese_context_reset(&final_lower) {
+            self.in_english_context = false;
+            self.in_vietnamese_context = true;
+            self.prev_word_was_english = false;
+        } else if is_anchor {
+            self.in_english_context = true;
+            self.in_vietnamese_context = false;
+            self.prev_word_was_english = true;
+        } else if was_english_restore || self.auto_restore.is_english_keyword(raw_lower) {
+            self.prev_word_was_english = true;
+        } else {
+            self.prev_word_was_english = false;
+        }
     }
 
     /// Handles physical Backspace pressed by the user.
@@ -1167,6 +1851,45 @@ impl Engine {
 
         let is_bracket = self.config.bracket_transform && matches!(ch, '[' | ']' | '{' | '}');
 
+        // Developer-Aware Markdown Inline Code (`...`) and Fenced Code Block (```...```) FSM:
+        if self.config.developer_mode {
+            if ch == '`' {
+                if !self.current_word.is_empty() {
+                    self.reset_word_buffers();
+                }
+                self.last_delimiter = Some('`');
+                self.last_delimiter_spaced = false;
+                self.sentence_start_pending = false;
+                self.dev_code_state.on_backtick();
+                return EngineOutput {
+                    backspaces: 0,
+                    commit_text: "`".to_string(),
+                    consumed: false,
+                    auto_restored: false,
+                    macro_expanded: false,
+                    adaptive_delay_ms: 0,
+                };
+            } else if ch == '\n' || ch == '\r' {
+                self.dev_code_state.on_newline();
+            } else {
+                self.dev_code_state.on_non_backtick();
+            }
+
+            if self.dev_code_state.is_bypassing() {
+                if !self.current_word.is_empty() {
+                    self.reset_word_buffers();
+                }
+                return EngineOutput {
+                    backspaces: 0,
+                    commit_text: ch.to_string(),
+                    consumed: false,
+                    auto_restored: false,
+                    macro_expanded: false,
+                    adaptive_delay_ms: 0,
+                };
+            }
+        }
+
         // Smart Punctuation Snapping:
         // If the previous action was a macro expansion ending with Space (stage: Expanded),
         // and the incoming key is a punctuation that attaches directly to the word,
@@ -1320,6 +2043,11 @@ impl Engine {
             } else if ch != ' ' {
                 self.sentence_start_pending = false;
             }
+            let was_preceded_by_tech_delim = self.preceded_by_tech_delimiter;
+            let was_preceded_by_slash = self.preceded_by_leading_slash;
+            let next_tech_delim = is_macro_technical_delimiter(ch);
+            let next_leading_slash = ch == '/'
+                && (self.current_word.is_empty() || was_preceded_by_slash);
             self.last_delimiter = Some(ch);
             self.last_delimiter_spaced = ch == ' ';
 
@@ -1360,9 +2088,11 @@ impl Engine {
                     }
                 }
 
-                // 1. Macro expansion check (suppressed if this word was just reverted via Backspace)
+                // 1. Macro expansion check (suppressed if this word was just reverted via Backspace
+                // or if surrounded by technical delimiters such as URLs, emails, paths, or function calls)
                 let is_suppressed = self.suppressed_macro.as_deref() == Some(&self.current_word)
-                    || self.suppressed_macro.as_deref() == Some(&self.raw_strokes);
+                    || self.suppressed_macro.as_deref() == Some(&self.raw_strokes)
+                    || should_suppress_macro_expansion(was_preceded_by_tech_delim, ch);
                 if self.config.enable_macro && !is_suppressed {
                     let expansion_opt = self.macro_table.expand(&self.current_word).map(|e| (e, self.current_word.clone())).or_else(|| {
                         if !self.manual_undo {
@@ -1381,6 +2111,8 @@ impl Engine {
                         self.stats.macros_expanded += 1;
                         self.stats.keystrokes_saved += saved;
                         self.reset();
+                        self.preceded_by_tech_delimiter = next_tech_delim;
+                        self.preceded_by_leading_slash = next_leading_slash;
                         self.last_macro = Some(LastMacroExpansion {
                             trigger,
                             expansion: expansion.clone(),
@@ -1404,7 +2136,8 @@ impl Engine {
                 // (e.g. intermediate forms like 'duong2' -> 'duòng ' where the user hit Space before adding the 2nd accent).
                 // Valid Vietnamese words formed with digits (e.g. gio72 -> giờ, duoc975 -> được) are never restored.
                 let has_digits = self.raw_strokes.chars().any(|c| c.is_ascii_digit());
-                let is_invalid_syllable = !is_valid_vietnamese_syllable(&self.current_word);
+                let is_elongated_vn = is_valid_elongated_vietnamese_word(&self.current_word);
+                let is_invalid_syllable = !is_elongated_vn && !is_valid_vietnamese_syllable(&self.current_word);
                 if ch == ' ' && is_invalid_syllable && self.config.smart_fuzzy_vowel && !self.manual_undo {
                     if let Some(resolved) = try_resolve_fuzzy_intermediate_vowel(&self.current_word, self.config.tone_style) {
                         let target = format!("{}{}", resolved, ch);
@@ -1412,7 +2145,11 @@ impl Engine {
                         let formatted_target = self.format_commit(&target);
                         let (backspaces, commit_text) =
                             compare_and_split_strings(&formatted_old, &formatted_target);
-                        self.reset();
+                        let raw_lower_fuzzy = self.raw_strokes.to_lowercase();
+                        self.update_sentence_context_after_word(&raw_lower_fuzzy, &resolved, false, ch);
+                        self.reset_word_buffers();
+                        self.preceded_by_tech_delimiter = next_tech_delim;
+                        self.preceded_by_leading_slash = next_leading_slash;
                         self.stats.words_typed += 1;
                         self.last_completed_word = Some(target);
                         return EngineOutput {
@@ -1425,16 +2162,28 @@ impl Engine {
                         };
                     }
                 }
-                let context_english_collision = self.prev_word_was_english
+                let raw_lower = self.raw_strokes.to_lowercase();
+                let is_slash_command_or_path = was_preceded_by_slash
+                    && self.current_word != self.raw_strokes
+                    && is_leading_slash_command_or_path_token(&raw_lower);
+                let math_context_collision = self.math_context_words_remaining > 0
+                    && !self.manual_undo
+                    && self.current_word != self.raw_strokes
+                    && raw_lower == "cos";
+                let sentence_momentum_collision = self.in_english_context
+                    && !self.manual_undo
+                    && self.current_word != self.raw_strokes
+                    && is_context_english_collision_word(&raw_lower);
+                let prev_word_collision = self.prev_word_was_english
                     && !self.manual_undo
                     && (2..=4).contains(&self.raw_strokes.len())
                     && self.current_word != self.raw_strokes
-                    && matches!(
-                        self.raw_strokes.to_lowercase().as_str(),
-                        "is" | "as" | "this" | "has" | "see"
-                    );
+                    && matches!(raw_lower.as_str(), "is" | "this" | "has" | "see");
+                let context_english_collision =
+                    math_context_collision || sentence_momentum_collision || prev_word_collision;
 
-                let is_known_english = context_english_collision
+                let is_known_english = is_slash_command_or_path
+                    || context_english_collision
                     || (self.config.auto_restore_english
                         && !has_digits
                         && self.current_word != self.raw_strokes
@@ -1447,6 +2196,7 @@ impl Engine {
 
                 if is_known_english
                     || (!self.manual_undo
+                        && !is_elongated_vn
                         && (!has_digits || is_invalid_syllable || alphanumeric_trap)
                         && has_vietnamese_diacritic(&self.current_word))
                 {
@@ -1465,19 +2215,23 @@ impl Engine {
                         || alphanumeric_trap
                         || (self.config.auto_restore_english
                             && !has_digits
+                            && !is_elongated_vn
                             && (has_phonology_violation(&self.current_word)
                                 || (self.config.spell_check
                                     && !is_in_vietnamese_dictionary(&self.current_word))));
 
                     if learned_restore || dict_restore || english_or_spell_restore {
-                        let target = format!("{}{}", self.raw_strokes, ch);
+                        let restored_word = self.raw_strokes.clone();
+                        let target = format!("{}{}", restored_word, ch);
                         let formatted_old = self.format_commit(&self.current_word);
                         let formatted_target = self.format_commit(&target);
                         let (backspaces, commit_text) =
                             compare_and_split_strings(&formatted_old, &formatted_target);
-                        self.reset();
+                        self.update_sentence_context_after_word(&raw_lower, &restored_word, true, ch);
+                        self.reset_word_buffers();
+                        self.preceded_by_tech_delimiter = next_tech_delim;
+                        self.preceded_by_leading_slash = next_leading_slash;
                         self.stats.english_restored += 1;
-                        self.prev_word_was_english = true;
                         self.last_completed_word = Some(target);
                         return EngineOutput {
                             backspaces,
@@ -1530,6 +2284,9 @@ impl Engine {
 
             // No macro or auto-restore needed: reset word buffer and let delimiter pass through natively
             let has_word = !self.current_word.is_empty();
+            let raw_lower_done = self.raw_strokes.to_lowercase();
+            let completed_word_done = self.current_word.clone();
+            let was_english_locked_done = self.english_locked;
             let raw_target = format!("{}{}", self.current_word, ch);
             let formatted_target = self.format_commit(&raw_target);
             if ch == ' ' && has_word && self.raw_strokes.len() <= 32 {
@@ -1545,10 +2302,24 @@ impl Engine {
                     english_locked: self.english_locked,
                 });
             }
+            if has_word {
+                self.update_sentence_context_after_word(
+                    &raw_lower_done,
+                    &completed_word_done,
+                    was_english_locked_done,
+                    ch,
+                );
+            } else if matches!(ch, '.' | '!' | '?' | '\n' | '\r') {
+                self.in_english_context = false;
+                self.in_vietnamese_context = false;
+                self.math_context_words_remaining = 0;
+                self.prev_word_was_english = false;
+            }
             self.reset_word_buffers();
+            self.preceded_by_tech_delimiter = next_tech_delim;
+            self.preceded_by_leading_slash = next_leading_slash;
             if has_word {
                 self.stats.words_typed += 1;
-                self.prev_word_was_english = false;
                 self.last_completed_word = Some(formatted_target);
             }
             return EngineOutput {
@@ -1693,16 +2464,36 @@ impl Engine {
 
             match self.config.method {
                 InputMethod::Telex | InputMethod::SimpleTelex => {
-                    // For standalone numbers or numbers following letters (e.g. 10, v1), track in word buffers
-                    // so subsequent letters lock English (e.g. 10px, 2rem, v1s, sha256).
+                    // For standalone numbers or numbers following letters (e.g. 10, v1, test123, user2026),
+                    // if the prefix is not a valid Vietnamese syllable when auto_restore_english is on,
+                    // restore the prefix to raw_strokes immediately while keeping numeric macros (e.g. k8s, mp3)
+                    // and completed Vietnamese words followed by digits (e.g. được7duo) intact.
                     let old_word = self.current_word.clone();
+                    let next_raw = format!("{}{}", self.raw_strokes, ch);
+                    let is_macro_prefix =
+                        self.config.enable_macro && self.macro_table.has_prefix(&next_raw);
+                    let should_restore_before_digit = !is_macro_prefix
+                        && !self.manual_undo
+                        && self.current_word != self.raw_strokes
+                        && (!is_valid_vietnamese_syllable(&self.current_word)
+                            || (self.config.auto_restore_english
+                                && (self.auto_restore.is_english_keyword(&self.raw_strokes)
+                                    || has_phonology_violation(&self.current_word)
+                                    || (self.config.spell_check
+                                        && !is_in_vietnamese_dictionary(&self.current_word)))));
                     self.raw_strokes.push(ch);
-                    self.current_word = self.raw_strokes.clone();
+                    if should_restore_before_digit {
+                        self.current_word = self.raw_strokes.clone();
+                    } else {
+                        self.current_word.push(ch);
+                    }
                     self.english_locked = true;
                     let formatted_old = self.format_commit(&old_word);
-            let formatted_new = self.format_commit(&self.current_word);
-            let (backspaces, commit_text) = compare_and_split_strings(&formatted_old, &formatted_new);
-                    let consumed = backspaces > 0 || commit_text != ch.to_string() || auto_cap_consumed;
+                    let formatted_new = self.format_commit(&self.current_word);
+                    let (backspaces, commit_text) =
+                        compare_and_split_strings(&formatted_old, &formatted_new);
+                    let consumed =
+                        backspaces > 0 || commit_text != ch.to_string() || auto_cap_consumed;
                     return EngineOutput {
                         backspaces,
                         commit_text,
@@ -1714,7 +2505,38 @@ impl Engine {
                 }
                 InputMethod::Auto => {
                     if self.word_used_telex {
+                        let old_word = self.current_word.clone();
+                        let next_raw = format!("{}{}", self.raw_strokes, ch);
+                        let is_macro_prefix =
+                            self.config.enable_macro && self.macro_table.has_prefix(&next_raw);
+                        let should_restore_before_digit = !is_macro_prefix
+                            && !self.manual_undo
+                            && self.current_word != self.raw_strokes
+                            && (!is_valid_vietnamese_syllable(&self.current_word)
+                                || (self.config.auto_restore_english
+                                    && (self.auto_restore.is_english_keyword(&self.raw_strokes)
+                                        || has_phonology_violation(&self.current_word)
+                                        || (self.config.spell_check
+                                            && !is_in_vietnamese_dictionary(&self.current_word)))));
+                        if should_restore_before_digit {
+                            self.raw_strokes.push(ch);
+                            self.current_word = self.raw_strokes.clone();
+                            self.english_locked = true;
+                            let formatted_old = self.format_commit(&old_word);
+                            let formatted_new = self.format_commit(&self.current_word);
+                            let (backspaces, commit_text) =
+                                compare_and_split_strings(&formatted_old, &formatted_new);
+                            return EngineOutput {
+                                backspaces,
+                                commit_text,
+                                consumed: true,
+                                auto_restored: true,
+                                macro_expanded: false,
+                                adaptive_delay_ms: 0,
+                            };
+                        }
                         self.reset();
+                        self.preceded_by_tech_delimiter = true;
                         return EngineOutput {
                             backspaces: 0,
                             commit_text: ch.to_string(),
@@ -2018,8 +2840,13 @@ impl Engine {
             has_digits || self.word_used_vni || self.config.method == InputMethod::Vni;
         let has_diacritic = has_vietnamese_diacritic(&new_word);
         let new_chars: Vec<char> = new_word.chars().collect();
+        let is_elongated_vn = has_diacritic && is_valid_elongated_vietnamese_word(&new_word);
         let invalid_structure = has_diacritic
+            && !is_elongated_vn
             && (!is_valid_in_progress_syllable(&new_chars) || has_phonology_violation(&new_word));
+        let slash_token_match = self.preceded_by_leading_slash
+            && has_diacritic
+            && is_leading_slash_command_or_path_token(&self.raw_strokes.to_lowercase());
         let learned_match = !is_vni_word
             && has_diacritic
             && self.habit_learner.is_learned_word(&self.raw_strokes);
@@ -2038,6 +2865,7 @@ impl Engine {
         if !self.manual_undo
             && !is_vni_word
             && ((self.config.auto_restore_english && invalid_structure)
+                || slash_token_match
                 || dict_match
                 || learned_match)
         {
@@ -2995,5 +3823,140 @@ mod tests {
         telex_engine.reset();
         let out_tse = type_word(&mut telex_engine, "tiense ");
         assert_eq!(out_tse, "tiến ");
+    }
+
+    #[test]
+    fn test_batch1_vietlotus_edge_cases_and_guards() {
+        let mut engine = Engine::new(EngineConfig {
+            method: InputMethod::Telex,
+            auto_restore_english: true,
+            spell_check: true,
+            enable_dictionary: true,
+            enable_macro: true,
+            ..EngineConfig::default()
+        });
+
+        // 1. Vowel elongation after horned syllables ('ư'/'ơ') & toned syllables:
+        // 'uwfaaa ' -> 'ừaaa ', 'owfaaa ' -> 'ờaaa ', 'muwaaaa ' -> 'mưaaaa ', 'uwfeee ' -> 'ừeee ', 'trowifiii ' -> 'trờiiii '
+        assert_eq!(type_word(&mut engine, "uwfaaa "), "ừaaa ");
+        assert_eq!(type_word(&mut engine, "owfaaa "), "ờaaa ");
+        assert_eq!(type_word(&mut engine, "muwaaaa "), "mưaaaa ");
+        assert_eq!(type_word(&mut engine, "uwfeee "), "ừeee ");
+        assert_eq!(type_word(&mut engine, "trowifiii "), "trờiiii ");
+        // While keeping English words with 'w' + 'e' intact:
+        assert_eq!(type_word(&mut engine, "owe "), "owe ");
+        assert_eq!(type_word(&mut engine, "twee "), "twee ");
+        assert_eq!(type_word(&mut engine, "weee "), "weee ");
+
+        // 2. Completed horn/breve syllable saturation on trailing 'w' and subsequent Backspace:
+        // 'dduowcjw' -> 'đượcw', then Backspace -> 'được'
+        engine.reset();
+        let out_duocw = type_word(&mut engine, "dduowcjw");
+        assert_eq!(out_duocw, "đượcw");
+        engine.handle_backspace();
+        assert_eq!(engine.current_word(), "được");
+        let out_space = engine.process_key(' ', 0.0);
+        assert!(!out_space.auto_restored);
+
+        // And English words with two 'w's restore both 'w's cleanly:
+        engine.reset();
+        assert_eq!(type_word(&mut engine, "awkward "), "awkward ");
+        assert_eq!(type_word(&mut engine, "downward "), "downward ");
+
+        // 3. Restore non-Vietnamese words before digits when Macro & Auto-Restore are both enabled:
+        // 'test123 ' -> 'test123 ', 'user2026 ' -> 'user2026 ', while keeping numeric macros ('k8s', 'mp3')
+        engine.reset();
+        engine.macro_table.insert("k8s".to_string(), "Kubernetes".to_string());
+        engine.macro_table.insert("mp3".to_string(), "MPEG Layer 3".to_string());
+        assert_eq!(type_word(&mut engine, "test123 "), "test123 ");
+        assert_eq!(type_word(&mut engine, "user2026 "), "user2026 ");
+        assert_eq!(type_word(&mut engine, "k8s "), "Kubernetes ");
+        assert_eq!(type_word(&mut engine, "mp3 "), "MPEG Layer 3 ");
+
+        // 4. Technical delimiter macro suppression (URLs, emails, paths, function calls):
+        // Note: 'vn' -> 'Việt Nam' and 'dc' -> 'được' are default macros!
+        engine.reset();
+        assert_eq!(type_word(&mut engine, "google.com.vn "), "google.com.vn ");
+        assert_eq!(type_word(&mut engine, "https://vn/dc "), "https://vn/dc ");
+        assert_eq!(type_word(&mut engine, "user@vn.com "), "user@vn.com ");
+        assert_eq!(type_word(&mut engine, "dc() "), "dc() ");
+        assert_eq!(type_word(&mut engine, "vn[0] "), "vn[0] ");
+        // Normal prose still expands macros as expected:
+        assert_eq!(type_word(&mut engine, "vn "), "Việt Nam ");
+        assert_eq!(type_word(&mut engine, "dc "), "được ");
+
+        // 5. Leading slash command & Unix path protection ('/compact', '/aws', '/os', '/usr/bin'):
+        engine.reset();
+        assert_eq!(type_word(&mut engine, "/compact "), "/compact ");
+        assert_eq!(type_word(&mut engine, "/aws "), "/aws ");
+        assert_eq!(type_word(&mut engine, "/os "), "/os ");
+        assert_eq!(type_word(&mut engine, "/if "), "/if ");
+        assert_eq!(type_word(&mut engine, "/as "), "/as ");
+        assert_eq!(type_word(&mut engine, "/usr/local/bin "), "/usr/local/bin ");
+    }
+
+    #[test]
+    fn test_batch2_developer_mode_backtick_and_sentence_momentum() {
+        let mut engine = Engine::new(EngineConfig {
+            method: InputMethod::Telex,
+            auto_restore_english: true,
+            spell_check: true,
+            enable_dictionary: true,
+            enable_macro: true,
+            developer_mode: true,
+            ..EngineConfig::default()
+        });
+
+        // 1. Markdown Inline Code (`...`) and Fenced Code Block (```...```) FSM:
+        // Inside inline backticks, Vietnamese diacritics and macro expansions are bypassed:
+        assert_eq!(
+            type_word(&mut engine, "Dufng leenhj `git status --short` vaf `dc vn` trong terminal "),
+            "Dùng lệnh `git status --short` và `dc vn` trong terminal "
+        );
+        // Unclosed inline backtick automatically closes on newline '\n':
+        engine.reset();
+        assert_eq!(
+            type_word(&mut engine, "`code_line\ntieengs Vieetj "),
+            "`code_line\ntiếng Việt "
+        );
+        // Fenced code block (```...```) stays bypassed across newlines until closing ```:
+        engine.reset();
+        assert_eq!(
+            type_word(
+                &mut engine,
+                "```rust\nlet dduowcj = vn();\nlet tieengs = 1;\n```\nTieengs Vieetj "
+            ),
+            "```rust\nlet dduowcj = vn();\nlet tieengs = 1;\n```\nTiếng Việt "
+        );
+
+        // 2. Bilingual Sentence Momentum & Math Function Context:
+        // Standalone Vietnamese collisions remain Vietnamese when typed alone:
+        engine.reset();
+        assert_eq!(type_word(&mut engine, "tree "), "trê ");
+        engine.reset();
+        assert_eq!(type_word(&mut engine, "cos "), "có ");
+        engine.reset();
+        assert_eq!(type_word(&mut engine, "must "), "mút ");
+
+        // Preceded by English anchor / English momentum -> ambiguous collisions resolve to English:
+        engine.reset();
+        assert_eq!(type_word(&mut engine, "the tree "), "the tree ");
+        engine.reset();
+        assert_eq!(type_word(&mut engine, "that is a tree "), "that is a tree ");
+        engine.reset();
+        assert_eq!(type_word(&mut engine, "he must see this room. "), "he must see this room. ");
+
+        // Sentence boundary '.' resets English momentum so the next word is Vietnamese again:
+        assert_eq!(type_word(&mut engine, "tree "), "trê ");
+
+        // Vietnamese context reset word ('anh', 'em', 'tôi', 'không') resets momentum back to Vietnamese:
+        engine.reset();
+        assert_eq!(type_word(&mut engine, "the anh cos "), "the anh có ");
+
+        // Math function context ('sin and cos ', 'tan or cos '):
+        engine.reset();
+        assert_eq!(type_word(&mut engine, "sin and cos "), "sin and cos ");
+        engine.reset();
+        assert_eq!(type_word(&mut engine, "tan or cos "), "tan or cos ");
     }
 }

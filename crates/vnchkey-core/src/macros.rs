@@ -97,6 +97,15 @@ impl MacroTable {
         Some(resolve_dynamic_tokens_with_clipboard(raw, &self.clipboard_text))
     }
 
+    /// Returns `true` if any active macro key starts with `prefix` (case-insensitive).
+    pub fn has_prefix(&self, prefix: &str) -> bool {
+        if prefix.is_empty() {
+            return false;
+        }
+        let lower = prefix.to_lowercase();
+        self.entries.keys().any(|k| k.starts_with(&lower))
+    }
+
     /// Inserts a new shorthand entry.
     pub fn insert(&mut self, shortcut: String, expansion: String) {
         self.entries.insert(shortcut.to_lowercase(), expansion);

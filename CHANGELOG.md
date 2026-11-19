@@ -20,6 +20,13 @@ Tất cả những thay đổi nổi bật của dự án **vnchKey** (**fcitx5-
 - **Khử Nhiễu Phím Kép Phần Cứng (`debounce_ms`)**: Lọc phím lặp phần cứng dựa trên `timestamp_ms`.
 - **Live Inspector (Debug)**: Thêm `Engine::inspect_state()`, FFI `fcitx5_vnchkey_inspect_state`, và mục mở trực tiếp trên Windows, macOS, Linux (`vnchkey-settings`).
 - **Thống Kê Hiệu Suất (`TypingStats`)**: Bổ sung `keystrokes_saved`, `serialize_compact()`, `parse_compact()`, và FFI `fcitx5_vnchkey_get_stats`.
+- **Chế Độ Code (`developer_mode` & `DevCodeState` FSM)** (`engine.rs`, FFI, Linux/macOS/Windows): Tự động ngắt bỏ dấu tiếng Việt và ngắt bung Gõ Tắt bên trong Markdown inline code (`` `...` ``) và fenced code block (```` ```...``` ````); inline code tự đóng khi xuống dòng (`\n`).
+- **Đà Ngữ Cảnh Song Ngữ & Ngữ Cảnh Toán Học (`in_english_context`, `math_context_words_remaining`)**: Các từ trùng phím Telex (`tree`, `cos`, `must`, `room`, `see`, `this`...) giữ nguyên tiếng Việt khi đứng độc lập (`tree ` → `trê `, `cos ` → `có `) nhưng tự động chuyển sang tiếng Anh khi đi sau từ neo tiếng Anh (`the tree `, `that is a tree `, `he must see this room.`) hoặc biểu thức lượng giác (`sin and cos `, `tan or cos `), và tự reset về tiếng Việt khi gặp dấu kết câu hoặc từ khóa tiếng Việt (`anh`, `em`, `tôi`, `không`).
+- **Cải Tiến Lõi Telex & Guard Kỹ Thuật (`telex.rs`, `macros.rs`, `auto_restore.rs`, `engine.rs`)**:
+  - Giữ dấu thanh cố định khi kéo dài nguyên âm biểu cảm sau âm tiết có móc `ư`/`ơ` (`uwfaaa ` → `ừaaa `, `trowifiii ` → `trờiiii `) mà vẫn bảo toàn từ tiếng Anh (`owe `, `twee `, `weee `).
+  - Bão hòa ngữ nghĩa khi dư phím `w` cuối âm tiết hoàn chỉnh (`dduowcjw` → `đượcw`, `Backspace` → `được`) và khôi phục trọn vẹn từ tiếng Anh chứa nhiều `w` (`awkward `, `downward `).
+  - Tự động khôi phục từ không phải tiếng Việt trước chữ số khi bật đồng thời Macro & Auto-Restore (`test123 `, `user2026 `) nhưng vẫn giữ nguyên macro chứa số (`k8s`, `mp3`) qua `MacroTable::has_prefix`.
+  - Chặn bung Gõ Tắt bên cạnh dấu phân cách kỹ thuật (`google.com.vn`, `https://vn/dc`, `user@vn.com`, `dc()`, `vn[0]`) và bảo vệ slash commands / đường dẫn Unix (`/compact`, `/aws`, `/os`, `/usr/local/bin`).
 
 ---
 

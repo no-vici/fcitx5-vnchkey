@@ -750,6 +750,12 @@ impl SettingsApp {
         ui.add_space(6.0);
 
         ui.checkbox(
+            &mut self.config.developer_mode,
+            "Chế độ Code (Developer Mode): Tự động ngắt dấu & gõ tắt trong cặp dấu `code` và khối ```code```",
+        );
+        ui.add_space(6.0);
+
+        ui.checkbox(
             &mut self.config.free_marking,
             "Cho phép bỏ dấu tự do trên bất kỳ nguyên âm nào",
         );

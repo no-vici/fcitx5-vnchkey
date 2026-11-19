@@ -1,5 +1,6 @@
 // Auto-generated sorted dictionary + 2KB Bloom filter. Do not edit manually.
 
+/// Precomputed 2KB Bloom filter over valid Vietnamese syllables.
 pub const VIETNAMESE_BLOOM_FILTER: [u64; 256] = [
     0xe2b6f3c5a5fcff57, 0x6ff2fca489f3a6f1, 0xb98197db93689e3e, 0x4adb91d0fc4699df,
     0xb30e01794d9bdc2d, 0xfea3356dfa70af9a, 0xeb64d19221fbffd0, 0x9de4ff7ec32675a9,
@@ -67,6 +68,7 @@ pub const VIETNAMESE_BLOOM_FILTER: [u64; 256] = [
     0x5dcfe5177b83c7ff, 0x45b3df6bfb0198bc, 0xf7d495e277bcddcd, 0xf7e9f8970f5c7b67,
 ];
 
+/// Sorted dictionary of valid Vietnamese syllables and expressions.
 pub const VIETNAMESE_WORDS_SORTED: &[&str] = &[
     "Gom góp từ ngữ của miền Nam và Saigon xưa", "a", "a yun pa", "abc", "ai", "am", "an", "ana", "ang", "anh",
     "ao", "ascii", "au", "ba", "bai", "ban", "bang", "banh", "bao", "basoi",

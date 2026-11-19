@@ -44,6 +44,12 @@ pub struct VnchkeyConfig {
     pub learn_typing_habits: bool,
     pub habit_promote_threshold: u32,
     pub initial_case_anchor: bool,
+    #[serde(default = "default_true")]
+    pub developer_mode: bool,
+}
+
+fn default_true() -> bool {
+    true
 }
 
 impl Default for VnchkeyConfig {
@@ -84,6 +90,7 @@ impl Default for VnchkeyConfig {
             learn_typing_habits: true,
             habit_promote_threshold: 4,
             initial_case_anchor: false,
+            developer_mode: true,
         }
     }
 }
@@ -225,6 +232,7 @@ impl ConfigManager {
             if let Some(v) = map.get("LearnTypingHabits") { cfg.learn_typing_habits = v.eq_ignore_ascii_case("true"); }
             if let Some(v) = map.get("HabitPromoteThreshold") { cfg.habit_promote_threshold = v.parse().unwrap_or(4).max(1); }
             if let Some(v) = map.get("InitialCaseAnchor") { cfg.initial_case_anchor = v.eq_ignore_ascii_case("true"); }
+            if let Some(v) = map.get("DeveloperMode") { cfg.developer_mode = v.eq_ignore_ascii_case("true"); }
         }
 
         cfg
@@ -274,6 +282,7 @@ impl ConfigManager {
         lines.push(format!("ShowIndicatorBadge={}", if cfg.show_indicator_badge { "True" } else { "False" }));
         lines.push(format!("LearnTypingHabits={}", if cfg.learn_typing_habits { "True" } else { "False" }));
         lines.push(format!("HabitPromoteThreshold={}", cfg.habit_promote_threshold));
+        lines.push(format!("DeveloperMode={}", if cfg.developer_mode { "True" } else { "False" }));
 
         fs::write(Self::conf_path(), lines.join("\n") + "\n")?;
         Self::reload_fcitx5();

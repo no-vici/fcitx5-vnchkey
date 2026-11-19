@@ -56,6 +56,7 @@ mod win_app {
     const ID_TOGGLE_ESCRESTORE: usize = 1032;
     const ID_TOGGLE_BRACKET: usize = 1033;
     const ID_TOGGLE_CASE_ANCHOR: usize = 1065;
+    const ID_TOGGLE_DEV_MODE: usize = 1066;
     const ID_TOGGLE_MACRO: usize = 1034;
     const ID_TOGGLE_DICT: usize = 1035;
     const ID_TOGGLE_HABIT_LEARNING: usize = 1053;
@@ -106,7 +107,17 @@ mod win_app {
         ) -> HANDLE;
         fn FindNextChangeNotification(hChangeHandle: HANDLE) -> i32;
         fn WaitForSingleObject(hHandle: HANDLE, dwMilliseconds: u32) -> u32;
+        fn GlobalLock(hMem: HANDLE) -> *mut std::ffi::c_void;
+        fn GlobalUnlock(hMem: HANDLE) -> i32;
     }
+
+    #[link(name = "user32")]
+    extern "system" {
+        fn OpenClipboard(hWndNewOwner: HWND) -> i32;
+        fn CloseClipboard() -> i32;
+        fn GetClipboardData(uFormat: u32) -> HANDLE;
+    }
+    const CF_UNICODETEXT: u32 = 13;
 
     const ID_ABOUT: usize = 1073;
     const ID_LIVE_INSPECTOR: usize = 1074;
@@ -276,7 +287,7 @@ mod win_app {
                 let ptr = GlobalLock(h_data) as *const u16;
                 if !ptr.is_null() {
                     let mut len = 0usize;
-                    while len < 2048 && *ptr.add(len) != 0 {
+                    while len < 65536 && *ptr.add(len) != 0 {
                         len += 1;
                     }
                     let slice = std::slice::from_raw_parts(ptr, len);
@@ -565,6 +576,10 @@ mod win_app {
                             let val = v == "true" || v == "1";
                             st.engine.set_initial_case_anchor(val);
                         }
+                        "developer_mode" => {
+                            let val = v != "false" && v != "0";
+                            st.engine.set_developer_mode(val);
+                        }
                         "per_app" => {
                             st.per_app = v == "true" || v == "1";
                         }
@@ -609,6 +624,7 @@ mod win_app {
              learn_habits={}\n\
              habit_threshold={}\n\
              initial_case_anchor={}\n\
+             developer_mode={}\n\
              per_app={}\n\
              ctrl={}\n\
              shift={}\n\
@@ -637,6 +653,7 @@ mod win_app {
             st.engine.habit_learning_enabled(),
             st.engine.habit_promote_threshold(),
             st.engine.initial_case_anchor(),
+            st.engine.developer_mode(),
             st.per_app,
             st.shortcut.ctrl, st.shortcut.shift, st.shortcut.alt, st.shortcut.win, st.shortcut.key_code,
             st.flip_shortcut.ctrl, st.flip_shortcut.shift, st.flip_shortcut.alt, st.flip_shortcut.win, st.flip_shortcut.key_code,
@@ -2207,7 +2224,7 @@ Start-Process -FilePath $batch -WindowStyle Hidden;
         AppendMenuW(menu, MF_SEPARATOR, 0, null_mut());
 
         // 5. Tính năng thông minh Checkboxes
-        let (quick_telex, quick_start, quick_end) = STATE.with(|s| {
+        let (quick_telex, quick_start, quick_end, dev_mode) = STATE.with(|s| {
             s.try_borrow()
                 .ok()
                 .map(|st| {
@@ -2215,9 +2232,10 @@ Start-Process -FilePath $batch -WindowStyle Hidden;
                         st.engine.quick_telex(),
                         st.engine.quick_start_consonant(),
                         st.engine.quick_end_consonant(),
+                        st.engine.developer_mode(),
                     )
                 })
-                .unwrap_or((false, false, false))
+                .unwrap_or((false, false, false, true))
         });
 
         AppendMenuW(
@@ -2249,6 +2267,12 @@ Start-Process -FilePath $batch -WindowStyle Hidden;
             MF_STRING | if case_anchor { MF_CHECKED } else { 0 },
             ID_TOGGLE_CASE_ANCHOR,
             to_wstring("Đồng nhất chữ hoa theo chữ cái đầu (Được, được)").as_ptr(),
+        );
+        AppendMenuW(
+            menu,
+            MF_STRING | if dev_mode { MF_CHECKED } else { 0 },
+            ID_TOGGLE_DEV_MODE,
+            to_wstring("Chế độ Code (Tự ngắt dấu trong `code`)").as_ptr(),
         );
 
         // Tùy chọn Tốc ký
@@ -2404,6 +2428,7 @@ Start-Process -FilePath $batch -WindowStyle Hidden;
             ID_LIVE_INSPECTOR,
             to_wstring("Live Inspector (Debug)...").as_ptr(),
         );
+
         AppendMenuW(
             menu,
             MF_STRING,
@@ -2638,6 +2663,11 @@ Start-Process -FilePath $batch -WindowStyle Hidden;
                         ID_TOGGLE_CASE_ANCHOR => {
                             let val = !st.engine.initial_case_anchor();
                             st.engine.set_initial_case_anchor(val);
+                            save_app_config(&st);
+                        }
+                        ID_TOGGLE_DEV_MODE => {
+                            let val = !st.engine.developer_mode();
+                            st.engine.set_developer_mode(val);
                             save_app_config(&st);
                         }
                         ID_TOGGLE_QUICK_TELEX => {

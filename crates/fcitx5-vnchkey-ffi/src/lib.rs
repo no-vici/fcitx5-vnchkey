@@ -757,6 +757,29 @@ pub unsafe extern "C" fn fcitx5_vnchkey_set_acronym_bypass(
     }
 }
 
+/// Enables or disables Developer Mode (Markdown inline `` `...` `` & fenced ```` ```...``` ```` code bypass).
+#[no_mangle]
+pub unsafe extern "C" fn fcitx5_vnchkey_set_developer_mode(
+    ctx: *mut Fcitx5VnchkeyContext,
+    enabled: bool,
+) {
+    if !ctx.is_null() {
+        (*ctx).engine.set_developer_mode(enabled);
+    }
+}
+
+/// Returns whether Developer Mode is enabled.
+#[no_mangle]
+pub unsafe extern "C" fn fcitx5_vnchkey_get_developer_mode(
+    ctx: *mut Fcitx5VnchkeyContext,
+) -> bool {
+    if !ctx.is_null() {
+        (*ctx).engine.developer_mode()
+    } else {
+        true
+    }
+}
+
 /// Reads typing statistics from the engine.
 #[no_mangle]
 pub unsafe extern "C" fn fcitx5_vnchkey_get_stats(
