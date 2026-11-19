@@ -1855,7 +1855,7 @@ impl Engine {
                 let (new_tail, tail_transformed, tail_undo) = self.vni.apply_key(&tail, ch);
                 if tail_transformed {
                     if !self.word_used_vni
-                        && !matches!(ch, '6' | '7' | '8' | '9')
+                        && ch != '9'
                         && (self.auto_restore.is_english_keyword(&self.current_word)
                             || self.current_word.to_lowercase().starts_with("sh"))
                     {

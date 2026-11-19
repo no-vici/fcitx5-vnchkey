@@ -120,6 +120,8 @@ fn test_vietc_auto_restore_cases() {
         ("do19 ", "đó "),
         ("du39 ", "đủ "),
         ("icon256 ", "icon256 "),
+        ("icon64 ", "icon64 "),
+        ("base64 ", "base64 "),
         ("abc256 ", "abc256 "),
     ];
     for (input, expected) in dbar_single_vowel_cases {
