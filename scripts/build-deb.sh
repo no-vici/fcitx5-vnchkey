@@ -5,7 +5,7 @@
 # ==============================================================================
 set -euo pipefail
 
-VERSION="0.3.6"
+VERSION="0.3.7"
 PKGNAME="fcitx5-vnchkey"
 ARCH="amd64"
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
