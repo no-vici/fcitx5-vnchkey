@@ -2624,6 +2624,7 @@ impl Engine {
                 }
                 InputMethod::Vni => {
                     if self.current_word.is_empty() {
+                        self.reset();
                         return EngineOutput {
                             backspaces: 0,
                             commit_text: ch.to_string(),

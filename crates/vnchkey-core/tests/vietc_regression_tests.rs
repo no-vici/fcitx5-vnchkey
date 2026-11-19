@@ -114,6 +114,11 @@ fn test_vietc_auto_restore_cases() {
         ("d9e2 ", "đè "),
         ("D9a4 ", "Đã "),
         ("D9e63 ", "Để "),
+        ("da49 ", "đã "),
+        ("de639 ", "để "),
+        ("de369 ", "để "),
+        ("do19 ", "đó "),
+        ("du39 ", "đủ "),
     ];
     for (input, expected) in dbar_single_vowel_cases {
         vni_auto.reset();
