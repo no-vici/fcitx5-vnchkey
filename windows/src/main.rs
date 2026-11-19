@@ -121,6 +121,8 @@ mod win_app {
 
     const ID_ABOUT: usize = 1073;
     const ID_LIVE_INSPECTOR: usize = 1074;
+    const ID_TOGGLE_TRACE_LOG: usize = 1075;
+    const ID_EXPORT_DEBUG_LOGS: usize = 1076;
     const ID_CHECK_UPDATE: usize = 1071;
     const ID_RESET_DEFAULTS: usize = 1072;
 
@@ -240,6 +242,8 @@ mod win_app {
         last_macros_mtime: Option<std::time::SystemTime>,
         chord_armed: bool,
         other_key_during_chord: bool,
+        tracing_enabled: bool,
+        trace_log: std::collections::VecDeque<String>,
     }
 
     thread_local! {
@@ -273,6 +277,8 @@ mod win_app {
             last_macros_mtime: None,
             chord_armed: false,
             other_key_during_chord: false,
+            tracing_enabled: false,
+            trace_log: std::collections::VecDeque::with_capacity(200),
         });
     }
 
@@ -1828,6 +1834,13 @@ Start-Process -FilePath $batch -WindowStyle Hidden;
                     st.engine.set_clipboard_text(read_win32_clipboard_text());
                 }
                 let output = st.engine.process_key(ch, now_ms());
+                if st.tracing_enabled {
+                    let entry = format!("[key={:?}] {}", ch, st.engine.inspect_state());
+                    if st.trace_log.len() >= 200 {
+                        st.trace_log.pop_front();
+                    }
+                    st.trace_log.push_back(entry);
+                }
                 if output.consumed {
                     // Pass through unchanged single ASCII characters directly via CallNextHookEx
                     // instead of swallowing and re-injecting via KEYEVENTF_UNICODE (VK_PACKET).
@@ -2428,6 +2441,19 @@ Start-Process -FilePath $batch -WindowStyle Hidden;
             ID_LIVE_INSPECTOR,
             to_wstring("Live Inspector (Debug)...").as_ptr(),
         );
+        let trace_checked = STATE.with(|s| s.borrow().tracing_enabled);
+        AppendMenuW(
+            menu,
+            if trace_checked { MF_STRING | MF_CHECKED } else { MF_STRING },
+            ID_TOGGLE_TRACE_LOG,
+            to_wstring("Ghi Trace Log (Debug)").as_ptr(),
+        );
+        AppendMenuW(
+            menu,
+            MF_STRING,
+            ID_EXPORT_DEBUG_LOGS,
+            to_wstring("Export Debug Logs...").as_ptr(),
+        );
 
         AppendMenuW(
             menu,
@@ -2764,10 +2790,74 @@ Start-Process -FilePath $batch -WindowStyle Hidden;
                 } else if id == ID_ABOUT {
                     show_about_dialog(hwnd);
                 } else if id == ID_LIVE_INSPECTOR {
-                    let info = STATE.with(|s| s.borrow().engine.inspect_state());
+                    let info = STATE.with(|s| {
+                        let b = s.borrow();
+                        let st = b.engine.stats();
+                        format!(
+                            "{}\n\nThống kê hiệu suất (TypingStats):\nTừ đã gõ: {} | Khôi phục EN: {} | Macro: {} | Phím tiết kiệm: {}",
+                            b.engine.inspect_state(),
+                            st.words_typed,
+                            st.english_restored,
+                            st.macros_expanded,
+                            st.keystrokes_saved
+                        )
+                    });
                     let title = to_wstring("VnCharKey - Live Inspector (Debug)");
                     let body = to_wstring(&info);
                     MessageBoxW(hwnd, body.as_ptr(), title.as_ptr(), MB_OK | MB_ICONINFORMATION);
+                } else if id == ID_TOGGLE_TRACE_LOG {
+                    let enabled = STATE.with(|s| {
+                        let mut b = s.borrow_mut();
+                        b.tracing_enabled = !b.tracing_enabled;
+                        if b.tracing_enabled {
+                            b.trace_log.clear();
+                        }
+                        b.tracing_enabled
+                    });
+                    let msg = if enabled {
+                        "Đã BẬT ghi Trace Log (tối đa 200 phím gần nhất)."
+                    } else {
+                        "Đã TẮT ghi Trace Log."
+                    };
+                    MessageBoxW(
+                        hwnd,
+                        to_wstring(msg).as_ptr(),
+                        to_wstring("VnCharKey - Trace Log").as_ptr(),
+                        MB_OK | MB_ICONINFORMATION,
+                    );
+                } else if id == ID_EXPORT_DEBUG_LOGS {
+                    let content = STATE.with(|s| {
+                        let b = s.borrow();
+                        let st = b.engine.stats();
+                        let mut out = String::from("=== VnCharKey Windows Debug Log Export ===\n");
+                        out.push_str(&format!(
+                            "Stats: Từ đã gõ: {} | Khôi phục EN: {} | Macro: {} | Phím tiết kiệm: {}\n",
+                            st.words_typed, st.english_restored, st.macros_expanded, st.keystrokes_saved
+                        ));
+                        out.push_str("------------------------------------------\n\n--- Live Inspector Trace ---\n");
+                        if b.trace_log.is_empty() {
+                            out.push_str("(No trace entries recorded)\n");
+                        } else {
+                            for line in &b.trace_log {
+                                out.push_str(line);
+                                out.push('\n');
+                            }
+                        }
+                        out.push_str("\n--- End of Log ---\n");
+                        out
+                    });
+                    let path = std::env::temp_dir().join("vncharkey-debug.log");
+                    let msg = if std::fs::write(&path, content).is_ok() {
+                        format!("Đã xuất nhật ký gỡ lỗi ra:\n{}", path.display())
+                    } else {
+                        "Không thể xuất nhật ký gỡ lỗi!".to_string()
+                    };
+                    MessageBoxW(
+                        hwnd,
+                        to_wstring(&msg).as_ptr(),
+                        to_wstring("VnCharKey - Export Debug Logs").as_ptr(),
+                        MB_OK | MB_ICONINFORMATION,
+                    );
                 }
                 if let Some((body, title)) = record_dialog {
                     MessageBoxW(

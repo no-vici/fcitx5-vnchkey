@@ -1647,7 +1647,31 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
     private var inspectorPanel: NSPanel?
     private var inspectorLabel: NSTextField?
+    private var inspectorStatsLabel: NSTextField?
     private var inspectorTimer: Timer?
+
+    @objc func toggleTraceLogging(_ sender: NSButton) {
+        let enabled = (sender.state == .on)
+        keyManager?.isTracingEnabled = enabled
+        if enabled {
+            keyManager?.clearTraceLog()
+        }
+    }
+
+    @objc func exportMacDebugLogs() {
+        let panel = NSSavePanel()
+        panel.nameFieldStringValue = "vnchkey-macos-debug.log"
+        if panel.runModal() == .OK, let url = panel.url {
+            var content = "=== vnchKey macOS Debug Log Export ===\n"
+            content += "Stats: \(keyManager?.getStatsSummary() ?? "N/A")\n"
+            content += "--------------------------------------\n\n"
+            content += "--- Live Inspector Trace ---\n"
+            let trace = keyManager?.getTraceLog() ?? ""
+            content += trace.isEmpty ? "(No trace entries recorded)\n" : trace + "\n"
+            content += "\n--- End of Log ---\n"
+            try? content.write(to: url, atomically: true, encoding: .utf8)
+        }
+    }
 
     @objc func showLiveInspector() {
         if let panel = inspectorPanel {
@@ -1656,7 +1680,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         }
 
         let panel = NSPanel(
-            contentRect: NSRect(x: 0, y: 0, width: 520, height: 110),
+            contentRect: NSRect(x: 0, y: 0, width: 540, height: 170),
             styleMask: [.titled, .closable, .utilityWindow, .nonactivatingPanel],
             backing: .buffered,
             defer: false
@@ -1669,12 +1693,30 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         let label = NSTextField(wrappingLabelWithString: keyManager?.inspectState() ?? "Engine chưa sẵn sàng")
         label.font = NSFont.monospacedSystemFont(ofSize: 12, weight: .regular)
         label.isSelectable = true
-        label.frame = NSRect(x: 16, y: 16, width: 488, height: 78)
+        label.frame = NSRect(x: 16, y: 80, width: 508, height: 74)
         label.autoresizingMask = [.width, .height]
         panel.contentView?.addSubview(label)
 
+        let statsLabel = NSTextField(labelWithString: keyManager?.getStatsSummary() ?? "")
+        statsLabel.font = NSFont.systemFont(ofSize: 11.5)
+        statsLabel.textColor = .secondaryLabelColor
+        statsLabel.frame = NSRect(x: 16, y: 52, width: 508, height: 20)
+        statsLabel.autoresizingMask = [.width, .maxYMargin]
+        panel.contentView?.addSubview(statsLabel)
+
+        let traceCheck = NSButton(checkboxWithTitle: "Ghi Trace Log", target: self, action: #selector(toggleTraceLogging(_:)))
+        traceCheck.state = (keyManager?.isTracingEnabled == true) ? .on : .off
+        traceCheck.frame = NSRect(x: 16, y: 14, width: 150, height: 24)
+        panel.contentView?.addSubview(traceCheck)
+
+        let exportBtn = NSButton(title: "Export Debug Logs", target: self, action: #selector(exportMacDebugLogs))
+        exportBtn.bezelStyle = .rounded
+        exportBtn.frame = NSRect(x: 364, y: 12, width: 160, height: 28)
+        panel.contentView?.addSubview(exportBtn)
+
         self.inspectorPanel = panel
         self.inspectorLabel = label
+        self.inspectorStatsLabel = statsLabel
 
         inspectorTimer?.invalidate()
         inspectorTimer = Timer.scheduledTimer(withTimeInterval: 0.15, repeats: true) { [weak self] _ in
@@ -1682,6 +1724,10 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             let state = self.keyManager?.inspectState() ?? "Engine chưa sẵn sàng"
             if self.inspectorLabel?.stringValue != state {
                 self.inspectorLabel?.stringValue = state
+            }
+            let stats = self.keyManager?.getStatsSummary() ?? ""
+            if self.inspectorStatsLabel?.stringValue != stats {
+                self.inspectorStatsLabel?.stringValue = stats
             }
         }
 

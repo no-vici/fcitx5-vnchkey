@@ -924,12 +924,41 @@ public class KeyTapManager {
             &outCommit
         )
 
+        if isTracingEnabled {
+            let state = inspectState()
+            traceLog.append("[key=0x\(String(scalar.value, radix: 16))] \(state)")
+            if traceLog.count > 200 {
+                traceLog.removeFirst(traceLog.count - 200)
+            }
+        }
+
         if handled == 1 {
             emitOutput(backspaces: backspaces, commitPtr: outCommit)
             return nil // Chặn phím gốc
         }
 
         return Unmanaged.passRetained(event)
+    }
+
+    var isTracingEnabled: Bool = false
+    private var traceLog: [String] = []
+
+    func getTraceLog() -> String {
+        return traceLog.joined(separator: "\n")
+    }
+
+    func clearTraceLog() {
+        traceLog.removeAll()
+    }
+
+    func getStatsSummary() -> String {
+        guard let engine = engine else { return "Thống kê: Engine chưa sẵn sàng" }
+        var words: UInt64 = 0
+        var enRestored: UInt64 = 0
+        var macros: UInt64 = 0
+        var saved: UInt64 = 0
+        fcitx5_vnchkey_get_stats(engine, &words, &enRestored, &macros, &saved)
+        return "Từ đã gõ: \(words) | Khôi phục EN: \(enRestored) | Macro: \(macros) | Phím tiết kiệm: \(saved)"
     }
 
     func inspectState() -> String {
