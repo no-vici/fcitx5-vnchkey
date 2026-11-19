@@ -1,0 +1,55 @@
+name: Multi-Platform CI & ASan Verification
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  linux-verify-3tier:
+    name: Linux 3-Tier Verification (Rust + ASan FFI + Wayland Addon)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Fcitx5 & Build Dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq --no-install-recommends \
+            cmake ninja-build extra-cmake-modules pkg-config \
+            libfcitx5core-dev libfcitx5utils-dev \
+            libgtk-3-dev libxkbcommon-dev libwayland-dev libegl1-mesa-dev
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Run Multi-Tier Verification Suite
+        run: ./scripts/verify-release.sh
+
+  windows-check:
+    name: Windows Cross-Target & Native Check
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: windows
+      - name: Cargo Check Windows Binary
+        run: cargo check --manifest-path windows/Cargo.toml --release
+
+  macos-check:
+    name: macOS FFI & Swift Build Check
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - name: Build Rust FFI Static Lib & Check Swift Compilation
+        run: |
+          cargo build --release -p fcitx5-vnchkey-ffi
+          cd macos
+          swiftc -typecheck Sources/main.swift Sources/KeyTapManager.swift \
+            -import-objc-header Bridging-Header.h
