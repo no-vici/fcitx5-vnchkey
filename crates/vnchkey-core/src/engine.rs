@@ -2590,7 +2590,10 @@ impl Engine {
                             let (new_tail, tail_transformed, tail_undo) =
                                 self.vni.apply_key(&tail, ch);
                             if tail_transformed {
-                                if self.current_word.eq_ignore_ascii_case("icon") {
+                                if !self.word_used_vni
+                                    && ch != '9'
+                                    && self.auto_restore.is_english_keyword(&self.current_word)
+                                {
                                     self.english_locked = true;
                                     self.raw_strokes.push(ch);
                                     self.current_word.push(ch);
@@ -2691,7 +2694,10 @@ impl Engine {
                             let (new_tail, tail_transformed, tail_undo) =
                                 self.vni.apply_key(&tail, ch);
                             if tail_transformed {
-                                if self.current_word.eq_ignore_ascii_case("icon") {
+                                if !self.word_used_vni
+                                    && ch != '9'
+                                    && self.auto_restore.is_english_keyword(&self.current_word)
+                                {
                                     self.english_locked = true;
                                     self.raw_strokes.push(ch);
                                     self.current_word.push(ch);
