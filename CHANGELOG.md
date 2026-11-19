@@ -4,6 +4,25 @@ Tất cả những thay đổi nổi bật của dự án **vnchKey** (**fcitx5-
 
 ---
 
+## [Unreleased]
+
+### ⚡ Tối Ưu Hiệu Năng & Bộ Nhớ (Performance & Zero-Allocation)
+- **Từ Điển Chánh Tả Tĩnh + Bloom Filter 2 KB** (`vietnamese_dict_data.rs`, `vietnamese_dict.rs`): Chuyển 6.974 từ tiếng Việt sang mảng `const VIETNAMESE_WORDS_SORTED` đã sắp xếp sẵn kết hợp `VIETNAMESE_BLOOM_FILTER` (2 KB L1 cache) và `binary_search()`, loại bỏ chi phí khởi tạo `OnceLock<HashSet<String>>` trên luồng tra cứu.
+- **FxHash & Stack Buffer Lowercasing** (`auto_restore.rs`): Thay SipHash mặc định bằng `FxHasher` / `FastHashSet` thuần Safe Rust (`#![forbid(unsafe_code)]`) và `with_stack_lowercase` dùng buffer `[u8; 64]` trên Stack để triệt tiêu cấp phát Heap cho từ ASCII.
+
+### 🚀 Tính Năng Mới & Cải Tiến Lõi (Core, FFI & UI)
+- **Biến Động Macro Mới**: Hỗ trợ `$ISO_DATE` (`YYYY-MM-DD`), `$WEEKDAY` (`Thứ Hai` → `Chủ Nhật`), và `$CLIPBOARD` (nối trực tiếp Clipboard OS trên macOS `NSPasteboard` và Windows `Win32 Clipboard API`, không sinh tiến trình con).
+- **Bảo Vệ Viết Tắt Chữ Hoa (`acronym_bypass`)**: Tự động giữ nguyên các cụm viết tắt ALL-CAPS 2–5 ký tự (như `IOS`, `VPS`, `FPS`...) khi kết thúc từ nếu không trùng từ điển tiếng Việt.
+- **Tự Động Viết Hoa Đầu Câu (`auto_capitalize`)**: Tùy chọn viết hoa chữ cái đầu câu mới sau `.`, `?`, `!`, `\n` (bỏ qua tên miền, số thập phân, từ viết tắt `vd.`, `tp.`).
+- **Bổ Sung Dấu Mũ/Móc Thông Minh (`smart_fuzzy_vowel`)**: Tùy chọn tự suy luận vần khép khi gõ Space (ví dụ `truongf ` → `trường `, `chuyenj ` → `chuyện `).
+- **Phân Giải Va Chạm Theo Ngữ Cảnh (`prev_word_was_english`)**: Khi từ liền trước vừa được Auto-Restore về tiếng Anh, các từ va chạm ngắn kế tiếp (`is`, `as`, `this`, `has`, `see`) tự động giữ nguyên tiếng Anh.
+- **Bộ Đệm Vòng Lùi Nhiều Từ (`reopen_history`)**: Nâng cấp `reopen_state` thành `VecDeque<ReopenWordState>` (tối đa 16 từ) cho phép bấm Backspace lùi qua nhiều từ liên tiếp để sửa dấu.
+- **Khử Nhiễu Phím Kép Phần Cứng (`debounce_ms`)**: Lọc phím lặp phần cứng dựa trên `timestamp_ms`.
+- **Live Inspector (Debug)**: Thêm `Engine::inspect_state()`, FFI `fcitx5_vnchkey_inspect_state`, và mục mở trực tiếp trên Windows, macOS, Linux (`vnchkey-settings`).
+- **Thống Kê Hiệu Suất (`TypingStats`)**: Bổ sung `keystrokes_saved`, `serialize_compact()`, `parse_compact()`, và FFI `fcitx5_vnchkey_get_stats`.
+
+---
+
 ## [0.3.6] - 2026-11-17
 
 ### 🚀 Tính Năng Mới & Đột Phá Kiến Trúc (Architectural Innovations)
