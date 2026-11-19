@@ -1813,6 +1813,116 @@ impl Engine {
         }
     }
 
+    fn process_vni_digit(&mut self, ch: char, auto_cap_consumed: bool) -> EngineOutput {
+        if self.current_word.is_empty() {
+            self.reset();
+            self.raw_strokes.push(ch);
+            self.current_word.push(ch);
+            self.english_locked = true;
+            return EngineOutput {
+                backspaces: 0,
+                commit_text: ch.to_string(),
+                consumed: false,
+                auto_restored: false,
+                macro_expanded: false,
+                adaptive_delay_ms: 0,
+            };
+        }
+        let (new_word, was_transformed, was_undo) = self.vni.apply_key(&self.current_word, ch);
+        if was_transformed
+            && !was_undo
+            && !matches!(ch, '6' | '7' | '8' | '9')
+            && (has_phonology_violation(&new_word)
+                || new_word.to_lowercase().starts_with("sh"))
+        {
+            self.english_locked = true;
+            self.raw_strokes.push(ch);
+            self.current_word.push(ch);
+            return EngineOutput {
+                backspaces: 0,
+                commit_text: self.format_commit(&ch.to_string()),
+                consumed: false,
+                auto_restored: false,
+                macro_expanded: false,
+                adaptive_delay_ms: 0,
+            };
+        }
+        if !was_transformed {
+            let split_idx = extract_last_syllable_index(&self.current_word);
+            let char_count = self.current_word.chars().count();
+            if split_idx > 0 && split_idx < char_count {
+                let tail: String = self.current_word.chars().skip(split_idx).collect();
+                let (new_tail, tail_transformed, tail_undo) = self.vni.apply_key(&tail, ch);
+                if tail_transformed {
+                    if !self.word_used_vni
+                        && !matches!(ch, '6' | '7' | '8' | '9')
+                        && (self.auto_restore.is_english_keyword(&self.current_word)
+                            || self.current_word.to_lowercase().starts_with("sh"))
+                    {
+                        self.english_locked = true;
+                        self.raw_strokes.push(ch);
+                        self.current_word.push(ch);
+                        return EngineOutput {
+                            backspaces: 0,
+                            commit_text: self.format_commit(&ch.to_string()),
+                            consumed: false,
+                            auto_restored: false,
+                            macro_expanded: false,
+                            adaptive_delay_ms: 0,
+                        };
+                    }
+                    self.word_used_vni = true;
+                    self.english_locked = false;
+                    self.manual_undo |= tail_undo;
+                    self.raw_strokes = format!("{}{}", tail, ch);
+                    let formatted_old = self.format_commit(&tail);
+                    let formatted_new = self.format_commit(&new_tail);
+                    let (backspaces, commit_text) =
+                        compare_and_split_strings(&formatted_old, &formatted_new);
+                    self.current_word = new_tail;
+                    let consumed =
+                        backspaces > 0 || commit_text != ch.to_string() || auto_cap_consumed;
+                    return EngineOutput {
+                        backspaces,
+                        commit_text,
+                        consumed,
+                        auto_restored: false,
+                        macro_expanded: false,
+                        adaptive_delay_ms: 0,
+                    };
+                }
+            }
+            self.english_locked = true;
+            self.raw_strokes.push(ch);
+            self.current_word.push(ch);
+            return EngineOutput {
+                backspaces: 0,
+                commit_text: ch.to_string(),
+                consumed: false,
+                auto_restored: false,
+                macro_expanded: false,
+                adaptive_delay_ms: 0,
+            };
+        }
+        self.word_used_vni = true;
+        self.english_locked = false;
+        self.manual_undo |= was_undo;
+        self.raw_strokes.push(ch);
+        let formatted_old = self.format_commit(&self.current_word);
+        let formatted_new = self.format_commit(&new_word);
+        let (backspaces, commit_text) = compare_and_split_strings(&formatted_old, &formatted_new);
+        self.current_word = new_word;
+        let consumed = backspaces > 0 || commit_text != ch.to_string() || auto_cap_consumed;
+        EngineOutput {
+            backspaces,
+            commit_text,
+            consumed,
+            auto_restored: false,
+            macro_expanded: false,
+            adaptive_delay_ms: 0,
+        }
+    }
+
     /// Process a key press event.
     pub fn process_key(&mut self, mut ch: char, timestamp_ms: f64) -> EngineOutput {
         self.last_completed_word = None;
@@ -2550,218 +2660,10 @@ impl Engine {
                             adaptive_delay_ms: 0,
                         };
                     }
-                    if self.current_word.is_empty() {
-                        self.raw_strokes.push(ch);
-                        self.current_word.push(ch);
-                        self.english_locked = true;
-                        return EngineOutput {
-                            backspaces: 0,
-                            commit_text: ch.to_string(),
-                            consumed: false,
-                            auto_restored: false,
-                            macro_expanded: false,
-                            adaptive_delay_ms: 0,
-                        };
-                    }
-                    let (new_word, was_transformed, was_undo) =
-                        self.vni.apply_key(&self.current_word, ch);
-                    if was_transformed
-                        && !was_undo
-                        && ch != '9'
-                        && (has_phonology_violation(&new_word)
-                            || new_word.to_lowercase().starts_with("sh"))
-                    {
-                        self.english_locked = true;
-                        self.raw_strokes.push(ch);
-                        self.current_word.push(ch);
-                        return EngineOutput {
-                            backspaces: 0,
-                            commit_text: self.format_commit(&ch.to_string()),
-                            consumed: false,
-                            auto_restored: false,
-                            macro_expanded: false,
-                            adaptive_delay_ms: 0,
-                        };
-                    }
-                    if !was_transformed {
-                        let split_idx = extract_last_syllable_index(&self.current_word);
-                        let char_count = self.current_word.chars().count();
-                        if split_idx > 0 && split_idx < char_count {
-                            let tail: String = self.current_word.chars().skip(split_idx).collect();
-                            let (new_tail, tail_transformed, tail_undo) =
-                                self.vni.apply_key(&tail, ch);
-                            if tail_transformed {
-                                if !self.word_used_vni
-                                    && ch != '9'
-                                    && (self.auto_restore.is_english_keyword(&self.current_word)
-                                        || self.current_word.to_lowercase().starts_with("sh"))
-                                {
-                                    self.english_locked = true;
-                                    self.raw_strokes.push(ch);
-                                    self.current_word.push(ch);
-                                    return EngineOutput {
-                                        backspaces: 0,
-                                        commit_text: self.format_commit(&ch.to_string()),
-                                        consumed: false,
-                                        auto_restored: false,
-                                        macro_expanded: false,
-                                        adaptive_delay_ms: 0,
-                                    };
-                                }
-                                self.word_used_vni = true;
-                                self.english_locked = false;
-                                self.manual_undo |= tail_undo;
-                                self.raw_strokes = format!("{}{}", tail, ch);
-                                let formatted_old = self.format_commit(&tail);
-                                let formatted_new = self.format_commit(&new_tail);
-                                let (backspaces, commit_text) =
-                                    compare_and_split_strings(&formatted_old, &formatted_new);
-                                self.current_word = new_tail;
-                                let consumed = backspaces > 0 || commit_text != ch.to_string() || auto_cap_consumed;
-                                return EngineOutput {
-                                    backspaces,
-                                    commit_text,
-                                    consumed,
-                                    auto_restored: false,
-                                    macro_expanded: false,
-                                    adaptive_delay_ms: 0,
-                                };
-                            }
-                        }
-                        self.reset();
-                        return EngineOutput {
-                            backspaces: 0,
-                            commit_text: ch.to_string(),
-                            consumed: false,
-                            auto_restored: false,
-                            macro_expanded: false,
-                            adaptive_delay_ms: 0,
-                        };
-                    }
-                    self.word_used_vni = true;
-                    self.english_locked = false;
-                    self.manual_undo |= was_undo;
-                    self.raw_strokes.push(ch);
-                    let formatted_old = self.format_commit(&self.current_word);
-                    let formatted_new = self.format_commit(&new_word);
-                    let (backspaces, commit_text) =
-                        compare_and_split_strings(&formatted_old, &formatted_new);
-                    self.current_word = new_word;
-                    let consumed = backspaces > 0 || commit_text != ch.to_string() || auto_cap_consumed;
-                    return EngineOutput {
-                        backspaces,
-                        commit_text,
-                        consumed,
-                        auto_restored: false,
-                        macro_expanded: false,
-                        adaptive_delay_ms: 0,
-                    };
+                    return self.process_vni_digit(ch, auto_cap_consumed);
                 }
                 InputMethod::Vni => {
-                    if self.current_word.is_empty() {
-                        self.reset();
-                        return EngineOutput {
-                            backspaces: 0,
-                            commit_text: ch.to_string(),
-                            consumed: false,
-                            auto_restored: false,
-                            macro_expanded: false,
-                            adaptive_delay_ms: 0,
-                        };
-                    }
-                    let (new_word, was_transformed, was_undo) =
-                        self.vni.apply_key(&self.current_word, ch);
-                    if was_transformed
-                        && !was_undo
-                        && ch != '9'
-                        && (has_phonology_violation(&new_word)
-                            || new_word.to_lowercase().starts_with("sh"))
-                    {
-                        self.english_locked = true;
-                        self.raw_strokes.push(ch);
-                        self.current_word.push(ch);
-                        return EngineOutput {
-                            backspaces: 0,
-                            commit_text: self.format_commit(&ch.to_string()),
-                            consumed: false,
-                            auto_restored: false,
-                            macro_expanded: false,
-                            adaptive_delay_ms: 0,
-                        };
-                    }
-                    if !was_transformed {
-                        let split_idx = extract_last_syllable_index(&self.current_word);
-                        let char_count = self.current_word.chars().count();
-                        if split_idx > 0 && split_idx < char_count {
-                            let tail: String = self.current_word.chars().skip(split_idx).collect();
-                            let (new_tail, tail_transformed, tail_undo) =
-                                self.vni.apply_key(&tail, ch);
-                            if tail_transformed {
-                                if !self.word_used_vni
-                                    && ch != '9'
-                                    && (self.auto_restore.is_english_keyword(&self.current_word)
-                                        || self.current_word.to_lowercase().starts_with("sh"))
-                                {
-                                    self.english_locked = true;
-                                    self.raw_strokes.push(ch);
-                                    self.current_word.push(ch);
-                                    return EngineOutput {
-                                        backspaces: 0,
-                                        commit_text: self.format_commit(&ch.to_string()),
-                                        consumed: false,
-                                        auto_restored: false,
-                                        macro_expanded: false,
-                                        adaptive_delay_ms: 0,
-                                    };
-                                }
-                                self.word_used_vni = true;
-                                self.english_locked = false;
-                                self.manual_undo |= tail_undo;
-                                self.raw_strokes = format!("{}{}", tail, ch);
-                                let formatted_old = self.format_commit(&tail);
-                                let formatted_new = self.format_commit(&new_tail);
-                                let (backspaces, commit_text) =
-                                    compare_and_split_strings(&formatted_old, &formatted_new);
-                                self.current_word = new_tail;
-                                let consumed = backspaces > 0 || commit_text != ch.to_string() || auto_cap_consumed;
-                                return EngineOutput {
-                                    backspaces,
-                                    commit_text,
-                                    consumed,
-                                    auto_restored: false,
-                                    macro_expanded: false,
-                                    adaptive_delay_ms: 0,
-                                };
-                            }
-                        }
-                        self.reset();
-                        return EngineOutput {
-                            backspaces: 0,
-                            commit_text: ch.to_string(),
-                            consumed: false,
-                            auto_restored: false,
-                            macro_expanded: false,
-                            adaptive_delay_ms: 0,
-                        };
-                    }
-                    self.word_used_vni = true;
-                    self.english_locked = false;
-                    self.manual_undo |= was_undo;
-                    self.raw_strokes.push(ch);
-                    let formatted_old = self.format_commit(&self.current_word);
-                    let formatted_new = self.format_commit(&new_word);
-                    let (backspaces, commit_text) =
-                        compare_and_split_strings(&formatted_old, &formatted_new);
-                    self.current_word = new_word;
-                    let consumed = backspaces > 0 || commit_text != ch.to_string() || auto_cap_consumed;
-                    return EngineOutput {
-                        backspaces,
-                        commit_text,
-                        consumed,
-                        auto_restored: false,
-                        macro_expanded: false,
-                        adaptive_delay_ms: 0,
-                    };
+                    return self.process_vni_digit(ch, auto_cap_consumed);
                 }
             }
         }
@@ -2900,7 +2802,7 @@ impl Engine {
         let mut was_transformed = was_transformed;
         // Early Alphanumeric Guard: if a VNI digit transforms a word into an invalid Vietnamese
         // syllable (e.g. "icon" + '2' -> "icòn"), lock English immediately so "icon256" passes through.
-        if ch.is_ascii_digit() && ch != '9' && was_transformed && !was_undo {
+        if ch.is_ascii_digit() && !matches!(ch, '6' | '7' | '8' | '9') && was_transformed && !was_undo {
             if crate::syllable_parser::parse_syllable(&new_word).is_none()
                 || self.auto_restore.is_english_keyword(&self.current_word)
             {
