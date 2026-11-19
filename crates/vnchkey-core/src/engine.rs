@@ -2166,6 +2166,10 @@ impl Engine {
                 let is_slash_command_or_path = was_preceded_by_slash
                     && self.current_word != self.raw_strokes
                     && is_leading_slash_command_or_path_token(&raw_lower);
+                let is_dot_module_prefix = ch == '.'
+                    && !self.manual_undo
+                    && self.current_word != self.raw_strokes
+                    && matches!(raw_lower.as_str(), "os" | "sys" | "io" | "fs" | "db" | "re");
                 let math_context_collision = self.math_context_words_remaining > 0
                     && !self.manual_undo
                     && self.current_word != self.raw_strokes
@@ -2183,6 +2187,7 @@ impl Engine {
                     math_context_collision || sentence_momentum_collision || prev_word_collision;
 
                 let is_known_english = is_slash_command_or_path
+                    || is_dot_module_prefix
                     || context_english_collision
                     || (self.config.auto_restore_english
                         && !has_digits
@@ -3893,6 +3898,15 @@ mod tests {
         assert_eq!(type_word(&mut engine, "/if "), "/if ");
         assert_eq!(type_word(&mut engine, "/as "), "/as ");
         assert_eq!(type_word(&mut engine, "/usr/local/bin "), "/usr/local/bin ");
+
+        // 6. Extra edge-cases from VieLotus test_suite.csv:
+        // 'os.path ', 'cocoa ', 'momo ', 'mono ', 'qusy ' -> 'quý '
+        engine.reset();
+        assert_eq!(type_word(&mut engine, "os.path "), "os.path ");
+        assert_eq!(type_word(&mut engine, "cocoa "), "cocoa ");
+        assert_eq!(type_word(&mut engine, "momo "), "momo ");
+        assert_eq!(type_word(&mut engine, "mono "), "mono ");
+        assert_eq!(type_word(&mut engine, "qusy "), "quý ");
     }
 
     #[test]

@@ -476,6 +476,27 @@ impl TelexEngine {
         }
 
         // 4. Normal character append (vowel or consonant)
+        if letters.len() == 3
+            && letters[0].eq_ignore_ascii_case(&'q')
+            && letters[1].eq_ignore_ascii_case(&'u')
+            && is_vietnamese_vowel(ch)
+        {
+            let pre_tone = match letters[2].to_ascii_lowercase() {
+                's' => 1,
+                'f' => 2,
+                'r' => 3,
+                'x' => 4,
+                'j' => 5,
+                _ => 0,
+            };
+            if pre_tone > 0 {
+                letters.pop();
+                letters.push(ch);
+                rebalance_tone(&mut letters, pre_tone, self.tone_style);
+                return (letters.into_iter().collect(), true, false);
+            }
+        }
+
         let mut fallback = letters.clone();
         fallback.push(ch);
 
