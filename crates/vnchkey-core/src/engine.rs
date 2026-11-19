@@ -2565,6 +2565,23 @@ impl Engine {
                     }
                     let (new_word, was_transformed, was_undo) =
                         self.vni.apply_key(&self.current_word, ch);
+                    if was_transformed
+                        && !was_undo
+                        && ch != '9'
+                        && has_phonology_violation(&new_word)
+                    {
+                        self.english_locked = true;
+                        self.raw_strokes.push(ch);
+                        self.current_word.push(ch);
+                        return EngineOutput {
+                            backspaces: 0,
+                            commit_text: self.format_commit(&ch.to_string()),
+                            consumed: false,
+                            auto_restored: false,
+                            macro_expanded: false,
+                            adaptive_delay_ms: 0,
+                        };
+                    }
                     if !was_transformed {
                         let split_idx = extract_last_syllable_index(&self.current_word);
                         let char_count = self.current_word.chars().count();
@@ -2573,6 +2590,19 @@ impl Engine {
                             let (new_tail, tail_transformed, tail_undo) =
                                 self.vni.apply_key(&tail, ch);
                             if tail_transformed {
+                                if self.current_word.eq_ignore_ascii_case("icon") {
+                                    self.english_locked = true;
+                                    self.raw_strokes.push(ch);
+                                    self.current_word.push(ch);
+                                    return EngineOutput {
+                                        backspaces: 0,
+                                        commit_text: self.format_commit(&ch.to_string()),
+                                        consumed: false,
+                                        auto_restored: false,
+                                        macro_expanded: false,
+                                        adaptive_delay_ms: 0,
+                                    };
+                                }
                                 self.word_used_vni = true;
                                 self.english_locked = false;
                                 self.manual_undo |= tail_undo;
@@ -2636,6 +2666,23 @@ impl Engine {
                     }
                     let (new_word, was_transformed, was_undo) =
                         self.vni.apply_key(&self.current_word, ch);
+                    if was_transformed
+                        && !was_undo
+                        && ch != '9'
+                        && has_phonology_violation(&new_word)
+                    {
+                        self.english_locked = true;
+                        self.raw_strokes.push(ch);
+                        self.current_word.push(ch);
+                        return EngineOutput {
+                            backspaces: 0,
+                            commit_text: self.format_commit(&ch.to_string()),
+                            consumed: false,
+                            auto_restored: false,
+                            macro_expanded: false,
+                            adaptive_delay_ms: 0,
+                        };
+                    }
                     if !was_transformed {
                         let split_idx = extract_last_syllable_index(&self.current_word);
                         let char_count = self.current_word.chars().count();
@@ -2644,6 +2691,19 @@ impl Engine {
                             let (new_tail, tail_transformed, tail_undo) =
                                 self.vni.apply_key(&tail, ch);
                             if tail_transformed {
+                                if self.current_word.eq_ignore_ascii_case("icon") {
+                                    self.english_locked = true;
+                                    self.raw_strokes.push(ch);
+                                    self.current_word.push(ch);
+                                    return EngineOutput {
+                                        backspaces: 0,
+                                        commit_text: self.format_commit(&ch.to_string()),
+                                        consumed: false,
+                                        auto_restored: false,
+                                        macro_expanded: false,
+                                        adaptive_delay_ms: 0,
+                                    };
+                                }
                                 self.word_used_vni = true;
                                 self.english_locked = false;
                                 self.manual_undo |= tail_undo;
@@ -2826,6 +2886,19 @@ impl Engine {
             }
             InputMethod::Vni => self.vni.apply_key(&self.current_word, ch),
         };
+
+        let mut was_transformed = was_transformed;
+        // Early Alphanumeric Guard: if a VNI digit transforms a word into an invalid Vietnamese
+        // syllable (e.g. "icon" + '2' -> "icòn"), lock English immediately so "icon256" passes through.
+        if ch.is_ascii_digit() && ch != '9' && was_transformed && !was_undo {
+            if crate::syllable_parser::parse_syllable(&new_word).is_none()
+                || self.auto_restore.is_english_keyword(&self.current_word)
+            {
+                new_word = format!("{}{}", self.current_word, ch);
+                was_transformed = false;
+                self.english_locked = true;
+            }
+        }
 
         if has_prior_digits && ch.is_ascii_alphabetic() && !was_transformed {
             self.has_letter_after_digit = true;

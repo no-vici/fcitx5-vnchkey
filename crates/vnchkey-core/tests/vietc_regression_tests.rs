@@ -119,6 +119,7 @@ fn test_vietc_auto_restore_cases() {
         ("de369 ", "để "),
         ("do19 ", "đó "),
         ("du39 ", "đủ "),
+        ("icon256 ", "icon256 "),
     ];
     for (input, expected) in dbar_single_vowel_cases {
         vni_auto.reset();
