@@ -1645,14 +1645,47 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         self.ipcServer?.start()
     }
 
+    private var inspectorPanel: NSPanel?
+    private var inspectorLabel: NSTextField?
+    private var inspectorTimer: Timer?
+
     @objc func showLiveInspector() {
-        let alert = NSAlert()
-        alert.messageText = "vnchKey - Live Inspector (Debug)"
-        alert.informativeText = keyManager?.inspectState() ?? "Engine chưa sẵn sàng"
-        alert.alertStyle = .informational
-        alert.addButton(withTitle: "Đóng")
-        NSApp.activate(ignoringOtherApps: true)
-        alert.runModal()
+        if let panel = inspectorPanel {
+            panel.makeKeyAndOrderFront(nil)
+            return
+        }
+
+        let panel = NSPanel(
+            contentRect: NSRect(x: 0, y: 0, width: 520, height: 110),
+            styleMask: [.titled, .closable, .utilityWindow, .nonactivatingPanel],
+            backing: .buffered,
+            defer: false
+        )
+        panel.title = "vnchKey - Live Inspector (Debug)"
+        panel.level = .floating
+        panel.isReleasedWhenClosed = false
+        panel.center()
+
+        let label = NSTextField(wrappingLabelWithString: keyManager?.inspectState() ?? "Engine chưa sẵn sàng")
+        label.font = NSFont.monospacedSystemFont(ofSize: 12, weight: .regular)
+        label.isSelectable = true
+        label.frame = NSRect(x: 16, y: 16, width: 488, height: 78)
+        label.autoresizingMask = [.width, .height]
+        panel.contentView?.addSubview(label)
+
+        self.inspectorPanel = panel
+        self.inspectorLabel = label
+
+        inspectorTimer?.invalidate()
+        inspectorTimer = Timer.scheduledTimer(withTimeInterval: 0.15, repeats: true) { [weak self] _ in
+            guard let self = self, let panel = self.inspectorPanel, panel.isVisible else { return }
+            let state = self.keyManager?.inspectState() ?? "Engine chưa sẵn sàng"
+            if self.inspectorLabel?.stringValue != state {
+                self.inspectorLabel?.stringValue = state
+            }
+        }
+
+        panel.makeKeyAndOrderFront(nil)
     }
 
     @objc func showAboutWindow() {
