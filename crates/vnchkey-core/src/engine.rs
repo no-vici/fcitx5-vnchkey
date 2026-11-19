@@ -2195,9 +2195,8 @@ impl Engine {
                         && self.auto_restore.is_english_keyword(&self.raw_strokes));
 
                 let alphanumeric_trap = self.has_letter_after_digit
-                    && !self.current_word.ends_with(|c: char| {
-                        matches!(c, 'c' | 'k' | 'm' | 'n' | 'p' | 't' | 'g' | 'h' | 'i' | 'o' | 'u' | 'y')
-                    });
+                    && (!is_valid_vietnamese_syllable(&self.current_word)
+                        || self.current_word.chars().any(|c| c.is_ascii_digit()));
 
                 if is_known_english
                     || (!self.manual_undo

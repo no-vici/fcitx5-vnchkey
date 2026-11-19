@@ -97,6 +97,33 @@ fn test_vietc_shape_modifier_swapping() {
 
 #[test]
 fn test_vietc_auto_restore_cases() {
+    // VNI 'đ' (d9) followed by single accented vowels must NOT trigger alphanumeric_trap
+    let mut vni_auto = Engine::new(EngineConfig {
+        method: InputMethod::Auto,
+        auto_restore_english: true,
+        spell_check: true,
+        enable_dictionary: true,
+        ..EngineConfig::default()
+    });
+    let dbar_single_vowel_cases = [
+        ("d9a4 ", "đã "),
+        ("d9e63 ", "để "),
+        ("d9o1 ", "đó "),
+        ("d9u3 ", "đủ "),
+        ("d9i ", "đi "),
+        ("d9e2 ", "đè "),
+        ("D9a4 ", "Đã "),
+        ("D9e63 ", "Để "),
+    ];
+    for (input, expected) in dbar_single_vowel_cases {
+        vni_auto.reset();
+        let out = type_word(&mut vni_auto, input);
+        assert_eq!(
+            out, expected,
+            "VNI d9 + single vowel failed for '{input}': got '{out}', expected '{expected}'"
+        );
+    }
+
     let mut config = EngineConfig::default();
     config.method = InputMethod::Telex;
     config.auto_restore_english = true;
