@@ -23,6 +23,16 @@
 
 ## ✅ Cột Mốc Đã Hoàn Thành (Shipped & Active)
 
+### Phiên bản 0.3.7: Đa Nền Tảng (Linux / macOS / Windows), Ngữ Cảnh & Live Inspector
+- [x] **Context-Aware Collision Resolution**: Tự động nới lỏng bảo vệ từ va chạm ngắn (`is`, `as`, `this`, `has`, `see`) khi từ liền trước vừa được Auto-Restore về tiếng Anh.
+- [x] **Multi-Word Backspace Ring Buffer (12 từ)**: Nâng cấp `reopen_state` lên `VecDeque`, cho phép xóa ngược qua nhiều từ mà vẫn khôi phục đúng trạng thái dấu của từng từ.
+- [x] **Hardware Key Debounce Filter**: Khử nhiễu phím kép phần cứng (switch double-click / bàn phím không dây 2.4GHz).
+- [x] **Live Inspector (Debug), Trace Log & `TypingStats` Đa Nền Tảng**:
+  - **Linux**: Streaming realtime từ `fcitx5` sang `fcitx5-vnchkey-settings`, ghi `/tmp/vnchkey-inspector.log`, đính kèm khi Export Debug Logs và hiển thị `TypingStats`.
+  - **macOS**: `NSPanel` nổi cập nhật 150ms, ghi Trace Log, Export Debug Logs và hiển thị `TypingStats`.
+  - **Windows**: Menu khay Live Inspector kèm `TypingStats`, bật/tắt Trace Log và Export Debug Logs.
+- [x] **Biến Macro Động & Vá Lỗi VNI**: Thêm `$VN_DATE` (`DD-MM-YYYY`), `$ISO_DATE`, `$WEEKDAY`, `$CLIPBOARD`; sửa lỗi `alphanumeric_trap` với `d9` + nguyên âm đơn (`đã`, `để`, `đó`, `đủ`).
+
 ### Phiên bản 0.1.0: Nền Móng Kiến Trúc & Hiệu Năng Cốt Lõi
 - [x] **Lõi Xử Lý Thuần Rust (`vnchkey-core`)**: Quản lý State Machine biến âm âm tiết tiếng Việt, không phụ thuộc daemon ngoài, an toàn bộ nhớ tuyệt đối.
 - [x] **Thuật Toán Micro-diff Minimal Replacement**:
