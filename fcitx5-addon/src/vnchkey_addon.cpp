@@ -1636,6 +1636,21 @@ void VnchkeyEngine::keyEvent(const fcitx::InputMethodEntry &entry, fcitx::KeyEve
 
     int consumed = fcitx5_vnchkey_process_key(ctx, ch, timestamp_ms, &out_backspaces, &out_commit);
 
+    if (::access("/tmp/vnchkey-inspector.lock", F_OK) == 0) {
+        if (char* state_cstr = fcitx5_vnchkey_inspect_state(ctx)) {
+            if (FILE* f = std::fopen("/tmp/vnchkey-inspector.txt.tmp", "w")) {
+                std::fputs(state_cstr, f);
+                std::fclose(f);
+                std::rename("/tmp/vnchkey-inspector.txt.tmp", "/tmp/vnchkey-inspector.txt");
+            }
+            if (FILE* logf = std::fopen("/tmp/vnchkey-inspector.log", "a")) {
+                std::fprintf(logf, "[key=0x%x] %s\n", static_cast<unsigned int>(ch), state_cstr);
+                std::fclose(logf);
+            }
+            fcitx5_vnchkey_free_string(state_cstr);
+        }
+    }
+
     // Selection cleanup: if there is an active selection after caret (such as browser URL bar or spreadsheet autocomplete),
     // clear it safely so that new keystrokes don't get swallowed or misaligned.
     if (ic && ic->surroundingText().isValid()) {

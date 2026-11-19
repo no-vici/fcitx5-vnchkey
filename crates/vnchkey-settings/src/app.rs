@@ -2037,19 +2037,40 @@ impl SettingsApp {
 
             ui.add_space(12.0);
             ui.group(|ui| {
-                ui.label(egui::RichText::new("Live Inspector (Debug)").strong());
-                let id = egui::Id::new("live_inspector_input");
-                let mut input = ui.data_mut(|d| d.get_temp::<String>(id).unwrap_or_default());
                 ui.horizontal(|ui| {
-                    ui.label("Gõ thử:");
-                    ui.text_edit_singleline(&mut input);
+                    ui.label(egui::RichText::new("Live Inspector (Debug)").strong());
+                    let live_id = egui::Id::new("live_inspector_fcitx5");
+                    let mut live_fcitx5 = ui.data_mut(|d| d.get_temp::<bool>(live_id).unwrap_or(false));
+                    if ui.checkbox(&mut live_fcitx5, "Live từ Fcitx5 (Realtime)").changed() {
+                        ui.data_mut(|d| d.insert_temp(live_id, live_fcitx5));
+                        if live_fcitx5 {
+                            let _ = std::fs::write("/tmp/vnchkey-inspector.lock", b"1");
+                            let _ = std::fs::remove_file("/tmp/vnchkey-inspector.log");
+                        } else {
+                            let _ = std::fs::remove_file("/tmp/vnchkey-inspector.lock");
+                        }
+                    }
                 });
-                ui.data_mut(|d| d.insert_temp(id, input.clone()));
-                let mut eng = vnchkey_core::Engine::new(vnchkey_core::EngineConfig::default());
-                for ch in input.chars() {
-                    eng.process_key(ch, 0.0);
+                let live_fcitx5 = ui.data_mut(|d| d.get_temp::<bool>(egui::Id::new("live_inspector_fcitx5")).unwrap_or(false));
+                if live_fcitx5 {
+                    ui.ctx().request_repaint_after(std::time::Duration::from_millis(150));
+                    let state = std::fs::read_to_string("/tmp/vnchkey-inspector.txt")
+                        .unwrap_or_else(|_| "Đang chờ bạn gõ ở bất kỳ ứng dụng nào...".to_string());
+                    ui.label(egui::RichText::new(state).monospace().size(11.5));
+                } else {
+                    let id = egui::Id::new("live_inspector_input");
+                    let mut input = ui.data_mut(|d| d.get_temp::<String>(id).unwrap_or_default());
+                    ui.horizontal(|ui| {
+                        ui.label("Gõ thử:");
+                        ui.text_edit_singleline(&mut input);
+                    });
+                    ui.data_mut(|d| d.insert_temp(id, input.clone()));
+                    let mut eng = vnchkey_core::Engine::new(vnchkey_core::EngineConfig::default());
+                    for ch in input.chars() {
+                        eng.process_key(ch, 0.0);
+                    }
+                    ui.label(egui::RichText::new(eng.inspect_state()).monospace().size(11.5));
                 }
-                ui.label(egui::RichText::new(eng.inspect_state()).monospace().size(11.5));
             });
             ui.add_space(6.0);
 
@@ -2282,6 +2303,18 @@ impl SettingsApp {
             } else {
                 log_content.push_str("Unable to query journalctl.\n");
             }
+            if let Ok(inspector_log) = fs::read_to_string("/tmp/vnchkey-inspector.log") {
+                if !inspector_log.trim().is_empty() {
+                    log_content.push_str("\n--- Live Inspector Trace (/tmp/vnchkey-inspector.log) ---\n");
+                    let lines: Vec<&str> = inspector_log.lines().collect();
+                    let start = lines.len().saturating_sub(200);
+                    for line in &lines[start..] {
+                        log_content.push_str(line);
+                        log_content.push('\n');
+                    }
+                }
+            }
+
             log_content.push_str("\n--- End of Log ---\n");
 
             if fs::write(&path, log_content).is_ok() {

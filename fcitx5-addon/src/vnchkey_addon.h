@@ -45,6 +45,7 @@ extern "C" {
     void fcitx5_vnchkey_load_macros(void* ctx, const char* path);
     void fcitx5_vnchkey_set_clipboard_text(void* ctx, const char* text);
     void fcitx5_vnchkey_load_dictionary(void* ctx, const char* path);
+    char* fcitx5_vnchkey_inspect_state(void* engine);
     void fcitx5_vnchkey_free_string(char* s);
     void fcitx5_vnchkey_set_method(void* ctx, uint32_t method);
     uint32_t fcitx5_vnchkey_get_method(void* ctx);
