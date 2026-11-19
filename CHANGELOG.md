@@ -6,12 +6,17 @@ Tất cả những thay đổi nổi bật của dự án **vnchKey** (**fcitx5-
 
 ## [Unreleased]
 
+### 🐛 Sửa Lỗi (Bug Fixes)
+- **Bảo Toàn Nguyên Âm Đơn Có Dấu Đi Sau `đ` Trong Kiểu Gõ VNI / Auto (`engine.rs`, `vietc_regression_tests.rs`)**:
+  - Khắc phục lỗi `alphanumeric_trap` nhận diện nhầm các âm tiết mở hợp lệ có chữ `đ` đi trước nguyên âm đơn mang dấu (`d9a4` → `đã`, `d9e63` → `để`, `d9o1` → `đó`, `d9u3` → `đủ`) là từ lẫn số và ép hoàn nguyên ngược về phím thô khi nhấn `Space`.
+  - Đồng bộ trạng thái khởi tạo khi nhập số ở đầu từ trong chế độ `InputMethod::Vni` và mở rộng bộ kiểm thử hồi quy bao phủ cả thứ tự gõ thuận lẫn gõ đảo phím (`da49`, `de639`, `do19`, `du39`).
+
 ### ⚡ Tối Ưu Hiệu Năng & Bộ Nhớ (Performance & Zero-Allocation)
 - **Từ Điển Chánh Tả Tĩnh + Bloom Filter 2 KB** (`vietnamese_dict_data.rs`, `vietnamese_dict.rs`): Chuyển 6.974 từ tiếng Việt sang mảng `const VIETNAMESE_WORDS_SORTED` đã sắp xếp sẵn kết hợp `VIETNAMESE_BLOOM_FILTER` (2 KB L1 cache) và `binary_search()`, loại bỏ chi phí khởi tạo `OnceLock<HashSet<String>>` trên luồng tra cứu.
 - **FxHash & Stack Buffer Lowercasing** (`auto_restore.rs`): Thay SipHash mặc định bằng `FxHasher` / `FastHashSet` thuần Safe Rust (`#![forbid(unsafe_code)]`) và `with_stack_lowercase` dùng buffer `[u8; 64]` trên Stack để triệt tiêu cấp phát Heap cho từ ASCII.
 
 ### 🚀 Tính Năng Mới & Cải Tiến Lõi (Core, FFI & UI)
-- **Biến Động Macro Mới**: Hỗ trợ `$ISO_DATE` (`YYYY-MM-DD`), `$WEEKDAY` (`Thứ Hai` → `Chủ Nhật`), và `$CLIPBOARD` (nối trực tiếp Clipboard OS trên macOS `NSPasteboard` và Windows `Win32 Clipboard API`, không sinh tiến trình con).
+- **Biến Động Macro Mới**: Hỗ trợ `$VN_DATE` (`DD-MM-YYYY`), `$ISO_DATE` (`YYYY-MM-DD`), `$WEEKDAY` (`Thứ Hai` → `Chủ Nhật`), và `$CLIPBOARD` (nối trực tiếp Clipboard OS trên macOS `NSPasteboard` và Windows `Win32 Clipboard API`, không sinh tiến trình con).
 - **Bảo Vệ Viết Tắt Chữ Hoa (`acronym_bypass`)**: Tự động giữ nguyên các cụm viết tắt ALL-CAPS 2–5 ký tự (như `IOS`, `VPS`, `FPS`...) khi kết thúc từ nếu không trùng từ điển tiếng Việt.
 - **Tự Động Viết Hoa Đầu Câu (`auto_capitalize`)**: Tùy chọn viết hoa chữ cái đầu câu mới sau `.`, `?`, `!`, `\n` (bỏ qua tên miền, số thập phân, từ viết tắt `vd.`, `tp.`).
 - **Bổ Sung Dấu Mũ/Móc Thông Minh (`smart_fuzzy_vowel`)**: Tùy chọn tự suy luận vần khép khi gõ Space (ví dụ `truongf ` → `trường `, `chuyenj ` → `chuyện `).
