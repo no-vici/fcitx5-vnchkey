@@ -131,6 +131,7 @@ pub fn resolve_dynamic_tokens_with_clipboard(text: &str, clipboard: &str) -> Str
     }
     let (year, month, day, hour, min, weekday_idx) = get_local_datetime_full();
     let date_str = format!("{:02}/{:02}/{:04}", day, month, year);
+    let vn_date_str = format!("{:02}-{:02}-{:04}", day, month, year);
     let iso_date_str = format!("{:04}-{:02}-{:02}", year, month, day);
     let time_str = format!("{:02}:{:02}", hour, min);
     let year_str = format!("{:04}", year);
@@ -148,6 +149,7 @@ pub fn resolve_dynamic_tokens_with_clipboard(text: &str, clipboard: &str) -> Str
     text.replace("$DATETIME", &now_str)
         .replace("$NOW", &now_str)
         .replace("$ISO_DATE", &iso_date_str)
+        .replace("$VN_DATE", &vn_date_str)
         .replace("$DATE", &date_str)
         .replace("$TIME", &time_str)
         .replace("$YEAR", &year_str)
@@ -340,6 +342,7 @@ mod tests {
         let mut table = MacroTable::new();
         table.insert("dt".to_string(), "Hôm nay $DATE lúc $TIME".to_string());
         table.insert("yr".to_string(), "Năm $YEAR".to_string());
+        table.insert("vnd".to_string(), "Ngày $VN_DATE".to_string());
 
         let res = table.expand("dt").unwrap();
         assert!(res.starts_with("Hôm nay "));
@@ -348,6 +351,10 @@ mod tests {
 
         let yr = table.expand("yr").unwrap();
         assert!(yr.starts_with("Năm 202"));
+
+        let vnd = table.expand("vnd").unwrap();
+        assert!(vnd.starts_with("Ngày "));
+        assert!(vnd.contains("-202"));
     }
 }
 
