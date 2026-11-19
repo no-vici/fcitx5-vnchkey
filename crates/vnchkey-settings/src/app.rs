@@ -2070,6 +2070,15 @@ impl SettingsApp {
                         eng.process_key(ch, 0.0);
                     }
                     ui.label(egui::RichText::new(eng.inspect_state()).monospace().size(11.5));
+                    let st = eng.stats();
+                    ui.label(
+                        egui::RichText::new(format!(
+                            "TypingStats — Từ đã gõ: {} | Khôi phục EN: {} | Macro: {} | Phím tiết kiệm: {}",
+                            st.words_typed, st.english_restored, st.macros_expanded, st.keystrokes_saved
+                        ))
+                        .size(11.5)
+                        .color(egui::Color32::from_rgb(0xa6, 0xe3, 0xa1)),
+                    );
                 }
             });
             ui.add_space(6.0);
