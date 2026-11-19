@@ -2568,7 +2568,8 @@ impl Engine {
                     if was_transformed
                         && !was_undo
                         && ch != '9'
-                        && has_phonology_violation(&new_word)
+                        && (has_phonology_violation(&new_word)
+                            || new_word.to_lowercase().starts_with("sh"))
                     {
                         self.english_locked = true;
                         self.raw_strokes.push(ch);
@@ -2592,7 +2593,8 @@ impl Engine {
                             if tail_transformed {
                                 if !self.word_used_vni
                                     && ch != '9'
-                                    && self.auto_restore.is_english_keyword(&self.current_word)
+                                    && (self.auto_restore.is_english_keyword(&self.current_word)
+                                        || self.current_word.to_lowercase().starts_with("sh"))
                                 {
                                     self.english_locked = true;
                                     self.raw_strokes.push(ch);
@@ -2672,7 +2674,8 @@ impl Engine {
                     if was_transformed
                         && !was_undo
                         && ch != '9'
-                        && has_phonology_violation(&new_word)
+                        && (has_phonology_violation(&new_word)
+                            || new_word.to_lowercase().starts_with("sh"))
                     {
                         self.english_locked = true;
                         self.raw_strokes.push(ch);
@@ -2696,7 +2699,8 @@ impl Engine {
                             if tail_transformed {
                                 if !self.word_used_vni
                                     && ch != '9'
-                                    && self.auto_restore.is_english_keyword(&self.current_word)
+                                    && (self.auto_restore.is_english_keyword(&self.current_word)
+                                        || self.current_word.to_lowercase().starts_with("sh"))
                                 {
                                     self.english_locked = true;
                                     self.raw_strokes.push(ch);

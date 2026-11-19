@@ -120,6 +120,7 @@ fn test_vietc_auto_restore_cases() {
         ("do19 ", "đó "),
         ("du39 ", "đủ "),
         ("icon256 ", "icon256 "),
+        ("abc256 ", "abc256 "),
     ];
     for (input, expected) in dbar_single_vowel_cases {
         vni_auto.reset();
@@ -583,3 +584,42 @@ fn test_nightmare_sloppy_typing_and_bilingual_edge_cases() {
 }
 
 
+
+#[test]
+fn test_mixed_auto_vni_telex_alphanumeric_sentence() {
+    let mut engine = Engine::new(EngineConfig {
+        method: InputMethod::Auto,
+        tone_style: ToneStyle::Classic,
+        auto_restore_english: true,
+        spell_check: true,
+        enable_dictionary: true,
+        ..EngineConfig::default()
+    });
+
+    let sentences = [
+        // Kết hợp chữ-số (icon256, abc256), VNI d9 + nguyên âm đơn (d9a4, d9e63) và Telex (tieengs vieetj)
+        (
+            "Ma ma d9a4 d9e63 icon256 vaf abc256 trong thuw mucj tieengs vieetj ",
+            "Ma ma đã để icon256 và abc256 trong thư mục tiếng việt ",
+        ),
+        // Gõ xen kẽ VNI và Telex trong cùng một câu lập trình / kỹ thuật
+        (
+            "Kieerm tra file icon256 d9o1 d9u3 ro6i2 push leen repo ",
+            "Kiểm tra file icon256 đó đủ rồi push lên repo ",
+        ),
+        // Chuyển đổi qua lại giữa từ có số và từ VNI gõ đảo thứ tự phím (da49, de639)
+        (
+            "User v1s da49 chojn de639 chayj sha256 treen linux ",
+            "User v1s đã chọn để chạy sha256 trên linux ",
+        ),
+    ];
+
+    for (input, expected) in sentences {
+        engine.reset();
+        let actual = type_word(&mut engine, input);
+        assert_eq!(
+            actual, expected,
+            "Mixed Auto VNI+Telex sentence failed for '{input}': got '{actual}', expected '{expected}'"
+        );
+    }
+}
