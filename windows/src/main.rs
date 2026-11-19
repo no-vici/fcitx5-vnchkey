@@ -2764,11 +2764,7 @@ Start-Process -FilePath $batch -WindowStyle Hidden;
                 } else if id == ID_ABOUT {
                     show_about_dialog(hwnd);
                 } else if id == ID_LIVE_INSPECTOR {
-                    let info = if let Ok(st) = STATE.lock() {
-                        st.engine.inspect_state()
-                    } else {
-                        "Engine locked".to_string()
-                    };
+                    let info = STATE.with(|s| s.borrow().engine.inspect_state());
                     let title = to_wstring("VnCharKey - Live Inspector (Debug)");
                     let body = to_wstring(&info);
                     MessageBoxW(hwnd, body.as_ptr(), title.as_ptr(), MB_OK | MB_ICONINFORMATION);

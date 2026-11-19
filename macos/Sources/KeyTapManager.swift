@@ -905,7 +905,7 @@ public class KeyTapManager {
         let timestamp = Date().timeIntervalSince1970 * 1000.0
 
         let ch = Character(scalar)
-        if !ch.isLetter && !ch.isNumber && fcitx5_vnchkey_get_enable_macro(engine) {
+        if !ch.isLetter && !ch.isNumber {
             if let clip = NSPasteboard.general.string(forType: .string) {
                 let capped = clip.count > 2048 ? String(clip.prefix(2048)) : clip
                 capped.withCString { cstr in
