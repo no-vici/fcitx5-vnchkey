@@ -1544,21 +1544,38 @@ void VnchkeyEngine::keyEvent(const fcitx::InputMethodEntry &entry, fcitx::KeyEve
             return;
         }
 
-        if (isPreeditMode && ic && fcitx5_vnchkey_has_active_word(ctx)) {
+        if (isPreeditMode && ic) {
+            // Only intercept Backspace in Preedit if there is an active word being composed.
+            // If the buffer is empty, reset and let the app handle Backspace natively
+            // instead of reopening history words into Preedit.
+            if (!fcitx5_vnchkey_has_active_word(ctx)) {
+                fcitx5_vnchkey_reset(ctx);
+                return;
+            }
+
             fcitx5_vnchkey_handle_backspace(ctx);
             if (fcitx5_vnchkey_has_active_word(ctx)) {
                 char* cur = fcitx5_vnchkey_get_current_word(ctx);
                 if (cur && cur[0] != '\0') {
                     fcitx::Text text(cur, fcitx::TextFormatFlag::Underline);
                     ic->inputPanel().setClientPreedit(text);
-                    if (config_preedit_tooltip_ || isWpsOffice(ic->program())) {
+                    const bool show_tooltip = config_preedit_tooltip_ || isWpsOffice(ic->program());
+                    if (show_tooltip) {
                         ic->inputPanel().setPreedit(text);
                     }
-                    updateSymbolCandidates(ic, ctx, cur);
+                    const bool has_cand = (cur[0] == ':' && std::strlen(cur) > 1);
+                    if (has_cand || ic->inputPanel().candidateList()) {
+                        updateSymbolCandidates(ic, ctx, cur);
+                    }
                     ic->updatePreedit();
-                    ic->updateUserInterface(fcitx::UserInterfaceComponent::InputPanel);
+                    if (show_tooltip || has_cand || ic->inputPanel().candidateList()) {
+                        ic->updateUserInterface(fcitx::UserInterfaceComponent::InputPanel);
+                    }
                     fcitx5_vnchkey_free_string(cur);
                 } else {
+                    if (cur) {
+                        fcitx5_vnchkey_free_string(cur);
+                    }
                     ic->inputPanel().reset();
                     ic->updatePreedit();
                     ic->updateUserInterface(fcitx::UserInterfaceComponent::InputPanel);
