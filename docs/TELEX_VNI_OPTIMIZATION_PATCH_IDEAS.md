@@ -301,5 +301,3 @@ pub fn feed(&self, input: &str) -> (Cow<'_, str>, bool) {
 - **P3:** refactor lớn (Modifier/ToneAction/Cow) + fuzz.
 
 > Ghi chú: Đây là ý tưởng tham khảo. Khi triển khai, nên làm từng bước nhỏ, mỗi bước có test parity để tránh regression ngữ âm.
-path">
-/home/codegpt/antigravity/vnchKey/docs/TELEX_VNI_OPTIMIZATION_PATCH_IDEAS.md
