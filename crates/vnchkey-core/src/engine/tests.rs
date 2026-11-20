@@ -1031,3 +1031,63 @@
         engine.reset();
         assert_eq!(type_word(&mut engine, "tan or cos "), "tan or cos ");
     }
+
+    #[test]
+    fn test_vni_telex_parity_table_and_fuzz() {
+        let parity_cases: &[(&str, &str, &str)] = &[
+            ("tieengs ", "tie6ng1 ", "tiếng "),
+            ("duowcj ", "duo7c5 ", "dược "),
+            ("dduowcj ", "d9uo7c5 ", "được "),
+            ("nguowif ", "nguo7i2 ", "người "),
+            ("thuowr ", "thuo73 ", "thuở "),
+            ("khuowng ", "khuo7ng ", "khương "),
+            ("quow ", "quo7 ", "quơ "),
+            ("giuwax ", "giu7a4 ", "giữa "),
+            ("hoaf ", "hoa2 ", "hòa "),
+            ("homx ", "hom4 ", "hõm "),
+            ("truwowngf ", "truo7ng2 ", "trường "),
+            ("nghieeng ", "nghie6ng ", "nghiêng "),
+            ("khuyeens ", "khuye6n1 ", "khuyến "),
+            ("aans ", "a6n1 ", "ấn "),
+            ("mawns ", "ma8n1 ", "mắn "),
+            ("oors ", "o61 ", "ố "),
+            ("oows ", "o71 ", "ớ "),
+            ("nuowcs ", "nuo7c1 ", "nước "),
+        ];
+
+        for &(telex_in, vni_in, expected) in parity_cases {
+            let mut telex_engine = Engine::new(EngineConfig {
+                method: InputMethod::Telex,
+                ..EngineConfig::default()
+            });
+            let mut vni_engine = Engine::new(EngineConfig {
+                method: InputMethod::Vni,
+                ..EngineConfig::default()
+            });
+            let t_out = type_word(&mut telex_engine, telex_in);
+            let v_out = type_word(&mut vni_engine, vni_in);
+            assert_eq!(t_out, expected, "Telex failed for {:?}", telex_in);
+            assert_eq!(v_out, expected, "VNI failed for {:?}", vni_in);
+        }
+
+        // Deterministic fuzzing over random ASCII/modifier sequences: must never panic
+        let mut seed: u64 = 0x5EED_CAFE_BABE_1234;
+        let telex_chars = b"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ ";
+        let vni_chars = b"abcdefghijklmnopqrstuvwxyz0123456789 ";
+        for method in [InputMethod::Telex, InputMethod::Vni, InputMethod::Auto] {
+            let mut engine = Engine::new(EngineConfig {
+                method,
+                ..EngineConfig::default()
+            });
+            let alphabet = if method == InputMethod::Vni {
+                vni_chars.as_slice()
+            } else {
+                telex_chars.as_slice()
+            };
+            for _ in 0..500 {
+                seed = seed.wrapping_mul(6364136223846793005).wrapping_add(1442695040888963407);
+                let ch = alphabet[(seed as usize) % alphabet.len()] as char;
+                let _ = engine.process_key(ch, 0.0);
+            }
+        }
+    }
