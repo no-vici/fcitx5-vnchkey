@@ -89,7 +89,7 @@ impl Default for VnchkeyConfig {
             tray_icon_theme: "Default".to_string(),
             show_indicator_badge: true,
             learn_typing_habits: true,
-            habit_promote_threshold: 4,
+            habit_promote_threshold: 0,
             initial_case_anchor: false,
             developer_mode: true,
             allow_vietnamese_in_backtick: false,
@@ -232,7 +232,7 @@ impl ConfigManager {
             if let Some(v) = map.get("TrayIconTheme") { cfg.tray_icon_theme = v.clone(); }
             if let Some(v) = map.get("ShowIndicatorBadge") { cfg.show_indicator_badge = v.eq_ignore_ascii_case("true"); }
             if let Some(v) = map.get("LearnTypingHabits") { cfg.learn_typing_habits = v.eq_ignore_ascii_case("true"); }
-            if let Some(v) = map.get("HabitPromoteThreshold") { cfg.habit_promote_threshold = v.parse().unwrap_or(4).max(1); }
+            if let Some(v) = map.get("HabitPromoteThreshold") { cfg.habit_promote_threshold = v.parse().unwrap_or(0); }
             if let Some(v) = map.get("InitialCaseAnchor") { cfg.initial_case_anchor = v.eq_ignore_ascii_case("true"); }
             if let Some(v) = map.get("DeveloperMode") { cfg.developer_mode = v.eq_ignore_ascii_case("true"); }
             if let Some(v) = map.get("AllowVietnameseInBacktick") { cfg.allow_vietnamese_in_backtick = v.eq_ignore_ascii_case("true"); }

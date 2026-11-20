@@ -153,7 +153,7 @@ private:
     bool config_developer_mode_ = true;
     bool config_allow_vietnamese_in_backtick_ = false;
     bool config_learn_typing_habits_ = true;
-    uint32_t config_habit_promote_threshold_ = 4;
+    uint32_t config_habit_promote_threshold_ = 0;
 
     // Rescue Undo Cache (Escape/Backspace immediately after activation rescue)
     std::string last_rescue_raw_;

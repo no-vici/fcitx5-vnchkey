@@ -963,9 +963,9 @@ void VnchkeyEngine::loadConfig() {
                 config_learn_typing_habits_ = (line.find("False") == std::string::npos && line.find("false") == std::string::npos);
             } else if (line.rfind("HabitPromoteThreshold=", 0) == 0) {
                 try {
-                    config_habit_promote_threshold_ = std::max(1, std::stoi(line.substr(22)));
+                    config_habit_promote_threshold_ = std::max(0, std::stoi(line.substr(22)));
                 } catch (...) {
-                    config_habit_promote_threshold_ = 4;
+                    config_habit_promote_threshold_ = 0;
                 }
             }
         }

@@ -116,7 +116,7 @@ impl Default for EngineConfig {
             quick_start_consonant: false,
             quick_end_consonant: false,
             habit_learning_enabled: true,
-            habit_promote_threshold: 4,
+            habit_promote_threshold: 0,
             initial_case_anchor: false,
             auto_capitalize: false,
             smart_fuzzy_vowel: false,
@@ -1170,7 +1170,7 @@ impl Engine {
 
     /// Sets the number of corrections before auto-promoting a word into the whitelist.
     pub fn set_habit_promote_threshold(&mut self, threshold: u32) {
-        self.config.habit_promote_threshold = threshold.max(1);
+        self.config.habit_promote_threshold = threshold;
         self.habit_learner.set_promote_threshold(threshold);
     }
 
@@ -3347,7 +3347,10 @@ mod tests {
 
     #[test]
     fn test_inline_symbol_and_emoji_expansion() {
-        let mut engine = Engine::new(EngineConfig::default());
+        let mut engine = Engine::new(EngineConfig {
+            habit_promote_threshold: 4,
+            ..EngineConfig::default()
+        });
 
         // 1. Emoji expansion with closing colon: ":smile:" -> "😄"
         let res1 = type_word(&mut engine, ":smile:");
@@ -3693,7 +3696,7 @@ mod tests {
             method: InputMethod::Telex,
             spell_check: false, // disable built-in dictionary spell check to test pure habit learning
             auto_restore_english: false,
-            habit_promote_threshold: 4, // Higher threshold (4 times) to prevent accidental whitelisting
+            habit_promote_threshold: 0, // Higher threshold (4 times) to prevent accidental whitelisting
             ..EngineConfig::default()
         });
 

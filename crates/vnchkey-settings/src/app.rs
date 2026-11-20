@@ -1691,7 +1691,7 @@ impl SettingsApp {
                     ui.add_space(4.0);
                     ui.horizontal(|ui| {
                         ui.label("  ↳ Ngưỡng học tự động (Số lần sửa/xoá để đưa vào User Dict):");
-                        ui.add(egui::Slider::new(&mut self.config.habit_promote_threshold, 2..=10).text("lần"));
+                        ui.add(egui::Slider::new(&mut self.config.habit_promote_threshold, 0..=10).text("lần (0 = tắt)"));
                     });
                 }
             });

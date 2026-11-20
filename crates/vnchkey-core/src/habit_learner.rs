@@ -95,7 +95,7 @@ impl HabitLearner {
 
     /// Sets the promotion threshold (minimum corrections before auto-whitelisting).
     pub fn set_promote_threshold(&mut self, threshold: u32) {
-        self.promote_threshold = threshold.max(1);
+        self.promote_threshold = threshold;
     }
 
     /// Returns the promotion threshold.
@@ -171,7 +171,7 @@ impl HabitLearner {
                 if clean.len() >= 2 {
                     let entry = self.correction_counts.entry(clean.clone()).or_insert(0);
                     *entry = entry.saturating_add(1);
-                    if *entry >= self.promote_threshold {
+                    if self.promote_threshold > 0 && *entry >= self.promote_threshold {
                         self.promoted_words.insert(clean, true);
                     }
                 }
@@ -223,7 +223,10 @@ impl HabitLearner {
             *entry
         };
 
-        let newly_promoted = if count >= self.promote_threshold && !self.promoted_words.contains_key(&clean) {
+        let newly_promoted = if self.promote_threshold > 0
+            && count >= self.promote_threshold
+            && !self.promoted_words.contains_key(&clean)
+        {
             self.promoted_words.insert(clean.clone(), true);
             self.append_to_dictionary_file(&clean);
             true
