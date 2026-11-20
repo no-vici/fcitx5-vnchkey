@@ -161,6 +161,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         km.setInitialCaseAnchor(defaults.bool(forKey: "vnchkey.caseAnchor"))
         let devModeVal = defaults.object(forKey: "vnchkey.developerMode") != nil ? defaults.bool(forKey: "vnchkey.developerMode") : true
         km.setDeveloperMode(devModeVal)
+        km.setAllowVietnameseInBacktick(defaults.bool(forKey: "vnchkey.allowVietnameseInBacktick"))
         km.setW2U(UInt32(defaults.integer(forKey: "vnchkey.w2u")))
         km.setIdleTimeout(UInt64(defaults.integer(forKey: "vnchkey.idleTimeout")))
         km.setQuickTelex(defaults.bool(forKey: "vnchkey.quick_telex"))
@@ -328,6 +329,10 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         let devModeItem = NSMenuItem(title: "Chế độ Code (Tự ngắt dấu trong `code`)", action: #selector(toggleDeveloperMode(_:)), keyEquivalent: "")
         devModeItem.state = km.getDeveloperMode() ? .on : .off
         menu.addItem(devModeItem)
+
+        let allowBacktickItem = NSMenuItem(title: "Cho phép gõ Tiếng Việt trong `backtick` / ```code```", action: #selector(toggleAllowVietnameseInBacktick(_:)), keyEquivalent: "")
+        allowBacktickItem.state = km.getAllowVietnameseInBacktick() ? .on : .off
+        menu.addItem(allowBacktickItem)
 
         // Menu con: Tùy chọn Tốc ký (Quick Consonants)
         let quickMenu = NSMenu()
@@ -632,6 +637,15 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         let next = !km.getDeveloperMode()
         defaults.set(next, forKey: "vnchkey.developerMode")
         km.setDeveloperMode(next)
+        rebuildMenu()
+        syncDashboardControls()
+    }
+
+    @objc func toggleAllowVietnameseInBacktick(_ sender: NSMenuItem) {
+        guard let km = keyManager else { return }
+        let next = !km.getAllowVietnameseInBacktick()
+        defaults.set(next, forKey: "vnchkey.allowVietnameseInBacktick")
+        km.setAllowVietnameseInBacktick(next)
         rebuildMenu()
         syncDashboardControls()
     }

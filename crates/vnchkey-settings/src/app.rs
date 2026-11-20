@@ -756,6 +756,12 @@ impl SettingsApp {
         ui.add_space(6.0);
 
         ui.checkbox(
+            &mut self.config.allow_vietnamese_in_backtick,
+            "Cho phép gõ Tiếng Việt trong dấu `backtick` và ```fence code```",
+        );
+        ui.add_space(6.0);
+
+        ui.checkbox(
             &mut self.config.free_marking,
             "Cho phép bỏ dấu tự do trên bất kỳ nguyên âm nào",
         );

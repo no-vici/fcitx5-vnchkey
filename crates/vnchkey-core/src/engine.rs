@@ -92,6 +92,8 @@ pub struct EngineConfig {
     pub acronym_bypass: bool,
     /// Developer Mode: automatically bypass Vietnamese diacritics and macro expansion inside Markdown inline (`` `...` ``) and fenced (```` ```...``` ````) code blocks. Defaults to true.
     pub developer_mode: bool,
+    /// Allow typing Vietnamese inside Markdown backticks (`` ` ``) and fenced code blocks (```` ``` ````).
+    pub allow_vietnamese_in_backtick: bool,
 }
 
 impl Default for EngineConfig {
@@ -120,6 +122,7 @@ impl Default for EngineConfig {
             smart_fuzzy_vowel: false,
             acronym_bypass: true,
             developer_mode: true,
+            allow_vietnamese_in_backtick: false,
         }
     }
 }
@@ -1295,6 +1298,19 @@ impl Engine {
         self.config.developer_mode
     }
 
+    /// Enables or disables typing Vietnamese inside Markdown backticks and fenced code blocks.
+    pub fn set_allow_vietnamese_in_backtick(&mut self, enabled: bool) {
+        self.config.allow_vietnamese_in_backtick = enabled;
+        if enabled {
+            self.dev_code_state.reset();
+        }
+    }
+
+    /// Returns whether typing Vietnamese inside Markdown backticks is allowed.
+    pub fn allow_vietnamese_in_backtick(&self) -> bool {
+        self.config.allow_vietnamese_in_backtick
+    }
+
     /// Returns a compact live-inspector snapshot of the current engine state and syllable breakdown.
     pub fn inspect_state(&self) -> String {
         let syllable_info = if let Some(p) = crate::syllable_parser::parse_syllable(&self.current_word) {
@@ -1962,7 +1978,7 @@ impl Engine {
         let is_bracket = self.config.bracket_transform && matches!(ch, '[' | ']' | '{' | '}');
 
         // Developer-Aware Markdown Inline Code (`...`) and Fenced Code Block (```...```) FSM:
-        if self.config.developer_mode {
+        if self.config.developer_mode && !self.config.allow_vietnamese_in_backtick {
             if ch == '`' {
                 if !self.current_word.is_empty() {
                     self.reset_word_buffers();

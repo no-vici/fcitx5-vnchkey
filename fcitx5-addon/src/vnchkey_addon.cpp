@@ -957,6 +957,8 @@ void VnchkeyEngine::loadConfig() {
                 config_initial_case_anchor_ = (line.find("True") != std::string::npos || line.find("true") != std::string::npos);
             } else if (line.rfind("DeveloperMode=", 0) == 0) {
                 config_developer_mode_ = (line.find("False") == std::string::npos && line.find("false") == std::string::npos);
+            } else if (line.rfind("AllowVietnameseInBacktick=", 0) == 0) {
+                config_allow_vietnamese_in_backtick_ = (line.find("True") != std::string::npos || line.find("true") != std::string::npos);
             } else if (line.rfind("LearnTypingHabits=", 0) == 0) {
                 config_learn_typing_habits_ = (line.find("False") == std::string::npos && line.find("false") == std::string::npos);
             } else if (line.rfind("HabitPromoteThreshold=", 0) == 0) {
@@ -994,6 +996,7 @@ void VnchkeyEngine::loadConfig() {
         fcitx5_vnchkey_set_idle_timeout(ctx, config_idle_timeout_ms_);
         fcitx5_vnchkey_set_initial_case_anchor(ctx, config_initial_case_anchor_);
         fcitx5_vnchkey_set_developer_mode(ctx, config_developer_mode_);
+        fcitx5_vnchkey_set_allow_vietnamese_in_backtick(ctx, config_allow_vietnamese_in_backtick_);
         fcitx5_vnchkey_set_habit_learning_enabled(ctx, config_learn_typing_habits_);
         fcitx5_vnchkey_set_habit_promote_threshold(ctx, config_habit_promote_threshold_);
     }
@@ -1037,6 +1040,7 @@ void VnchkeyEngine::saveConfig() {
                     l.rfind("EnableDictionary=", 0) != 0 &&
                     l.rfind("InitialCaseAnchor=", 0) != 0 &&
                     l.rfind("DeveloperMode=", 0) != 0 &&
+                    l.rfind("AllowVietnameseInBacktick=", 0) != 0 &&
                     l.rfind("LearnTypingHabits=", 0) != 0 &&
                     l.rfind("HabitPromoteThreshold=", 0) != 0) {
                     lines.push_back(l);
@@ -1073,6 +1077,7 @@ void VnchkeyEngine::saveConfig() {
         out << "EnableDictionary=" << (config_dictionary_ ? "True" : "False") << "\n";
         out << "InitialCaseAnchor=" << (config_initial_case_anchor_ ? "True" : "False") << "\n";
         out << "DeveloperMode=" << (config_developer_mode_ ? "True" : "False") << "\n";
+        out << "AllowVietnameseInBacktick=" << (config_allow_vietnamese_in_backtick_ ? "True" : "False") << "\n";
         out << "LearnTypingHabits=" << (config_learn_typing_habits_ ? "True" : "False") << "\n";
         out << "HabitPromoteThreshold=" << config_habit_promote_threshold_ << "\n";
     }

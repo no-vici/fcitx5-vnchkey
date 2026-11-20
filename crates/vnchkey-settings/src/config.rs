@@ -46,6 +46,7 @@ pub struct VnchkeyConfig {
     pub initial_case_anchor: bool,
     #[serde(default = "default_true")]
     pub developer_mode: bool,
+    pub allow_vietnamese_in_backtick: bool,
 }
 
 fn default_true() -> bool {
@@ -91,6 +92,7 @@ impl Default for VnchkeyConfig {
             habit_promote_threshold: 4,
             initial_case_anchor: false,
             developer_mode: true,
+            allow_vietnamese_in_backtick: false,
         }
     }
 }
@@ -233,6 +235,7 @@ impl ConfigManager {
             if let Some(v) = map.get("HabitPromoteThreshold") { cfg.habit_promote_threshold = v.parse().unwrap_or(4).max(1); }
             if let Some(v) = map.get("InitialCaseAnchor") { cfg.initial_case_anchor = v.eq_ignore_ascii_case("true"); }
             if let Some(v) = map.get("DeveloperMode") { cfg.developer_mode = v.eq_ignore_ascii_case("true"); }
+            if let Some(v) = map.get("AllowVietnameseInBacktick") { cfg.allow_vietnamese_in_backtick = v.eq_ignore_ascii_case("true"); }
         }
 
         cfg
@@ -283,6 +286,7 @@ impl ConfigManager {
         lines.push(format!("LearnTypingHabits={}", if cfg.learn_typing_habits { "True" } else { "False" }));
         lines.push(format!("HabitPromoteThreshold={}", cfg.habit_promote_threshold));
         lines.push(format!("DeveloperMode={}", if cfg.developer_mode { "True" } else { "False" }));
+        lines.push(format!("AllowVietnameseInBacktick={}", if cfg.allow_vietnamese_in_backtick { "True" } else { "False" }));
 
         fs::write(Self::conf_path(), lines.join("\n") + "\n")?;
         Self::reload_fcitx5();

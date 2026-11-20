@@ -123,6 +123,7 @@ mod win_app {
     const ID_LIVE_INSPECTOR: usize = 1074;
     const ID_TOGGLE_TRACE_LOG: usize = 1075;
     const ID_EXPORT_DEBUG_LOGS: usize = 1076;
+    const ID_ALLOW_VIETNAMESE_IN_BACKTICK: usize = 1077;
     const ID_CHECK_UPDATE: usize = 1071;
     const ID_RESET_DEFAULTS: usize = 1072;
 
@@ -631,6 +632,7 @@ mod win_app {
              habit_threshold={}\n\
              initial_case_anchor={}\n\
              developer_mode={}\n\
+             allow_vietnamese_in_backtick={}\n\
              per_app={}\n\
              ctrl={}\n\
              shift={}\n\
@@ -660,6 +662,7 @@ mod win_app {
             st.engine.habit_promote_threshold(),
             st.engine.initial_case_anchor(),
             st.engine.developer_mode(),
+            st.engine.allow_vietnamese_in_backtick(),
             st.per_app,
             st.shortcut.ctrl, st.shortcut.shift, st.shortcut.alt, st.shortcut.win, st.shortcut.key_code,
             st.flip_shortcut.ctrl, st.flip_shortcut.shift, st.flip_shortcut.alt, st.flip_shortcut.win, st.flip_shortcut.key_code,
@@ -2246,6 +2249,7 @@ Start-Process -FilePath $batch -WindowStyle Hidden;
                         st.engine.quick_start_consonant(),
                         st.engine.quick_end_consonant(),
                         st.engine.developer_mode(),
+            st.engine.allow_vietnamese_in_backtick(),
                     )
                 })
                 .unwrap_or((false, false, false, true))
@@ -2440,6 +2444,13 @@ Start-Process -FilePath $batch -WindowStyle Hidden;
             MF_STRING,
             ID_LIVE_INSPECTOR,
             to_wstring("Live Inspector (Debug)...").as_ptr(),
+        );
+        let allow_backtick_checked = STATE.with(|s| s.borrow().engine.allow_vietnamese_in_backtick());
+        AppendMenuW(
+            menu,
+            if allow_backtick_checked { MF_STRING | MF_CHECKED } else { MF_STRING },
+            ID_ALLOW_VIETNAMESE_IN_BACKTICK,
+            to_wstring("Cho phép gõ Tiếng Việt trong `backtick` / ```code```").as_ptr(),
         );
         let trace_checked = STATE.with(|s| s.borrow().tracing_enabled);
         AppendMenuW(
@@ -2805,6 +2816,13 @@ Start-Process -FilePath $batch -WindowStyle Hidden;
                     let title = to_wstring("VnCharKey - Live Inspector (Debug)");
                     let body = to_wstring(&info);
                     MessageBoxW(hwnd, body.as_ptr(), title.as_ptr(), MB_OK | MB_ICONINFORMATION);
+                } else if id == ID_ALLOW_VIETNAMESE_IN_BACKTICK {
+                    STATE.with(|s| {
+                        let mut b = s.borrow_mut();
+                        let next = !b.engine.allow_vietnamese_in_backtick();
+                        b.engine.set_allow_vietnamese_in_backtick(next);
+                    });
+                    save_config();
                 } else if id == ID_TOGGLE_TRACE_LOG {
                     let enabled = STATE.with(|s| {
                         let mut b = s.borrow_mut();

@@ -58,7 +58,7 @@
 **vnchKey** được xây dựng như một module native tích hợp trực tiếp vào framework **Fcitx5** – khung nhập liệu chuẩn mực và phổ biến nhất trên Linux hiện nay. 
 
 Thay vì phải chạy tiến trình daemon ngoài với quyền root để can thiệp kernel, **vnchKey** hoạt động trực tiếp trong không gian người dùng của Fcitx5:
-- **Lõi xử lý Tiếng Việt viết bằng Rust (`vnchkey-core`)**: Quản lý toàn bộ State Machine của âm tiết, kiểm tra luật ngữ âm, đặt dấu thanh và khôi phục từ tiếng Anh.
+- **Lõi xử lý Tiếng Việt viết bằng Rust (`vnchkey-core`)**: Quản lý toàn bộ State Machine của âm tiết, kiểm tra luật ngữ âm, đặt dấu thanh và khôi phục từ Tiếng Anh.
 - **Cầu nối C-ABI (`fcitx5-vnchkey-ffi`)**: Cung cấp giao diện hàm extern C an toàn, truyền nhận dữ liệu trực tiếp giữa Rust và C++.
 - **Module Fcitx5 Native Addon (`fcitx5-addon`)**: Plugin C++ biên dịch thành `fcitx5-vnchkey-addon.so`, nạp trực tiếp vào Fcitx5 Server, tương thích hoàn hảo với cả Wayland (Sway, Hyprland, GNOME, KDE) và X11.
 - **Ứng dụng thiết lập các tính năng (`vnchkey-settings`)**: 100% Rust viết bằng thư viện đồ hoạ `egui` / `eframe`, khởi động tức thì, tinh tế và đồng bộ trực tiếp với file cấu hình Fcitx5.
@@ -80,10 +80,10 @@ fcitx5-vnchkey/
 │   │   │   ├── vni.rs               # Biến đổi VNI đa thứ tự phím (1-9, 0 xóa dấu)
 │   │   │   ├── syllable_parser.rs   # Bộ bóc tách âm tiết 5 thành phần (Onset-Glide-Nucleus-Coda-Tone)
 │   │   │   ├── habit_learner.rs     # [Mới] Tự động học thói quen sửa lỗi & Whitelist (Log 100 MB FIFO)
-│   │   │   ├── auto_restore.rs      # Từ điển tiếng Anh kỹ thuật & từ điển ngoại lệ người dùng
+│   │   │   ├── auto_restore.rs      # Từ điển Tiếng Anh kỹ thuật & từ điển ngoại lệ người dùng
 │   │   │   ├── casing.rs            # Theo dõi và bảo toàn kiểu chữ hoa/thường
 │   │   │   ├── macros.rs            # Bảng từ viết tắt (Gõ tắt) & hoàn tác 2 bước
-│   │   │   └── vietnamese_dict.rs   # Bộ từ điển Chánh Tả ~6.750 từ gốc tiếng Việt
+│   │   │   └── vietnamese_dict.rs   # Bộ từ điển Chánh Tả ~6.750 từ gốc Tiếng Việt
 │   │   └── tests/
 │   │       └── vietc_regression_tests.rs # Bộ kiểm thử hồi quy đối sánh từ VietC
 │   │
@@ -243,9 +243,9 @@ Khác biệt với các bộ gõ truyền thống dựa trên chuỗi regex ho�
   - Khi người dùng gõ thêm nguyên âm hoặc mở rộng từ, dấu thanh tự động dịch chuyển mượt mà đến đúng vị trí âm chính mới mà không làm vỡ từ:
     - `ho` + `s` $\to$ `hó` $\xrightarrow{+\text{a}}$ `hoá` (Kiểu mới Modern) hoặc `hóa` (Kiểu cũ Classic).
     - `thuy` + `r` $\to$ `thủy` $\xrightarrow{+\text{a}}$ `thuyển` $\to$ chuyển dấu chuẩn xác.
-- **Hỗ trợ Song Song Chuẩn Dấu Mới & Cổ Điển**:
-  - Dấu Mới (Modern): `hóa`, `hòa`, `thủy`, `họa` (dấu đặt trên âm chính).
-  - Dấu Cổ Điển (Classic): `hoá`, `hoà`, `thuỷ`, `hoạ`.
+- **Hỗ trợ Song Song Chuẩn Cổ Điển & Dấu Mới**:
+  - Dấu Mới (Classic): `hóa`, `hòa`, `thủy`, `họa` (dấu đặt trên âm chính).
+  - Dấu Cổ Điển (Modern): `hoá`, `hoà`, `thuỷ`, `hoạ`.
 
 ---
 
@@ -270,7 +270,7 @@ Chắt lọc và nâng cấp từ thuật toán hoán đổi dấu phụ của *
 - **Cơ chế bảo vệ của vnchKey**:
   - Khi từ đang có âm cuối tắc và đã mang dấu thanh hợp lệ (ví dụ `được`, `mất`, `bác`, `đẹp`), nếu người dùng vô tình gõ các phím thanh không tương thích (như `f` - Huyền, `r` - Hỏi, `x` - Ngã):
     - Thay vì làm hỏng từ hoặc rớt dấu kỳ quặc (như `được` + `f` $\to$ `đườc` ở một số bộ gõ khác), engine nhận diện sự vi phạm ngữ âm học và **từ chối biến âm**.
-    - Ký tự gõ sai được giữ nguyên ở dạng phím thô (`được` + `f` $\to$ `đượcf`), bảo toàn nguyên vẹn từ tiếng Việt trước đó.
+    - Ký tự gõ sai được giữ nguyên ở dạng phím thô (`được` + `f` $\to$ `đượcf`), bảo toàn nguyên vẹn từ Tiếng Việt trước đó.
 
 ---
 
@@ -283,15 +283,15 @@ Chắt lọc và nâng cấp từ thuật toán hoán đổi dấu phụ của *
   - Đảo ngược qua lại trạng thái của từ đang gõ giữa Tiếng Việt và chuỗi phím thô (`thể` $\longleftrightarrow$ `theer`, `việt` $\longleftrightarrow$ `vieetj`).
   - **Không xung đột với phím tắt Redo của Editor**: Tổ hợp phím chỉ bắt sự kiện khi trong bộ đệm đang thực sự có từ vừa gõ (`has_active_word()`). Khi bộ đệm đang rỗng, phím tắt được trả thẳng về cho ứng dụng (VS Code, trình duyệt...) thực hiện lệnh Redo bình thường. Trên Windows, người dùng có thể tự do đổi sang `Alt + X`, `Ctrl + Alt + Z` hoặc thu phím bất kỳ.
 - **Hoàn Nguyên Từ Thô Bằng `Shift + Esc` & Bảo Toàn `Esc` Cho Neovim**:
-  - **Nhấn `Esc` đơn thuần**: Giữ nguyên từ tiếng Việt vừa gõ, chốt bộ đệm và truyền thẳng `Esc` cho ứng dụng — giúp lập trình viên **thoát `INSERT` mode của Neovim ngay lập tức ở lần bấm đầu tiên** mà không bị mất dấu hay biến dạng chữ!
-  - **Nhấn `Shift + Esc`**: Hoàn nguyên ngay lập tức từ đang gõ về chuỗi phím thô (`tiếng` $\to$ `tieengs`) và tạm khóa tiếng Anh cho từ đó.
+  - **Nhấn `Esc` đơn thuần**: Giữ nguyên từ Tiếng Việt vừa gõ, chốt bộ đệm và truyền thẳng `Esc` cho ứng dụng — giúp lập trình viên **thoát `INSERT` mode của Neovim ngay lập tức ở lần bấm đầu tiên** mà không bị mất dấu hay biến dạng chữ!
+  - **Nhấn `Shift + Esc`**: Hoàn nguyên ngay lập tức từ đang gõ về chuỗi phím thô (`tiếng` $\to$ `tieengs`) và tạm khóa Tiếng Anh cho từ đó.
 - **Hồi Sinh Từ Trước Sau Phím Space (`Backspace` — Reopen Word)**:
   - Lỡ gõ `tiêng ` (quên bỏ dấu sắc) rồi đã bấm `Space`? Chỉ cần bấm `Backspace` một lần để xóa dấu cách rồi gõ luôn phím `s` $\to$ từ tự động hồi sinh và biến thành `tiếng` mà không cần xóa cả chữ!
 - **Cứu Chữ & Cứu Dấu Kiểu Ngó Sen (Word & Accent Rescue)**:
-  - **Cứu Chữ tự động khi bật bộ gõ**: Nếu bạn quên bật bộ gõ và lỡ gõ cả câu tiếng Anh thô (`chaof banj, tieengs vieetj`), chỉ cần bấm phím chuyển sang vnchKey — toàn bộ câu vừa gõ sẽ tự động hóa phép thành **`chào bạn, tiếng việt`**! (Nhấn `Backspace` hoặc `Esc` ngay sau đó nếu muốn hoàn tác về chữ thô).
+  - **Cứu Chữ tự động khi bật bộ gõ**: Nếu bạn quên bật bộ gõ và lỡ gõ cả câu Tiếng Anh thô (`chaof banj, tieengs vieetj`), chỉ cần bấm phím chuyển sang vnchKey — toàn bộ câu vừa gõ sẽ tự động hóa phép thành **`chào bạn, tiếng việt`**! (Nhấn `Backspace` hoặc `Esc` ngay sau đó nếu muốn hoàn tác về chữ thô).
   - **Cứu Dấu khi bôi đen từ**: Dùng chuột hoặc bàn phím bôi đen một từ bất kỳ (ví dụ `tiêng`) rồi bấm phím dấu (`s` hoặc `1`), từ đang bôi đen sẽ lập tức biến thành **`tiếng`**.
 - **Tự Động Bỏ Qua Ký Tự Lập Trình & Token Kỹ Thuật (Developer & Technical Token Protection)**:
-  - Tự động nhận diện và khóa tiếng Anh cho các định danh mã nguồn: biến bắt đầu bằng gạch dưới (`_variable`, `__init__`), chuỗi `snake_case` (`user_id`, `parse_string`), chuỗi truy cập thuộc tính qua dấu chấm (`db.collection.findOne`), và `camelCase` / `PascalCase` (`useState`, `ClassName`).
+  - Tự động nhận diện và khóa Tiếng Anh cho các định danh mã nguồn: biến bắt đầu bằng gạch dưới (`_variable`, `__init__`), chuỗi `snake_case` (`user_id`, `parse_string`), chuỗi truy cập thuộc tính qua dấu chấm (`db.collection.findOne`), và `camelCase` / `PascalCase` (`useState`, `ClassName`).
   - **Bảo vệ mã màu & đơn vị CSS**: tự động khóa bảo vệ mã màu Hex (`#f97316`, `#ef4444`), đơn vị CSS (`10px`, `2rem`, `50vh`, `100vw`) và token kỹ thuật pha trộn số-chữ (`v1s`, `sha256`, `utf8`, `x86_64`) không bị nhảy dấu nhầm.
 - **Hỗ Trợ Bảng Mã Unicode Tổ Hợp (NFD Composite Charset)**:
   - Cho phép chuyển đổi linh hoạt giữa **Unicode Dựng Sẵn (NFC)** và **Unicode Tổ Hợp (NFD)** ngay trong bảng Cài Đặt để tương thích tuyệt đối với các phần mềm đồ họa XWayland đặc thù.
@@ -303,7 +303,7 @@ Tích hợp bộ máy học thích nghi cục bộ (`habit_learner.rs`) ngay tro
 - **Tự động phát hiện 4 hành vi sửa lỗi của người dùng**:
   1. **Xóa bằng `Backspace` rồi gõ lại chữ không dấu (`BackspaceRetype`)**: Khi một từ bị bỏ dấu nhầm, người dùng bấm `Backspace` xóa đi rồi gõ lại từ nguyên bản.
   2. **Nhấn đúp phím dấu để khử dấu (`DoubleKeyUndo`)**: Gõ `ss`, `ff`, `rr`, `ww`... để hoàn tác dấu thanh/dấu mũ về chữ ASCII.
-  3. **Bấm phím Lật Từ (`FlipToRaw`)**: Dùng `Ctrl + Shift + Z` / `Alt + X` để trả từ tiếng Việt về chuỗi phím gốc.
+  3. **Bấm phím Lật Từ (`FlipToRaw`)**: Dùng `Ctrl + Shift + Z` / `Alt + X` để trả từ Tiếng Việt về chuỗi phím gốc.
   4. **Bấm phím Hoàn Nguyên (`EscapeToRaw`)**: Dùng `Esc` / `Shift + Esc` để hủy bỏ dấu vừa gõ.
 - **Bảng Tra Cứu Trực Quan (Habit Inspector trên GUI Settings)**:
   - Hiển thị danh sách từ đang được bộ gõ theo dõi cùng thanh tiến trình trực quan (`2/4 lần`).
@@ -313,7 +313,7 @@ Tích hợp bộ máy học thích nghi cục bộ (`habit_learner.rs`) ngay tro
   - Ngưỡng sửa/xóa mặc định được nâng lên **4 lần**, đồng thời người dùng có thể tùy chỉnh tự do ngưỡng này (từ 2 đến 10 lần trên Linux/Windows/macOS).
 - **Tự động đưa vào Từ Điển Cá Nhân & Phục Hồi Tức Thì (Instant Unlearn)**:
   - Từ được học sẽ tự động được ghi nối vào tệp **Từ Điển Cá Nhân** (`vnchkey-dictionary.conf` / `dictionary.conf`).
-  - Nếu xóa từ trong tab **Dictionary** trên GUI, bộ gõ lập tức dọn sạch bộ nhớ đệm và phục hồi khả năng gõ dấu tiếng Việt bình thường ngay tức khắc!
+  - Nếu xóa từ trong tab **Dictionary** trên GUI, bộ gõ lập tức dọn sạch bộ nhớ đệm và phục hồi khả năng gõ dấu Tiếng Việt bình thường ngay tức khắc!
 - **Nhật ký thói quen dung lượng cao (100 MB FIFO Rotation) & Bảo mật tuyệt đối**:
   - Hỗ trợ lưu lịch sử học tập lên tới **100 MB** (`vnchkey-habit.log` / `habit.log`), tự động xoay vòng FIFO giữ lại 70% dữ liệu mới nhất khi đầy.
   - Chỉ ghi nhận các từ chữ cái đơn thuần (2–32 ký tự), tuyệt đối không ghi nhận chuỗi số, mã PIN hay mật khẩu.
@@ -323,8 +323,8 @@ Tích hợp bộ máy học thích nghi cục bộ (`habit_learner.rs`) ngay tro
 ### 3.14. Đồng Bộ Neovim & Terminal Qua Unix Socket IPC Tức Thì (< 2ms)
 - Bộ gõ trên Linux mở một listener Unix Domain Socket non-blocking (`/tmp/vnchkey.sock`) được cấp quyền riêng tư an toàn `0600`.
 - Module [vnchkey.lua](file:///home/codegpt/antigravity/vnchKey/data/neovim/lua/vnchkey.lua) trong Neovim tự động kết nối qua `vim.uv.new_pipe()`:
-  - Khi rời Insert mode (`InsertLeave`): gửi lệnh `bypass_on` để tắt gõ tiếng Việt tức thì mà **không làm mất cờ vàng** trên khay hệ thống, không bị trễ D-Bus.
-  - Khi vào Insert mode (`InsertEnter`): gửi lệnh `bypass_off` để khôi phục tiếng Việt siêu tốc.
+  - Khi rời Insert mode (`InsertLeave`): gởi lệnh `bypass_on` để tắt gõ Tiếng Việt tức thì mà **không làm mất cờ vàng** trên khay hệ thống, không bị trễ D-Bus.
+  - Khi vào Insert mode (`InsertEnter`): gởi lệnh `bypass_off` để khôi phục Tiếng Việt siêu tốc.
 
 ---
 
@@ -336,7 +336,7 @@ Học hỏi và phát triển từ các công cụ thực chiến trên Wayland:
   - Tự động quét các ứng dụng Electron/Chromium đang chạy (`VS Code`, `VSCodium`, `Cursor`, `Windsurf`, `Discord`, `Vesktop`, `Slack`, `Obsidian`, `Notion`, `Spotify`, `Chrome`, `Brave`...) và kiểm tra `/proc/<PID>/cmdline`.
   - Cảnh báo ngay nếu ứng dụng đang chạy qua XWayland hoặc thiếu cờ `--enable-wayland-ime` / `--ozone-platform-hint=auto`, đồng thời cung cấp câu lệnh khắc phục chính xác cho từng ứng dụng.
 - **Tự Động Bypass Khi Chơi Game & Nhập Mật Khẩu / PIN (Zero-Config Bypass)**:
-  - **Bảo vệ Ô Mật Khẩu & Trường Nhạy Cảm (`isSensitiveContext`)**: Tự động xả bộ đệm và ngắt biến đổi tiếng Việt khi con trỏ nằm trong các trường có cờ `CapabilityFlag::Password`, `Sensitive`, `Number`, `Digit`, `Dialable`, hoặc `Alpha`.
+  - **Bảo vệ Ô Mật Khẩu & Trường Nhạy Cảm (`isSensitiveContext`)**: Tự động xả bộ đệm và ngắt biến đổi Tiếng Việt khi con trỏ nằm trong các trường có cờ `CapabilityFlag::Password`, `Sensitive`, `Number`, `Digit`, `Dialable`, hoặc `Alpha`.
   - **Nhận diện Game Tự Động (`isGamingProgram`)**: Tự động chuyển sang chế độ `Bypass` (trả phím `WASD` thô tức thì không độ trễ) khi focus vào Steam (`steam_app_*`), `gamescope`, Lutris, Heroic, Bottles, PrismLauncher, Minecraft, RetroArch, RPCS3, Yuzu, Ryujinx, PCSX2, Dolphin, CS2, Dota 2, Valorant, Genshin Impact, Elden Ring, Cyberpunk 2077, Baldur's Gate 3, Overwatch, Apex Legends, Roblox/Sober, osu!, các tiến trình Unreal/Unity/Godot và các game `.exe` chạy qua Wine/Proton.
 
 ---
@@ -361,7 +361,7 @@ Cung cấp công cụ cấu hình đồ họa native độc lập **`fcitx5-vnch
   - **Lưới Thẻ Chế Độ 1-Click (Mode Cards Grid)**: Trực quan hóa việc chuyển đổi chế độ xuất chữ cho từng ứng dụng với các thẻ bấm lớn nổi bật:
     - **`Direct (Micro-diff)`**: Gõ trực tiếp như UniKey Windows, tối ưu cho Terminal, Neovim, VS Code, WezTerm với độ trễ bằng 0.
     - **`Preedit (Gạch Chân)`**: Gom từ nguyên tử, đặc trị triệt để 100% lỗi nhảy chữ, lặp chữ trên Google Docs, Chrome, Firefox, Slack, Discord.
-    - **`Bypass (OFF)`**: Tắt bộ gõ hoàn toàn, chỉ gửi phím tiếng Anh thô cho Game hoặc Terminal đặc thù.
+    - **`Bypass (OFF)`**: Tắt bộ gõ hoàn toàn, chỉ gởi phím Tiếng Anh thô cho Game hoặc Terminal đặc thù.
     - **`Default Typing`**: Kế thừa chế độ mặc định toàn cục của hệ thống (Global Default).
 - **Hỗ trợ toàn diện 10 Tab chuyên sâu**: **General**, **Typing**, **Applications**, **Macros**, **Dictionary**, **Keymap**, **Appearance**, **Backup**, **Doctor**, **About**.
 - **Tự động đồng bộ**: Nạp lại cấu hình tức thì vào Fcitx5 ngay khi bấm Áp Dụng.
@@ -447,7 +447,7 @@ Phiên bản dành cho Windows sử dụng tên gọi trung tính **VnCharKey** 
 - 🔬 **[Phân Tích Kỹ Thuật Cơ Chế Non-Preedit UniKey vs Wayland](docs/NON_PREEDIT_WAYLAND_ANALYSIS.md)**: Phân tích chuyên sâu về sự khác biệt kiến trúc xử lý bàn phím giữa Windows và Linux Wayland, nguyên nhân gốc rễ gây lỗi nhảy chữ trên Web DOM và giải pháp toàn diện của vnchKey.
 - 📖 **[Nền Tảng Ngôn Ngữ Học & Âm Vị Học Tiếng Việt](docs/VIETNAMESE_LANGUAGE_SYSTEM.md)**: Cẩm nang chuyên sâu về cấu trúc âm tiết (Onset-Glide-Nucleus-Coda-Tone), quy tắc đặt dấu thanh (Mới vs Cũ), ràng buộc âm cuối tắc và bảng ma trận chuyển đổi vần.
 - ⚡ **[Kiến Trúc Kỹ Thuật Nhập Liệu & Các Đột Phá Công Nghệ](docs/INPUT_ENGINEERING_AND_INNOVATIONS.md)**: Phân tích cơ chế phát phím Micro-Diff, Select-and-Replace cho Web/Electron, hồi sinh từ sau phím cách, Escape to Undo, nhận diện camelCase và hệ thống Macro động theo múi giờ địa phương.
-- 🛡️ **[Kiến Trúc Kiểm Thử Đa Tầng & Báo Cáo Kiểm Định Chất Lượng (Multi-Tier Testing & ASan Guide)](docs/MULTI_TIER_TESTING_AND_VERIFICATION.md)**: Hướng dẫn toàn diện về hệ thống kiểm thử 3 tầng (Property-Based Fuzzing, Mô phỏng bẫy tiếng Anh vs bảo vệ tiếng Việt, kiểm định rò rỉ bộ nhớ C++ AddressSanitizer/UBSan qua FFI) dành cho lập trình viên.
+- 🛡️ **[Kiến Trúc Kiểm Thử Đa Tầng & Báo Cáo Kiểm Định Chất Lượng (Multi-Tier Testing & ASan Guide)](docs/MULTI_TIER_TESTING_AND_VERIFICATION.md)**: Hướng dẫn toàn diện về hệ thống kiểm thử 3 tầng (Property-Based Fuzzing, Mô phỏng bẫy Tiếng Anh vs bảo vệ Tiếng Việt, kiểm định rò rỉ bộ nhớ C++ AddressSanitizer/UBSan qua FFI) dành cho lập trình viên.
 
 ---
 

@@ -478,6 +478,17 @@ public class KeyTapManager {
         return fcitx5_vnchkey_get_developer_mode(engine)
     }
 
+    public func setAllowVietnameseInBacktick(_ enabled: Bool) {
+        if let engine = self.engine {
+            fcitx5_vnchkey_set_allow_vietnamese_in_backtick(engine, enabled)
+        }
+    }
+
+    public func getAllowVietnameseInBacktick() -> Bool {
+        guard let engine = self.engine else { return false }
+        return fcitx5_vnchkey_get_allow_vietnamese_in_backtick(engine)
+    }
+
     public func setW2U(_ mode: UInt32) { // 0: NonStart, 1: Always, 2: Disabled
         if let engine = self.engine {
             fcitx5_vnchkey_set_w2u(engine, mode)

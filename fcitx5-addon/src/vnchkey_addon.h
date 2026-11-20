@@ -76,6 +76,8 @@ extern "C" {
     bool fcitx5_vnchkey_get_initial_case_anchor(void* ctx);
     void fcitx5_vnchkey_set_developer_mode(void* ctx, bool enabled);
     bool fcitx5_vnchkey_get_developer_mode(void* ctx);
+    void fcitx5_vnchkey_set_allow_vietnamese_in_backtick(void* ctx, bool enabled);
+    bool fcitx5_vnchkey_get_allow_vietnamese_in_backtick(const void* ctx);
 
     char* fcitx5_vnchkey_get_current_word(void* ctx);
     char* fcitx5_vnchkey_get_completed_word(void* ctx);
@@ -149,6 +151,7 @@ private:
     bool config_word_rescue_ = true;
     bool config_initial_case_anchor_ = false;
     bool config_developer_mode_ = true;
+    bool config_allow_vietnamese_in_backtick_ = false;
     bool config_learn_typing_habits_ = true;
     uint32_t config_habit_promote_threshold_ = 4;
 
