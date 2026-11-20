@@ -4,6 +4,30 @@ Tất cả những thay đổi nổi bật của dự án **vnchKey** (**fcitx5-
 
 ---
 
+## [0.3.8] - 2026-11-20
+
+### 🐛 Sửa Lỗi & Tối Ưu Fcitx5 Wayland (`vnchkey_addon.cpp`)
+- **Khắc Phục Lag Khi Giữ `BackSpace` Trong Chế Độ Preedit Trên Firefox/Wayland**:
+  - Khi bộ đệm từ hiện tại đã rỗng (`!fcitx5_vnchkey_has_active_word(ctx)`), addon gọi `fcitx5_vnchkey_reset(ctx)` và nhả ngay phím `BackSpace` về cho trình duyệt xử lý native thay vì lôi ngược tối đa 16 từ cũ từ `reopen_history` vào Preedit.
+  - Giảm cập nhật D-Bus `InputPanel` dư thừa mỗi lần xóa ký tự: chỉ gọi `updateSymbolCandidates(...)` và `updateUserInterface(InputPanel)` khi đang bật `PreeditTooltip`, đang gõ `:shortcode`, hoặc đang có danh sách ứng viên mở.
+- **Hiển Thị Tooltip Nổi Trên Google Docs (Kix Canvas / Wayland)**:
+  - Khi bật server tooltip (`config_preedit_tooltip_ || isWpsOffice(...)`), addon chủ động xóa rỗng `setClientPreedit(fcitx::Text())` và `setPreedit(fcitx::Text())`, đồng thời dùng duy nhất `setAuxUp(text)` để ép Fcitx5 ClassicUI/Kimpanel luôn vẽ khung nổi 1 dòng duy nhất (không bị nhân đôi từ hay ẩn mất khi Google Docs trả về `cursorRect(0, 0)`).
+
+### ⚡ Tối Ưu Hiệu Năng & An Toàn Lõi (`vnchkey-core`, `fcitx5-vnchkey-ffi`, `vnchkey-settings`)
+- **Zero-Allocation Onset & Coda Validation** (`telex.rs`): Viết lại `is_valid_vietnamese_onset` và `is_valid_vietnamese_coda` để so khớp trực tiếp trên `&[char]` qua `norm_onset_char` / `to_ascii_lowercase()`, loại bỏ hoàn toàn cấp phát `String` trên hot path.
+- **Atomic Config Write** (`config.rs`): Bổ sung `ConfigManager::atomic_write` (ghi ra file `.tmp` rồi `fs::rename`) cho toàn bộ thao tác lưu `config.conf`, `macros.conf`, `dictionary.conf`, và `app_modes.conf`, tránh hỏng dữ liệu cấu hình khi crash/mất điện đột ngột.
+- **Hardening & Robustness**:
+  - Thay thế toàn bộ 28 lời gọi `.unwrap()` trong `vni.rs` (6) và `telex.rs` (22) bằng `.expect("invariant: valid vowel/digit")`.
+  - Giới hạn độ dài `$CLIPBOARD` tối đa `4096` ký tự trong `macros.rs` để tránh khựng khi clipboard quá lớn.
+  - Gộp logic chuyển đổi `InputMethod` (`0/1/2/3`) trong `fcitx5-vnchkey-ffi/src/lib.rs` thành helper `method_from_u32` và `method_to_u32`.
+  - Dọn sạch toàn bộ cảnh báo `clippy` và `missing_docs` trên toàn workspace.
+
+### 🏗️ Tái Cấu Trúc & Kiểm Thử (Refactoring & Testing)
+- **Tách Module `engine/`**: Chia `engine.rs` (3.980 dòng) thành `engine/mod.rs` (2.347 dòng), `engine/dev_code.rs` (601 dòng), và `engine/tests.rs` (1.033 dòng) để dễ đọc, dễ bảo trì và tăng tốc biên dịch.
+- **Bảng Parity Test VNI vs Telex & Fuzzing** (`engine/tests.rs`): Bổ sung `test_vni_telex_parity_table_and_fuzz` đối chiếu 26 cặp từ/vần giữa Telex và VNI (bao gồm chữ thường, `TitleCase`, `ALL-CAPS`) cùng 500 bước fuzzing ngẫu nhiên trên `Telex`, `Vni`, và `Auto`.
+
+---
+
 ## [0.3.7] - 2026-11-19
 
 ### 🐛 Sửa Lỗi (Bug Fixes)
