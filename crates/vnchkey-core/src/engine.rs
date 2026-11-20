@@ -1520,6 +1520,11 @@ impl Engine {
                 // cancel any candidate so it doesn't mistakenly learn typos.
                 self.deleted_accented_candidate = None;
                 self.manual_undo = true;
+                if self.english_locked
+                    && !self.current_word.chars().any(|c| !c.is_alphabetic())
+                {
+                    self.english_locked = false;
+                }
             }
             false
         }
