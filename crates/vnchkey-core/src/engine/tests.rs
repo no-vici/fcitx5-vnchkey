@@ -1053,6 +1053,15 @@
             ("oors ", "o61 ", "ố "),
             ("oows ", "o71 ", "ớ "),
             ("nuowcs ", "nuo7c1 ", "nước "),
+            // TitleCase & ALL-CAPS parity:
+            ("Tieengs ", "Tie6ng1 ", "Tiếng "),
+            ("TIEENGS ", "TIE6NG1 ", "TIẾNG "),
+            ("Dduowcj ", "D9uo7c5 ", "Được "),
+            ("DDUOWCJ ", "D9UO7C5 ", "ĐƯỢC "),
+            ("Nguowif ", "Nguo7i2 ", "Người "),
+            ("NGUOWIF ", "NGUO7I2 ", "NGƯỜI "),
+            ("Nuowcs ", "Nuo7c1 ", "Nước "),
+            ("NUOWCS ", "NUO7C1 ", "NƯỚC "),
         ];
 
         for &(telex_in, vni_in, expected) in parity_cases {
