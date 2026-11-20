@@ -1229,10 +1229,11 @@ void VnchkeyEngine::keyEvent(const fcitx::InputMethodEntry &entry, fcitx::KeyEve
                     const bool use_server_tooltip = config_preedit_tooltip_ || isWpsOffice(prog);
                     if (use_server_tooltip) {
                         ic->inputPanel().setClientPreedit(fcitx::Text());
-                        ic->inputPanel().setPreedit(text);
-                        ic->inputPanel().setAuxUp(fcitx::Text(std::string("✎ ") + cur));
+                        ic->inputPanel().setPreedit(fcitx::Text());
+                        ic->inputPanel().setAuxUp(text);
                     } else {
                         ic->inputPanel().setClientPreedit(text);
+                        ic->inputPanel().setPreedit(fcitx::Text());
                         ic->inputPanel().setAuxUp(fcitx::Text());
                     }
                     ic->inputPanel().setCandidateList(nullptr);
@@ -1298,10 +1299,11 @@ void VnchkeyEngine::keyEvent(const fcitx::InputMethodEntry &entry, fcitx::KeyEve
                         const bool use_server_tooltip = config_preedit_tooltip_ || isWpsOffice(prog);
                         if (use_server_tooltip) {
                             ic->inputPanel().setClientPreedit(fcitx::Text());
-                            ic->inputPanel().setPreedit(text);
-                            ic->inputPanel().setAuxUp(fcitx::Text(std::string("✎ ") + cur));
+                            ic->inputPanel().setPreedit(fcitx::Text());
+                            ic->inputPanel().setAuxUp(text);
                         } else {
                             ic->inputPanel().setClientPreedit(text);
+                            ic->inputPanel().setPreedit(fcitx::Text());
                             ic->inputPanel().setAuxUp(fcitx::Text());
                         }
                         ic->inputPanel().setCandidateList(nullptr);
@@ -1435,10 +1437,11 @@ void VnchkeyEngine::keyEvent(const fcitx::InputMethodEntry &entry, fcitx::KeyEve
                         const bool use_server_tooltip = config_preedit_tooltip_ || isWpsOffice(prog);
                         if (use_server_tooltip) {
                             ic->inputPanel().setClientPreedit(fcitx::Text());
-                            ic->inputPanel().setPreedit(text);
-                            ic->inputPanel().setAuxUp(fcitx::Text(std::string("✎ ") + cur));
+                            ic->inputPanel().setPreedit(fcitx::Text());
+                            ic->inputPanel().setAuxUp(text);
                         } else {
                             ic->inputPanel().setClientPreedit(text);
+                            ic->inputPanel().setPreedit(fcitx::Text());
                             ic->inputPanel().setAuxUp(fcitx::Text());
                         }
                         ic->inputPanel().setCandidateList(nullptr);
@@ -1576,10 +1579,11 @@ void VnchkeyEngine::keyEvent(const fcitx::InputMethodEntry &entry, fcitx::KeyEve
                     const bool show_tooltip = config_preedit_tooltip_ || isWpsOffice(ic->program());
                     if (show_tooltip) {
                         ic->inputPanel().setClientPreedit(fcitx::Text());
-                        ic->inputPanel().setPreedit(text);
-                        ic->inputPanel().setAuxUp(fcitx::Text(std::string("✎ ") + cur));
+                        ic->inputPanel().setPreedit(fcitx::Text());
+                        ic->inputPanel().setAuxUp(text);
                     } else {
                         ic->inputPanel().setClientPreedit(text);
+                        ic->inputPanel().setPreedit(fcitx::Text());
                         ic->inputPanel().setAuxUp(fcitx::Text());
                     }
                     const bool has_cand = (cur[0] == ':' && std::strlen(cur) > 1);
@@ -1727,10 +1731,11 @@ void VnchkeyEngine::keyEvent(const fcitx::InputMethodEntry &entry, fcitx::KeyEve
                 const bool use_server_tooltip = config_preedit_tooltip_ || isWpsOffice(ic->program());
                 if (use_server_tooltip) {
                     ic->inputPanel().setClientPreedit(fcitx::Text());
-                    ic->inputPanel().setPreedit(text);
-                    ic->inputPanel().setAuxUp(fcitx::Text(std::string("✎ ") + cur));
+                    ic->inputPanel().setPreedit(fcitx::Text());
+                    ic->inputPanel().setAuxUp(text);
                 } else {
                     ic->inputPanel().setClientPreedit(text);
+                    ic->inputPanel().setPreedit(fcitx::Text());
                     ic->inputPanel().setAuxUp(fcitx::Text());
                 }
                 updateSymbolCandidates(ic, ctx, cur);
