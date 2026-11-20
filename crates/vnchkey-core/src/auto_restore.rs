@@ -298,11 +298,10 @@ impl EnglishAutoRestore {
                 // Rule 3: If User Dictionary is enabled and raw_strokes is in the English/User dictionary:
                 // - Restore if raw_strokes is >= 4 chars (e.g. "text", "post", "cost", "user", "window", "linux")
                 // - Or restore if the resulting 2-3 letter word is NOT in the Vietnamese dictionary (e.g. "fix" -> "fĩ", "web" -> "ưeb", "yes" -> "ýe")
-                if use_dictionary && self.keywords.contains(raw_clean) {
-                    if raw_clean.len() >= 4 || !is_in_vietnamese_dictionary(cur_clean) {
+                if use_dictionary && self.keywords.contains(raw_clean)
+                    && (raw_clean.len() >= 4 || !is_in_vietnamese_dictionary(cur_clean)) {
                         return true;
                     }
-                }
 
                 false
             })

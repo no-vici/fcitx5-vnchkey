@@ -288,9 +288,18 @@ impl ConfigManager {
         lines.push(format!("DeveloperMode={}", if cfg.developer_mode { "True" } else { "False" }));
         lines.push(format!("AllowVietnameseInBacktick={}", if cfg.allow_vietnamese_in_backtick { "True" } else { "False" }));
 
-        fs::write(Self::conf_path(), lines.join("\n") + "\n")?;
+        Self::atomic_write(&Self::conf_path(), &(lines.join("\n") + "\n"))?;
         Self::reload_fcitx5();
         Ok(())
+    }
+
+    fn atomic_write(path: &std::path::Path, content: &str) -> std::io::Result<()> {
+        if let Some(parent) = path.parent() {
+            let _ = fs::create_dir_all(parent);
+        }
+        let tmp_path = path.with_extension("tmp");
+        fs::write(&tmp_path, content)?;
+        fs::rename(&tmp_path, path)
     }
 
     pub fn load_macros() -> Vec<(String, String)> {
@@ -322,11 +331,7 @@ impl ConfigManager {
                     Some(p)
                 } else if let Some(p) = line.split_once(':') {
                     Some(p)
-                } else if let Some(p) = line.split_once(';') {
-                    Some(p)
-                } else {
-                    None
-                };
+                } else { line.split_once(';').map(|p| p) };
                 if let Some((k, v)) = pair {
                     let key = k.trim().to_string();
                     let norm = key.to_lowercase();
@@ -504,13 +509,13 @@ impl ConfigManager {
             app_modes: Self::load_app_modes(),
             habit_log: habit_log_content,
         };
-        let json = serde_json::to_string_pretty(&backup).map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e))?;
+        let json = serde_json::to_string_pretty(&backup).map_err(std::io::Error::other)?;
         fs::write(path, json)
     }
 
     pub fn import_backup(path: &Path) -> std::io::Result<()> {
         let content = fs::read_to_string(path)?;
-        let backup: BackupData = serde_json::from_str(&content).map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e))?;
+        let backup: BackupData = serde_json::from_str(&content).map_err(std::io::Error::other)?;
         Self::save_config(&backup.config)?;
         Self::save_macros(&backup.macros)?;
         Self::save_dictionary(&backup.dictionary)?;

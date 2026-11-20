@@ -260,8 +260,8 @@ fn regex_lite_replace(haystack: &str, pattern: &str, replacement: &str, max_repl
     if pattern.starts_with(r#"version\s*=\s*"[^"]+""#) {
         let mut result = String::new();
         let mut replaced = 0;
-        let mut lines = haystack.lines().peekable();
-        while let Some(line) = lines.next() {
+        let lines = haystack.lines().peekable();
+        for line in lines {
             let trimmed = line.trim_start();
             if trimmed.starts_with("version = ") && replaced < max_replacements {
                 let indent = &line[..line.len() - trimmed.len()];

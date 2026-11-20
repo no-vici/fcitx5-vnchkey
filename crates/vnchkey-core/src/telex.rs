@@ -233,8 +233,8 @@ impl TelexEngine {
                 // Special case for 'o': if syllable has 'ươ' (e.g. dươc + o -> duôc), convert 'ươ' -> 'uô'
                 if lower == 'o' {
                     if let Some((u_idx, o_idx)) = find_adjacent_uo(&letters) {
-                        let (u_base, _, u_up) = decompose_vowel(letters[u_idx]).unwrap();
-                        let (o_base, _, o_up) = decompose_vowel(letters[o_idx]).unwrap();
+                        let (u_base, _, u_up) = decompose_vowel(letters[u_idx]).expect("invariant: valid vowel/digit");
+                        let (o_base, _, o_up) = decompose_vowel(letters[o_idx]).expect("invariant: valid vowel/digit");
                         if u_base == 'ư' && o_base == 'ơ' {
                             letters[u_idx] = compose_vowel('u', 0, u_up);
                             letters[o_idx] = compose_vowel('ô', 0, o_up || ch.is_uppercase());
@@ -260,7 +260,7 @@ impl TelexEngine {
 
                 if matching.len() == 1 {
                     let idx = matching[0];
-                    let (base, _, is_up) = decompose_vowel(letters[idx]).unwrap();
+                    let (base, _, is_up) = decompose_vowel(letters[idx]).expect("invariant: valid vowel/digit");
                     let hat_base = match lower {
                         'a' => 'â',
                         'e' => 'ê',
@@ -295,9 +295,9 @@ impl TelexEngine {
             if lower == 'w' {
                 // Case 1: Adjacent 'uo' pair (duocw -> dươc, thuow -> thuơ, thuongw -> thương)
                 if let Some((u_idx, o_idx)) = find_adjacent_uo(&letters) {
-                    let (_, _, u_up) = decompose_vowel(letters[u_idx]).unwrap();
-                    let (o_base, _, o_up) = decompose_vowel(letters[o_idx]).unwrap();
-                    let (u_base, _, _) = decompose_vowel(letters[u_idx]).unwrap();
+                    let (_, _, u_up) = decompose_vowel(letters[u_idx]).expect("invariant: valid vowel/digit");
+                    let (o_base, _, o_up) = decompose_vowel(letters[o_idx]).expect("invariant: valid vowel/digit");
+                    let (u_base, _, _) = decompose_vowel(letters[u_idx]).expect("invariant: valid vowel/digit");
 
                     // Exceptions:
                     // 1. 'qu' + 'o' (e.g. 'quon' for 'quởn' / 'quỡn', 'quo' for 'quơ'): in 'qu', 'u' is glide/semi-vowel and never takes a horn ('ư').
@@ -358,7 +358,7 @@ impl TelexEngine {
 
                 // Case 2: Adjacent 'uu' pair (cuuw -> cưu, luuw -> lưu, huuw -> hưu)
                 if let Some((u1_idx, _u2_idx)) = find_adjacent_uu(&letters) {
-                    let (u1_base, _, u1_up) = decompose_vowel(letters[u1_idx]).unwrap();
+                    let (u1_base, _, u1_up) = decompose_vowel(letters[u1_idx]).expect("invariant: valid vowel/digit");
                     if u1_base == 'ư' {
                         let last_raw_is_w = raw_strokes
                             .chars()
@@ -382,8 +382,8 @@ impl TelexEngine {
 
                 // Case 3: Open syllable 'ua' not preceded by 'q' (muaw -> mưa, chuaw -> chưa, thuaw -> thưa)
                 if let Some((u_idx, a_idx)) = find_open_ua_non_qu(&letters) {
-                    let (u_base, _, u_up) = decompose_vowel(letters[u_idx]).unwrap();
-                    let (a_base, _, _) = decompose_vowel(letters[a_idx]).unwrap();
+                    let (u_base, _, u_up) = decompose_vowel(letters[u_idx]).expect("invariant: valid vowel/digit");
+                    let (a_base, _, _) = decompose_vowel(letters[a_idx]).expect("invariant: valid vowel/digit");
                     if a_base == 'a' {
                         if u_base == 'ư' {
                             let last_raw_is_w = raw_strokes
@@ -645,7 +645,7 @@ pub fn apply_smart_uo_horn(letters: &mut [char]) -> bool {
         // Exception 1: 'qu' + 'o' (e.g. 'quon' for 'quởn' / 'quỡn')
         // In 'qu', 'u' is glide/semi-vowel and never takes a horn ('ư').
         if u_idx > 0 && letters[u_idx - 1].eq_ignore_ascii_case(&'q') {
-            let (o_base, o_tone, o_up) = decompose_vowel(letters[o_idx]).unwrap();
+            let (o_base, o_tone, o_up) = decompose_vowel(letters[o_idx]).expect("invariant: valid vowel/digit");
             let has_consonant_coda =
                 o_idx + 1 < letters.len() && !is_vietnamese_vowel(letters[o_idx + 1]);
             if has_consonant_coda && o_base == 'o' {
@@ -667,8 +667,8 @@ pub fn apply_smart_uo_horn(letters: &mut [char]) -> bool {
             return false;
         }
 
-        let (u_base, u_tone, u_up) = decompose_vowel(letters[u_idx]).unwrap();
-        let (o_base, o_tone, o_up) = decompose_vowel(letters[o_idx]).unwrap();
+        let (u_base, u_tone, u_up) = decompose_vowel(letters[u_idx]).expect("invariant: valid vowel/digit");
+        let (o_base, o_tone, o_up) = decompose_vowel(letters[o_idx]).expect("invariant: valid vowel/digit");
 
         // If 'ơ' was already horned in an open syllable ('thuơ', 'huơ') and the user subsequently
         // appends a coda consonant or semivowel (e.g. 'thuowng' -> 'thương', 'huowu' -> 'hươu'),
@@ -778,7 +778,7 @@ pub fn place_tone(letters: &mut [char], tone: usize, tone_style: ToneStyle) {
     let mut effective_vowels = all_vowels.clone();
     if effective_vowels.len() > 1 && effective_vowels[0] == 1 {
         let first_char = letters[0].to_ascii_lowercase();
-        let (second_base, _, _) = decompose_vowel(letters[1]).unwrap();
+        let (second_base, _, _) = decompose_vowel(letters[1]).expect("invariant: valid vowel/digit");
         if (first_char == 'g' && vowel_family(second_base) == 'i')
             || (first_char == 'q' && vowel_family(second_base) == 'u')
         {
@@ -805,8 +805,8 @@ pub fn place_tone(letters: &mut [char], tone: usize, tone_style: ToneStyle) {
     } else if effective_vowels.len() == 2 {
         let idx0 = effective_vowels[0];
         let idx1 = effective_vowels[1];
-        let b0 = decompose_vowel(letters[idx0]).unwrap().0;
-        let b1 = decompose_vowel(letters[idx1]).unwrap().0;
+        let b0 = decompose_vowel(letters[idx0]).expect("invariant: valid vowel/digit").0;
+        let b1 = decompose_vowel(letters[idx1]).expect("invariant: valid vowel/digit").0;
 
         let has_coda = idx1 + 1 < letters.len() && !is_vietnamese_vowel(letters[idx1 + 1]);
         if has_coda {
@@ -824,9 +824,9 @@ pub fn place_tone(letters: &mut [char], tone: usize, tone_style: ToneStyle) {
         }
     } else {
         // Triphthongs and glide + diphthong combinations
-        let b0 = decompose_vowel(letters[effective_vowels[0]]).unwrap().0;
-        let b1 = decompose_vowel(letters[effective_vowels[1]]).unwrap().0;
-        let b2 = decompose_vowel(letters[effective_vowels[2]]).unwrap().0;
+        let b0 = decompose_vowel(letters[effective_vowels[0]]).expect("invariant: valid vowel/digit").0;
+        let b1 = decompose_vowel(letters[effective_vowels[1]]).expect("invariant: valid vowel/digit").0;
+        let b2 = decompose_vowel(letters[effective_vowels[2]]).expect("invariant: valid vowel/digit").0;
 
         if vowel_family(b0) == 'u' && vowel_family(b1) == 'y' && vowel_family(b2) == 'e' {
             // 'uye' cluster (huyên, khuyên, chuyên, nguyên, tuyết...):
@@ -936,7 +936,7 @@ pub fn can_modify_syllable(letters: &[char]) -> bool {
         Some(idx) => idx,
         None => return false,
     };
-    let last_v = letters.iter().rposition(|&c| is_vietnamese_vowel(c)).unwrap();
+    let last_v = letters.iter().rposition(|&c| is_vietnamese_vowel(c)).expect("invariant: valid vowel/digit");
 
     // All characters between first_v and last_v must be vowels (contiguous vowel nucleus)
     if !letters[first_v..=last_v]
@@ -966,8 +966,8 @@ pub fn is_valid_vietnamese_syllable(word: &str) -> bool {
         return false;
     }
 
-    let first_v = letters.iter().position(|&c| is_vietnamese_vowel(c)).unwrap();
-    let last_v = letters.iter().rposition(|&c| is_vietnamese_vowel(c)).unwrap();
+    let first_v = letters.iter().position(|&c| is_vietnamese_vowel(c)).expect("invariant: valid vowel/digit");
+    let last_v = letters.iter().rposition(|&c| is_vietnamese_vowel(c)).expect("invariant: valid vowel/digit");
     let vowel_len = last_v - first_v + 1;
     if vowel_len > 3 {
         return false;
@@ -993,7 +993,7 @@ pub fn is_valid_vietnamese_syllable(word: &str) -> bool {
         .collect();
     if matches!(coda.as_str(), "c" | "ch" | "p" | "t" | "k") {
         let tone = extract_tone(&letters);
-        if matches!(tone, 2 | 3 | 4) {
+        if matches!(tone, 2..=4) {
             return false;
         }
     }
@@ -1023,7 +1023,7 @@ pub fn is_valid_in_progress_syllable(letters: &[char]) -> bool {
         Some(idx) => idx,
         None => return is_valid_vietnamese_onset(letters),
     };
-    let last_v = letters.iter().rposition(|&c| is_vietnamese_vowel(c)).unwrap();
+    let last_v = letters.iter().rposition(|&c| is_vietnamese_vowel(c)).expect("invariant: valid vowel/digit");
 
     if !can_modify_syllable(letters) {
         return false;
@@ -1127,7 +1127,7 @@ pub fn is_valid_in_progress_syllable(letters: &[char]) -> bool {
             .collect();
         if matches!(coda.as_str(), "c" | "ch" | "p" | "t") {
             let tone = extract_tone(letters);
-            if matches!(tone, 2 | 3 | 4) {
+            if matches!(tone, 2..=4) {
                 return false;
             }
         }

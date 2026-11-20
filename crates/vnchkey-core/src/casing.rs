@@ -143,11 +143,10 @@ impl CaseTracker {
 
     /// Records the case of a typed character.
     pub fn track(&mut self, ch: char) {
-        if ch.is_alphabetic() {
-            if self.cases.len() < 64 {
+        if ch.is_alphabetic()
+            && self.cases.len() < 64 {
                 self.cases.push(ch.is_uppercase());
             }
-        }
     }
 
     /// Applies the tracked casing pattern to transformed text.

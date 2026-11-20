@@ -95,7 +95,7 @@ impl VniEngine {
         if ch.is_ascii_digit() && can_modify_syllable(&letters) {
             match ch {
                 '0'..='5' => {
-                    let tone = ch.to_digit(10).unwrap() as usize;
+                    let tone = ch.to_digit(10).expect("invariant: valid vowel/digit") as usize;
                     if has_effective_vowel(&letters) {
                         if tone == 0 {
                             if current_tone > 0 {
@@ -133,8 +133,8 @@ impl VniEngine {
                 '6' => {
                     // Circumflex (^): a/ă -> â, e -> ê, o/ơ -> ô, ươ -> uô
                     if let Some((u_idx, o_idx)) = find_adjacent_uo(&letters) {
-                        let (u_base, _, u_up) = decompose_vowel(letters[u_idx]).unwrap();
-                        let (o_base, _, o_up) = decompose_vowel(letters[o_idx]).unwrap();
+                        let (u_base, _, u_up) = decompose_vowel(letters[u_idx]).expect("invariant: valid vowel/digit");
+                        let (o_base, _, o_up) = decompose_vowel(letters[o_idx]).expect("invariant: valid vowel/digit");
                         if u_base == 'ư' && o_base == 'ơ' {
                             letters[u_idx] = compose_vowel('u', 0, u_up);
                             letters[o_idx] = compose_vowel('ô', 0, o_up);
@@ -173,8 +173,8 @@ impl VniEngine {
                     // Horn (ơ, ư): uo -> ươ, uu -> ưu, o/ô -> ơ, u -> ư
                     // Case 1: Adjacent 'uo' pair
                     if let Some((u_idx, o_idx)) = find_adjacent_uo(&letters) {
-                        let (u_base, _, u_up) = decompose_vowel(letters[u_idx]).unwrap();
-                        let (o_base, _, o_up) = decompose_vowel(letters[o_idx]).unwrap();
+                        let (u_base, _, u_up) = decompose_vowel(letters[u_idx]).expect("invariant: valid vowel/digit");
+                        let (o_base, _, o_up) = decompose_vowel(letters[o_idx]).expect("invariant: valid vowel/digit");
 
                         // Exceptions:
                         // 1. 'qu' + 'o' (e.g. 'quon' for 'quởn' / 'quỡn', 'quo' for 'quơ'): in 'qu', 'u' is glide/semi-vowel and never takes a horn ('ư').
@@ -220,7 +220,7 @@ impl VniEngine {
 
                     // Case 2: Adjacent 'uu' pair (cuu7 -> cưu, luu7 -> lưu, huu7 -> hưu)
                     if let Some((u1_idx, _u2_idx)) = find_adjacent_uu(&letters) {
-                        let (u1_base, _, u1_up) = decompose_vowel(letters[u1_idx]).unwrap();
+                        let (u1_base, _, u1_up) = decompose_vowel(letters[u1_idx]).expect("invariant: valid vowel/digit");
                         if u1_base == 'ư' {
                             letters[u1_idx] = compose_vowel('u', 0, u1_up);
                             letters.push('7');

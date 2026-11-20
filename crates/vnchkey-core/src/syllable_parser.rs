@@ -626,11 +626,7 @@ fn parse_vowels_and_coda(
         let is_diphthong = match pair {
             ('i', 'a') | ('i', 'e') | ('i', 'ê') | ('u', 'a') | ('u', 'o') | ('u', 'ô') | ('u', 'ơ') | ('ư', 'a') | ('ư', 'ơ') | ('y', 'a') | ('y', 'e') | ('y', 'ê') | ('o', 'o') => {
                 // 'ua' after 'q' is not a diphthong: in 'quang', 'u' is glide, 'a' is nucleus
-                if after_qu && pair == ('u', 'a') {
-                    false
-                } else {
-                    true
-                }
+                !(after_qu && pair == ('u', 'a'))
             }
             _ => false,
         };

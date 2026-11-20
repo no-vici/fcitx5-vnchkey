@@ -245,11 +245,10 @@ impl eframe::App for SettingsApp {
                             egui::Color32::WHITE,
                         );
 
-                        if ok_resp.clicked() {
-                            if self.save_all() {
+                        if ok_resp.clicked()
+                            && self.save_all() {
                                 ctx.send_viewport_cmd(egui::ViewportCommand::Close);
                             }
-                        }
 
                         // Apply Button
                         if ui.add(egui::Button::new("Áp Dụng").min_size(egui::vec2(80.0, 28.0))).clicked() {
@@ -1538,7 +1537,7 @@ impl SettingsApp {
                     ));
                 } else {
                     self.status_message = Some((
-                        format!("Tất cả macro Lập Trình & Git đã có sẵn trong danh sách."),
+                        "Tất cả macro Lập Trình & Git đã có sẵn trong danh sách.".to_string(),
                         false,
                     ));
                 }
@@ -1567,7 +1566,7 @@ impl SettingsApp {
                     ));
                 } else {
                     self.status_message = Some((
-                        format!("Tất cả macro Toán Học đã có sẵn trong danh sách."),
+                        "Tất cả macro Toán Học đã có sẵn trong danh sách.".to_string(),
                         false,
                     ));
                 }

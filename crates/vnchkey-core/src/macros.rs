@@ -73,11 +73,7 @@ impl MacroTable {
                     Some(p)
                 } else if let Some(p) = line.split_once(':') {
                     Some(p)
-                } else if let Some(p) = line.split_once(';') {
-                    Some(p)
-                } else {
-                    None
-                };
+                } else { line.split_once(';').map(|p| p) };
                 if let Some((k, v)) = pair {
                     self.insert(k.trim().to_string(), v.trim().to_string());
                 }
@@ -146,6 +142,12 @@ pub fn resolve_dynamic_tokens_with_clipboard(text: &str, clipboard: &str) -> Str
         _ => "Thứ Bảy",
     };
 
+    let safe_clipboard: std::borrow::Cow<'_, str> = if clipboard.chars().count() > 4096 {
+        let truncated: String = clipboard.chars().take(4096).collect();
+        std::borrow::Cow::Owned(truncated)
+    } else {
+        std::borrow::Cow::Borrowed(clipboard)
+    };
     text.replace("$DATETIME", &now_str)
         .replace("$NOW", &now_str)
         .replace("$ISO_DATE", &iso_date_str)
@@ -154,7 +156,7 @@ pub fn resolve_dynamic_tokens_with_clipboard(text: &str, clipboard: &str) -> Str
         .replace("$TIME", &time_str)
         .replace("$YEAR", &year_str)
         .replace("$WEEKDAY", weekday_str)
-        .replace("$CLIPBOARD", clipboard)
+        .replace("$CLIPBOARD", &safe_clipboard)
 }
 
 /// Retrieves the system's local date, time, and weekday (0 = Sunday .. 6 = Saturday).
@@ -316,7 +318,7 @@ fn parse_tzif_offset(data: &[u8], now_secs: i64) -> Option<i32> {
 
 /// Pure math calendar algorithm using Howard Hinnant's civil calendar formula from Unix Epoch timestamp.
 fn get_civil_datetime_from_secs(secs: i64) -> (i32, u32, u32, u32, u32) {
-    let sec_in_day = ((secs % 86400) + 86400) % 86400;
+    let sec_in_day = secs.rem_euclid(86400);
     let hour = (sec_in_day / 3600) as u32;
     let min = ((sec_in_day % 3600) / 60) as u32;
 

@@ -1472,11 +1472,7 @@ impl Engine {
             self.in_english_context = true;
             self.in_vietnamese_context = false;
             self.prev_word_was_english = true;
-        } else if was_english_restore || self.auto_restore.is_english_keyword(raw_lower) {
-            self.prev_word_was_english = true;
-        } else {
-            self.prev_word_was_english = false;
-        }
+        } else { self.prev_word_was_english = was_english_restore || self.auto_restore.is_english_keyword(raw_lower); }
     }
 
     /// Handles physical Backspace pressed by the user.
@@ -2718,7 +2714,7 @@ impl Engine {
         // Quick Telex Consonants (cc->ch, gg->gi, kk->kh, nn->ng, pp->ph, qq->qu, tt->th)
         if self.config.quick_telex && matches!(self.config.method, InputMethod::Telex | InputMethod::Auto | InputMethod::SimpleTelex) {
             if let Some(&last_ch) = self.current_word.chars().collect::<Vec<char>>().last() {
-                if last_ch.to_ascii_lowercase() == ch.to_ascii_lowercase() && ch.is_ascii_alphabetic() {
+                if last_ch.eq_ignore_ascii_case(&ch) && ch.is_ascii_alphabetic() {
                     let is_upper = last_ch.is_ascii_uppercase() || ch.is_ascii_uppercase();
                     let pair_rep = match ch.to_ascii_lowercase() {
                         'c' => Some(if is_upper { "Ch" } else { "ch" }),
@@ -2753,7 +2749,7 @@ impl Engine {
 
         // Quick Final Consonants: g->ng, h->nh, k->ch (after a vowel)
         if self.config.quick_end_consonant && matches!(self.config.method, InputMethod::Telex | InputMethod::Auto) {
-            let has_vowel = self.current_word.chars().any(|c| crate::telex::is_vietnamese_vowel(c));
+            let has_vowel = self.current_word.chars().any(crate::telex::is_vietnamese_vowel);
             if has_vowel {
                 if let Some(&last_ch) = self.current_word.chars().collect::<Vec<char>>().last() {
                     if crate::telex::is_vietnamese_vowel(last_ch) {
@@ -2823,15 +2819,14 @@ impl Engine {
         let mut was_transformed = was_transformed;
         // Early Alphanumeric Guard: if a VNI digit transforms a word into an invalid Vietnamese
         // syllable (e.g. "icon" + '2' -> "icòn"), lock English immediately so "icon256" passes through.
-        if ch.is_ascii_digit() && !matches!(ch, '6' | '7' | '8' | '9') && was_transformed && !was_undo {
-            if crate::syllable_parser::parse_syllable(&new_word).is_none()
-                || self.auto_restore.is_english_keyword(&self.current_word)
+        if ch.is_ascii_digit() && !matches!(ch, '6' | '7' | '8' | '9') && was_transformed && !was_undo
+            && (crate::syllable_parser::parse_syllable(&new_word).is_none()
+                || self.auto_restore.is_english_keyword(&self.current_word))
             {
                 new_word = format!("{}{}", self.current_word, ch);
                 was_transformed = false;
                 self.english_locked = true;
             }
-        }
 
         if has_prior_digits && ch.is_ascii_alphabetic() && !was_transformed {
             self.has_letter_after_digit = true;

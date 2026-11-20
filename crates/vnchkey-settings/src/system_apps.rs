@@ -331,6 +331,6 @@ pub fn scan_system_applications() -> Vec<SystemAppEntry> {
     }
 
     let mut list: Vec<SystemAppEntry> = map.into_values().collect();
-    list.sort_by(|a, b| a.display_name.to_lowercase().cmp(&b.display_name.to_lowercase()));
+    list.sort_by_key(|a| a.display_name.to_lowercase());
     list
 }
