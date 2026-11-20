@@ -853,6 +853,7 @@ fn norm_onset_char(c: char) -> char {
     }
 }
 
+/// Checks if `chars` form a valid Vietnamese onset consonant cluster.
 pub fn is_valid_vietnamese_onset(chars: &[char]) -> bool {
     match chars.len() {
         0 => true,

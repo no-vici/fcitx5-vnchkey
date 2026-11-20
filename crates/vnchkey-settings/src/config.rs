@@ -383,7 +383,7 @@ impl ConfigManager {
             }
         }
 
-        fs::write(Self::macro_path(), lines.join("\n") + "\n")?;
+        Self::atomic_write(&Self::macro_path(), &(lines.join("\n") + "\n"))?;
         Self::reload_fcitx5();
         Ok(())
     }
@@ -435,7 +435,7 @@ impl ConfigManager {
         lines.sort_by_key(|a| a.to_lowercase());
         lines.dedup_by(|a, b| a.eq_ignore_ascii_case(b));
 
-        fs::write(Self::dict_path(), lines.join("\n") + "\n")?;
+        Self::atomic_write(&Self::dict_path(), &(lines.join("\n") + "\n"))?;
         Self::reload_fcitx5();
         Ok(())
     }
@@ -484,8 +484,8 @@ impl ConfigManager {
         }
 
         let content = lines.join("\n") + "\n";
-        fs::write(Self::app_modes_path(), &content)?;
-        let _ = fs::write(Self::legacy_app_modes_path(), &content);
+        Self::atomic_write(&Self::app_modes_path(), &content)?;
+        let _ = Self::atomic_write(&Self::legacy_app_modes_path(), &content);
         Self::reload_fcitx5();
         Ok(())
     }

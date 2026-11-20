@@ -73,7 +73,7 @@ impl MacroTable {
                     Some(p)
                 } else if let Some(p) = line.split_once(':') {
                     Some(p)
-                } else { line.split_once(';').map(|p| p) };
+                } else { line.split_once(';') };
                 if let Some((k, v)) = pair {
                     self.insert(k.trim().to_string(), v.trim().to_string());
                 }

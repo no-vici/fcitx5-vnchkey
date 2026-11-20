@@ -1,5 +1,6 @@
 // Developer code-block & token-scoped guard state
 
+/// State machine for Developer Mode (Markdown inline code & fenced blocks).
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub struct DevCodeState {
     consecutive_backticks: u8,
