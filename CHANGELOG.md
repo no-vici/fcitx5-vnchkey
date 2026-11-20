@@ -10,6 +10,12 @@ Tất cả những thay đổi nổi bật của dự án **vnchKey** (**fcitx5-
 - **Bảo Toàn Nguyên Âm Đơn Có Dấu Đi Sau `đ` Trong Kiểu Gõ VNI / Auto (`engine.rs`, `vietc_regression_tests.rs`)**:
   - Khắc phục lỗi `alphanumeric_trap` nhận diện nhầm các âm tiết mở hợp lệ có chữ `đ` đi trước nguyên âm đơn mang dấu (`d9a4` → `đã`, `d9e63` → `để`, `d9o1` → `đó`, `d9u3` → `đủ`) là từ lẫn số và ép hoàn nguyên ngược về phím thô khi nhấn `Space`.
   - Đồng bộ trạng thái khởi tạo khi nhập số ở đầu từ trong chế độ `InputMethod::Vni` và mở rộng bộ kiểm thử hồi quy bao phủ cả thứ tự gõ thuận lẫn gõ đảo phím (`da49`, `de639`, `do19`, `du39`).
+- **Tối Ưu & Sửa Lỗi Trải Nghiệm Gõ (`engine.rs`, `habit_learner.rs`, `vnchkey_addon.cpp`)**:
+  - Tự động mở khóa `english_locked` khi bấm `Backspace` xóa hết ký tự số/đặc biệt khỏi từ đang gõ (ví dụ `chon8` → xóa `8` → `chọn`).
+  - Đặt mặc định `HabitPromoteThreshold = 0` (tắt tự động đưa từ vào User Dict) để tránh học nhầm từ gõ sai.
+  - Bổ sung tùy chọn **"Cho phép gõ Tiếng Việt trong `backtick` / ```code```"** trên cả 3 hệ điều hành (Linux, macOS, Windows).
+  - Bổ sung nhóm từ kỹ thuật lẫn số phổ biến (`icon16`–`icon256`, `base64`, `sha256`, `mp3`, `mp4`, `ipv4`, `ipv6`, `win32`, `arm64`, `html5`, `css3`...) vào `DEFAULT_ENGLISH_WORDS`.
+  - Gỡ bỏ `/tmp/vnchkey.sock` và cờ `neovim_bypass_` khỏi Fcitx5 addon để tránh xung đột trạng thái bật/tắt với `Ctrl+Space` của Fcitx5.
 
 ### ⚡ Tối Ưu Hiệu Năng & Bộ Nhớ (Performance & Zero-Allocation)
 - **Từ Điển Chánh Tả Tĩnh + Bloom Filter 2 KB** (`vietnamese_dict_data.rs`, `vietnamese_dict.rs`): Chuyển 6.974 từ tiếng Việt sang mảng `const VIETNAMESE_WORDS_SORTED` đã sắp xếp sẵn kết hợp `VIETNAMESE_BLOOM_FILTER` (2 KB L1 cache) và `binary_search()`, loại bỏ chi phí khởi tạo `OnceLock<HashSet<String>>` trên luồng tra cứu.
