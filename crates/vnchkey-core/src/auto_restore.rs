@@ -165,6 +165,10 @@ pub const DEFAULT_ENGLISH_WORDS: &[&str] = &[
     "use", "utf8", "version", "video", "view", "vim", "vite", "vitest",
     "void", "vscode", "vulkan", "wasm", "wezterm", "while", "yaml", "yarn",
     "yay", "zip", "zsh",
+    "icon16", "icon32", "icon48", "icon64", "icon128", "icon256",
+    "base64", "sha256", "md5", "mp3", "mp4", "h264", "ipv4", "ipv6",
+    "win32", "win64", "x64", "arm64", "es6", "css3", "html5", "web3", "oauth2", "http2",
+    "2d", "3d", "4k", "8k",
 ];
 
 /// Vietnamese Telex input sequences that happen to spell common English words (`thí`, `thế`, `thể`, `rết`, `cháo`, `á`, `í`, `ó`, `ú`, `mã`, `sẽ`, `sĩ`, `vả`)
