@@ -844,90 +844,92 @@ pub fn place_tone(letters: &mut [char], tone: usize, tone_style: ToneStyle) {
 }
 
 /// Checks if a slice of characters is a valid Vietnamese onset consonant cluster.
+#[inline]
+fn norm_onset_char(c: char) -> char {
+    match c {
+        'Đ' | 'đ' => 'đ',
+        '\u{2018}' | '\u{2019}' | '\u{02BC}' | '\'' => '\'',
+        _ => c.to_ascii_lowercase(),
+    }
+}
+
 pub fn is_valid_vietnamese_onset(chars: &[char]) -> bool {
-    let raw: String = chars.iter().flat_map(|c| c.to_lowercase()).collect();
-    let s = crate::vietnamese_dict::normalize_apostrophe(&raw);
-    matches!(
-        s.as_str(),
-        "" | "b"
-            | "c"
-            | "ch"
-            | "d"
-            | "đ"
-            | "dz"
-            | "g"
-            | "gh"
-            | "gi"
-            | "h"
-            | "k"
-            | "kh"
-            | "l"
-            | "m"
-            | "n"
-            | "ng"
-            | "ngh"
-            | "nh"
-            | "p"
-            | "ph"
-            | "q"
-            | "qu"
-            | "r"
-            | "s"
-            | "t"
-            | "th"
-            | "tr"
-            | "v"
-            | "x"
-            // Tay Nguyen & ethnic minority loan / dialect onsets:
-            | "kr"
-            | "pl"
-            | "pr"
-            | "gr"
-            | "dr"
-            | "đr"
-            | "gl"
-            | "br"
-            | "kl"
-            | "bl"
-            | "kn"
-            | "ml"
-            | "mr"
-            | "sr"
-            | "sl"
-            | "fl"
-            | "z"
-            // Onsets with apostrophe:
-            | "m'"
-            | "h'"
-            | "r'"
-            | "d'"
-            | "m'đ"
-            | "m'đr"
-            | "m'dr"
-            | "h'd"
-            | "h'dr"
-    )
+    match chars.len() {
+        0 => true,
+        1 => matches!(
+            norm_onset_char(chars[0]),
+            'b' | 'c' | 'd' | 'đ' | 'g' | 'h' | 'k' | 'l' | 'm' | 'n' | 'p' | 'q' | 'r'
+                | 's' | 't' | 'v' | 'x' | 'z'
+        ),
+        2 => matches!(
+            (norm_onset_char(chars[0]), norm_onset_char(chars[1])),
+            ('c', 'h')
+                | ('d', 'z')
+                | ('g', 'h')
+                | ('g', 'i')
+                | ('k', 'h')
+                | ('n', 'g')
+                | ('n', 'h')
+                | ('p', 'h')
+                | ('q', 'u')
+                | ('t', 'h')
+                | ('t', 'r')
+                | ('k', 'r')
+                | ('p', 'l')
+                | ('p', 'r')
+                | ('g', 'r')
+                | ('d', 'r')
+                | ('đ', 'r')
+                | ('g', 'l')
+                | ('b', 'r')
+                | ('k', 'l')
+                | ('b', 'l')
+                | ('k', 'n')
+                | ('m', 'l')
+                | ('m', 'r')
+                | ('s', 'r')
+                | ('s', 'l')
+                | ('f', 'l')
+                | ('m', '\'')
+                | ('h', '\'')
+                | ('r', '\'')
+                | ('d', '\'')
+        ),
+        3 => matches!(
+            (
+                norm_onset_char(chars[0]),
+                norm_onset_char(chars[1]),
+                norm_onset_char(chars[2])
+            ),
+            ('n', 'g', 'h') | ('m', '\'', 'đ') | ('h', '\'', 'd')
+        ),
+        4 => matches!(
+            (
+                norm_onset_char(chars[0]),
+                norm_onset_char(chars[1]),
+                norm_onset_char(chars[2]),
+                norm_onset_char(chars[3])
+            ),
+            ('m', '\'', 'đ', 'r') | ('m', '\'', 'd', 'r') | ('h', '\'', 'd', 'r')
+        ),
+        _ => false,
+    }
 }
 
 /// Checks if a slice of characters is a valid Vietnamese coda consonant cluster.
 pub fn is_valid_vietnamese_coda(chars: &[char]) -> bool {
-    let s: String = chars.iter().flat_map(|c| c.to_lowercase()).collect();
-    matches!(
-        s.as_str(),
-        "" | "c"
-            | "ch"
-            | "m"
-            | "n"
-            | "ng"
-            | "nh"
-            | "p"
-            | "t"
-            // Tay Nguyen & ethnic minority loan codas (Đắk, Lắk, Păh, Kar, Mil):
-            | "k"
-            | "h"
-            | "r"
-            | "l"
-    )
+    match chars.len() {
+        0 => true,
+        1 => matches!(
+            chars[0].to_ascii_lowercase(),
+            'c' | 'm' | 'n' | 'p' | 't' | 'k' | 'h' | 'r' | 'l'
+        ),
+        2 => matches!(
+            (chars[0].to_ascii_lowercase(), chars[1].to_ascii_lowercase()),
+            ('c', 'h') | ('n', 'g') | ('n', 'h')
+        ),
+        _ => false,
+    }
 }
 
 /// Checks if the current `letters` form a modifiable in-progress Vietnamese syllable.
