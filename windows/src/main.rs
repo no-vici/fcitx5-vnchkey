@@ -2249,7 +2249,6 @@ Start-Process -FilePath $batch -WindowStyle Hidden;
                         st.engine.quick_start_consonant(),
                         st.engine.quick_end_consonant(),
                         st.engine.developer_mode(),
-            st.engine.allow_vietnamese_in_backtick(),
                     )
                 })
                 .unwrap_or((false, false, false, true))
@@ -2821,8 +2820,8 @@ Start-Process -FilePath $batch -WindowStyle Hidden;
                         let mut b = s.borrow_mut();
                         let next = !b.engine.allow_vietnamese_in_backtick();
                         b.engine.set_allow_vietnamese_in_backtick(next);
+                        save_app_config(&b);
                     });
-                    save_config();
                 } else if id == ID_TOGGLE_TRACE_LOG {
                     let enabled = STATE.with(|s| {
                         let mut b = s.borrow_mut();
