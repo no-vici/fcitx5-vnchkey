@@ -3701,7 +3701,7 @@ mod tests {
             method: InputMethod::Telex,
             spell_check: false, // disable built-in dictionary spell check to test pure habit learning
             auto_restore_english: false,
-            habit_promote_threshold: 0, // Higher threshold (4 times) to prevent accidental whitelisting
+            habit_promote_threshold: 4, // Higher threshold (4 times) to prevent accidental whitelisting
             ..EngineConfig::default()
         });
 
