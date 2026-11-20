@@ -1230,8 +1230,10 @@ void VnchkeyEngine::keyEvent(const fcitx::InputMethodEntry &entry, fcitx::KeyEve
                     if (use_server_tooltip) {
                         ic->inputPanel().setClientPreedit(fcitx::Text());
                         ic->inputPanel().setPreedit(text);
+                        ic->inputPanel().setAuxUp(fcitx::Text(std::string("✎ ") + cur));
                     } else {
                         ic->inputPanel().setClientPreedit(text);
+                        ic->inputPanel().setAuxUp(fcitx::Text());
                     }
                     ic->inputPanel().setCandidateList(nullptr);
                     ic->updatePreedit();
@@ -1297,8 +1299,10 @@ void VnchkeyEngine::keyEvent(const fcitx::InputMethodEntry &entry, fcitx::KeyEve
                         if (use_server_tooltip) {
                             ic->inputPanel().setClientPreedit(fcitx::Text());
                             ic->inputPanel().setPreedit(text);
+                            ic->inputPanel().setAuxUp(fcitx::Text(std::string("✎ ") + cur));
                         } else {
                             ic->inputPanel().setClientPreedit(text);
+                            ic->inputPanel().setAuxUp(fcitx::Text());
                         }
                         ic->inputPanel().setCandidateList(nullptr);
                         ic->updatePreedit();
@@ -1432,8 +1436,10 @@ void VnchkeyEngine::keyEvent(const fcitx::InputMethodEntry &entry, fcitx::KeyEve
                         if (use_server_tooltip) {
                             ic->inputPanel().setClientPreedit(fcitx::Text());
                             ic->inputPanel().setPreedit(text);
+                            ic->inputPanel().setAuxUp(fcitx::Text(std::string("✎ ") + cur));
                         } else {
                             ic->inputPanel().setClientPreedit(text);
+                            ic->inputPanel().setAuxUp(fcitx::Text());
                         }
                         ic->inputPanel().setCandidateList(nullptr);
                         ic->updatePreedit();
@@ -1571,8 +1577,10 @@ void VnchkeyEngine::keyEvent(const fcitx::InputMethodEntry &entry, fcitx::KeyEve
                     if (show_tooltip) {
                         ic->inputPanel().setClientPreedit(fcitx::Text());
                         ic->inputPanel().setPreedit(text);
+                        ic->inputPanel().setAuxUp(fcitx::Text(std::string("✎ ") + cur));
                     } else {
                         ic->inputPanel().setClientPreedit(text);
+                        ic->inputPanel().setAuxUp(fcitx::Text());
                     }
                     const bool has_cand = (cur[0] == ':' && std::strlen(cur) > 1);
                     if (has_cand || ic->inputPanel().candidateList()) {
@@ -1720,8 +1728,10 @@ void VnchkeyEngine::keyEvent(const fcitx::InputMethodEntry &entry, fcitx::KeyEve
                 if (use_server_tooltip) {
                     ic->inputPanel().setClientPreedit(fcitx::Text());
                     ic->inputPanel().setPreedit(text);
+                    ic->inputPanel().setAuxUp(fcitx::Text(std::string("✎ ") + cur));
                 } else {
                     ic->inputPanel().setClientPreedit(text);
+                    ic->inputPanel().setAuxUp(fcitx::Text());
                 }
                 updateSymbolCandidates(ic, ctx, cur);
                 ic->updatePreedit();
