@@ -1226,9 +1226,12 @@ void VnchkeyEngine::keyEvent(const fcitx::InputMethodEntry &entry, fcitx::KeyEve
                 char* cur = fcitx5_vnchkey_get_current_word(ctx);
                 if (cur && cur[0] != '\0') {
                     fcitx::Text text(cur, fcitx::TextFormatFlag::Underline);
-                    ic->inputPanel().setClientPreedit(text);
-                    if (config_preedit_tooltip_ || isWpsOffice(prog)) {
+                    const bool use_server_tooltip = config_preedit_tooltip_ || isWpsOffice(prog);
+                    if (use_server_tooltip) {
+                        ic->inputPanel().setClientPreedit(fcitx::Text());
                         ic->inputPanel().setPreedit(text);
+                    } else {
+                        ic->inputPanel().setClientPreedit(text);
                     }
                     ic->inputPanel().setCandidateList(nullptr);
                     ic->updatePreedit();
@@ -1290,9 +1293,12 @@ void VnchkeyEngine::keyEvent(const fcitx::InputMethodEntry &entry, fcitx::KeyEve
                     char* cur = fcitx5_vnchkey_get_current_word(ctx);
                     if (cur && cur[0] != '\0') {
                         fcitx::Text text(cur, fcitx::TextFormatFlag::Underline);
-                        ic->inputPanel().setClientPreedit(text);
-                        if (config_preedit_tooltip_ || isWpsOffice(prog)) {
+                        const bool use_server_tooltip = config_preedit_tooltip_ || isWpsOffice(prog);
+                        if (use_server_tooltip) {
+                            ic->inputPanel().setClientPreedit(fcitx::Text());
                             ic->inputPanel().setPreedit(text);
+                        } else {
+                            ic->inputPanel().setClientPreedit(text);
                         }
                         ic->inputPanel().setCandidateList(nullptr);
                         ic->updatePreedit();
@@ -1422,9 +1428,12 @@ void VnchkeyEngine::keyEvent(const fcitx::InputMethodEntry &entry, fcitx::KeyEve
                     if (cur && cur[0] != '\0') {
                         std::string prog = ic->program();
                         fcitx::Text text(cur, fcitx::TextFormatFlag::Underline);
-                        ic->inputPanel().setClientPreedit(text);
-                        if (config_preedit_tooltip_ || isWpsOffice(prog)) {
+                        const bool use_server_tooltip = config_preedit_tooltip_ || isWpsOffice(prog);
+                        if (use_server_tooltip) {
+                            ic->inputPanel().setClientPreedit(fcitx::Text());
                             ic->inputPanel().setPreedit(text);
+                        } else {
+                            ic->inputPanel().setClientPreedit(text);
                         }
                         ic->inputPanel().setCandidateList(nullptr);
                         ic->updatePreedit();
@@ -1558,10 +1567,12 @@ void VnchkeyEngine::keyEvent(const fcitx::InputMethodEntry &entry, fcitx::KeyEve
                 char* cur = fcitx5_vnchkey_get_current_word(ctx);
                 if (cur && cur[0] != '\0') {
                     fcitx::Text text(cur, fcitx::TextFormatFlag::Underline);
-                    ic->inputPanel().setClientPreedit(text);
                     const bool show_tooltip = config_preedit_tooltip_ || isWpsOffice(ic->program());
                     if (show_tooltip) {
+                        ic->inputPanel().setClientPreedit(fcitx::Text());
                         ic->inputPanel().setPreedit(text);
+                    } else {
+                        ic->inputPanel().setClientPreedit(text);
                     }
                     const bool has_cand = (cur[0] == ':' && std::strlen(cur) > 1);
                     if (has_cand || ic->inputPanel().candidateList()) {
@@ -1705,9 +1716,12 @@ void VnchkeyEngine::keyEvent(const fcitx::InputMethodEntry &entry, fcitx::KeyEve
             char* cur = fcitx5_vnchkey_get_current_word(ctx);
             if (cur && cur[0] != '\0') {
                 fcitx::Text text(cur, fcitx::TextFormatFlag::Underline);
-                ic->inputPanel().setClientPreedit(text);
-                if (config_preedit_tooltip_ || isWpsOffice(ic->program())) {
+                const bool use_server_tooltip = config_preedit_tooltip_ || isWpsOffice(ic->program());
+                if (use_server_tooltip) {
+                    ic->inputPanel().setClientPreedit(fcitx::Text());
                     ic->inputPanel().setPreedit(text);
+                } else {
+                    ic->inputPanel().setClientPreedit(text);
                 }
                 updateSymbolCandidates(ic, ctx, cur);
                 ic->updatePreedit();
