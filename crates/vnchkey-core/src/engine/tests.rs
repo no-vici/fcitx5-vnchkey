@@ -1114,6 +1114,18 @@
     }
 
     #[test]
+    fn test_smart_fuzzy_vowel_uye() {
+        let mut engine = Engine::new(EngineConfig {
+            method: InputMethod::Vni,
+            smart_fuzzy_vowel: true,
+            ..EngineConfig::default()
+        });
+        assert_eq!(type_word(&mut engine, "khuyen1 "), "khuyến ");
+        assert_eq!(type_word(&mut engine, "huyen2 "), "huyền ");
+        assert_eq!(type_word(&mut engine, "tuyet5 "), "tuyệt ");
+    }
+
+    #[test]
     fn test_sentence_momentum_math_context_optional() {
         // Default OFF: d9a4 -> đã (no trap)
         let mut engine_off = Engine::new(EngineConfig {

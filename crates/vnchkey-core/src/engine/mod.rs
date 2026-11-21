@@ -225,6 +225,12 @@ fn try_resolve_fuzzy_intermediate_vowel(word: &str, tone_style: ToneStyle) -> Op
             let i_out = if is_upper_third { i_ch.to_uppercase().next().unwrap_or(i_ch) } else { i_ch.to_lowercase().next().unwrap_or(i_ch) };
             format!("{}{}{}", u_ch, o_ch, i_out)
         }
+        "uye" => {
+            let u_ch = parsed.nucleus.chars().next().unwrap_or('u');
+            let y_ch = parsed.nucleus.chars().nth(1).unwrap_or('y');
+            let e_ch = if is_upper_third { 'Ê' } else { 'ê' };
+            format!("{}{}{}", u_ch, y_ch, e_ch)
+        }
         "ye" => {
             let y_ch = parsed.nucleus.chars().next().unwrap_or('y');
             let e_ch = if is_upper_second { 'Ê' } else { 'ê' };
