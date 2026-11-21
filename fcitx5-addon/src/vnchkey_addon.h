@@ -78,6 +78,10 @@ extern "C" {
     bool fcitx5_vnchkey_get_developer_mode(void* ctx);
     void fcitx5_vnchkey_set_allow_vietnamese_in_backtick(void* ctx, bool enabled);
     bool fcitx5_vnchkey_get_allow_vietnamese_in_backtick(const void* ctx);
+    void fcitx5_vnchkey_set_sentence_momentum(void* ctx, bool enabled);
+    bool fcitx5_vnchkey_get_sentence_momentum(const void* ctx);
+    void fcitx5_vnchkey_set_math_context(void* ctx, bool enabled);
+    bool fcitx5_vnchkey_get_math_context(const void* ctx);
 
     char* fcitx5_vnchkey_get_current_word(void* ctx);
     char* fcitx5_vnchkey_get_completed_word(void* ctx);
