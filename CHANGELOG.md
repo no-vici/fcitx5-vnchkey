@@ -6,12 +6,30 @@ Tất cả những thay đổi nổi bật của dự án **vnchKey** (**fcitx5-
 
 ## [0.3.8] - 2026-11-20
 
+### 🚀 Tính Năng Mới (Mặc định TẮT - "Tự Do trên hết")
+- **Tự Thêm Khoảng Trắng Sau Dấu Câu (`AutoSpaceAfterPunctuation`)**:
+  - Tùy chọn tự động chèn thêm một khoảng trắng sau `.`, `?`, `!` khi ký tự trước đó là chữ cái (không kích hoạt trong code/backtick bypass). Mặc định **TẮT**.
+- **Tự Viết Hoa Danh Từ Riêng (`AutoCapitalizeProperNouns`)**:
+  - Tùy chọn tự viết hoa ký tự đầu của từ khi khớp danh sách `proper_nouns_list` do người dùng định nghĩa. Danh sách rỗng = không tự viết hoa từ nào. Mặc định **TẮT**.
+- **Backspace Xóa Cả Âm Tiết (`BackspaceBySyllable`)**:
+  - Khi bật, nhấn `Backspace` trong lúc đang gõ dở một âm tiết sẽ xóa **toàn bộ âm tiết** trong buffer thay vì xóa từng ký tự. Mặc định **TẮT**.
+  - Chỉ áp dụng khi IME còn đang giữ buffer âm tiết (chưa commit từ bằng Space/Enter/chuyển focus). Trường hợp reopen từ đã commit vẫn giữ hành vi cũ.
+- **Gợi Ý Macro Inline (`MacroPreview`)**:
+  - Hiển thị gợi ý expansion khi người dùng gõ trigger macro, giúp xác nhận trước khi bung. Mặc định **TẮT**.
+
 ### 🐛 Sửa Lỗi & Tối Ưu Fcitx5 Wayland (`vnchkey_addon.cpp`)
 - **Khắc Phục Lag Khi Giữ `BackSpace` Trong Chế Độ Preedit Trên Firefox/Wayland**:
   - Khi bộ đệm từ hiện tại đã rỗng (`!fcitx5_vnchkey_has_active_word(ctx)`), addon gọi `fcitx5_vnchkey_reset(ctx)` và nhả ngay phím `BackSpace` về cho trình duyệt xử lý native thay vì lôi ngược tối đa 16 từ cũ từ `reopen_history` vào Preedit.
   - Giảm cập nhật D-Bus `InputPanel` dư thừa mỗi lần xóa ký tự: chỉ gọi `updateSymbolCandidates(...)` và `updateUserInterface(InputPanel)` khi đang bật `PreeditTooltip`, đang gõ `:shortcode`, hoặc đang có danh sách ứng viên mở.
 - **Hiển Thị Tooltip Nổi Trên Google Docs (Kix Canvas / Wayland)**:
   - Khi bật server tooltip (`config_preedit_tooltip_ || isWpsOffice(...)`), addon chủ động xóa rỗng `setClientPreedit(fcitx::Text())` và `setPreedit(fcitx::Text())`, đồng thời dùng duy nhất `setAuxUp(text)` để ép Fcitx5 ClassicUI/Kimpanel luôn vẽ khung nổi 1 dòng duy nhất (không bị nhân đôi từ hay ẩn mất khi Google Docs trả về `cursorRect(0, 0)`).
+- **Sửa Lưu/Tải Cấu Hình Cho Tính Năng Mới (`vnchkey-settings`)**:
+  - Bổ sung `BackspaceBySyllable` / `MacroPreview` vào `load_config` và `save_config` trong `crates/vnchkey-settings/src/config.rs`, khắc phục lỗi tick setting nhưng restart bị mất.
+- **Wiring Fcitx5 Addon Cho Tính Năng Mới (`fcitx5-vnchkey-ffi`, `fcitx5-addon`)**:
+  - Thêm FFI setters `fcitx5_vnchkey_set_backspace_by_syllable` / `fcitx5_vnchkey_set_macro_preview`.
+  - C++ addon parse/save/apply `BackspaceBySyllable` và `MacroPreview` từ `vnchkey.conf` (chấp nhận cả snake_case cũ).
+- **Backspace Xóa Cả Âm Tiết Trong Direct Mode (`fcitx5-addon`)**:
+  - `handle_backspace` FFI trả về `bool` (reopen signal). Ở Direct Mode, khi `BackspaceBySyllable` bật và có buffer âm tiết đang gõ, addon xóa toàn bộ âm tiết bằng `deleteSurroundingText` và `filterAndAccept` phím BackSpace vật lý, tránh chỉ xóa 1 ký tự.
 
 ### ⚡ Tối Ưu Hiệu Năng & An Toàn Lõi (`vnchkey-core`, `fcitx5-vnchkey-ffi`, `vnchkey-settings`)
 - **Zero-Allocation Onset & Coda Validation** (`telex.rs`): Viết lại `is_valid_vietnamese_onset` và `is_valid_vietnamese_coda` để so khớp trực tiếp trên `&[char]` qua `norm_onset_char` / `to_ascii_lowercase()`, loại bỏ hoàn toàn cấp phát `String` trên hot path.

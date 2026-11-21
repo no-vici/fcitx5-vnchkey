@@ -353,6 +353,33 @@ Học hỏi và phát triển từ các công cụ thực chiến trên Wayland:
 
 ---
 
+### 3.17. Tùy Chọn Trợ Lý Gõ Nâng Cao (Mặc Định TẮT — "Tự Do trên hết")
+
+Bổ sung nhóm tính năng tùy chọn, tất cả **mặc định TẮT** để không làm thay đổi hành vi quen thuộc của người dùng:
+
+- **Tự Thêm Khoảng Trắng Sau Dấu Câu (`AutoSpaceAfterPunctuation`)**:
+  - Khi bật, sau khi gõ dấu kết câu `.`, `?`, `!` (ký tự trước là chữ cái), bộ gõ tự chèn thêm một khoảng trắng.
+  - Không kích hoạt trong ngữ cảnh code/backtick bypass.
+  - Cấu hình: `AutoSpaceAfterPunctuation=True/False`.
+
+- **Tự Viết Hoa Danh Từ Riêng (`AutoCapitalizeProperNouns`)**:
+  - Khi bật, nếu từ vừa hoàn thành khớp (không phân biệt hoa/thường) với một mục trong `proper_nouns_list` do người dùng định nghĩa, bộ gõ tự viết hoa ký tự đầu.
+  - Danh sách rỗng = không tự viết hoa từ nào (an toàn mặc định).
+  - Cấu hình: `AutoCapitalizeProperNouns=True/False`, `proper_nouns_list` trong config.
+
+- **Backspace Xóa Cả Âm Tiết (`BackspaceBySyllable`)**:
+  - Khi bật, nhấn `BackSpace` trong lúc IME đang giữ buffer âm tiết sẽ xóa **toàn bộ âm tiết** thay vì xóa từng ký tự.
+  - **Direct Mode**: addon xóa N ký tự trên app bằng `deleteSurroundingText` và filter phím BackSpace vật lý.
+  - **Preedit Mode**: reset preedit/buffer âm tiết.
+  - Chỉ áp dụng khi còn buffer âm tiết đang gõ; nếu đã commit từ (Space/Enter/chuyển focus), BackSpace thuộc về ứng dụng. Trường hợp reopen từ đã commit giữ hành vi cũ.
+  - Cấu hình: `BackspaceBySyllable=True/False`.
+
+- **Gợi Ý Macro Inline (`MacroPreview`)**:
+  - Khi bật, hiển thị gợi ý expansion trong lúc gõ trigger macro để người dùng xác nhận trước khi bung.
+  - Cấu hình: `MacroPreview=True/False`.
+
+---
+
 ## 4. Giao Diện Cài Đặt Trực Quan (Rust + egui GUI)
 
 Cung cấp công cụ cấu hình đồ họa native độc lập **`fcitx5-vnchkey-settings`** được viết 100% bằng Rust (`egui` / `eframe`):
