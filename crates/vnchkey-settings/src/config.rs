@@ -55,6 +55,8 @@ pub struct VnchkeyConfig {
     pub auto_space_after_punctuation: bool,
     #[serde(default)]
     pub auto_capitalize_proper_nouns: bool,
+    #[serde(default)]
+    pub backspace_by_syllable: bool,
 }
 
 fn default_true() -> bool {
@@ -105,6 +107,7 @@ impl Default for VnchkeyConfig {
             math_context: false,
             auto_space_after_punctuation: false,
             auto_capitalize_proper_nouns: false,
+            backspace_by_syllable: false,
         }
     }
 }

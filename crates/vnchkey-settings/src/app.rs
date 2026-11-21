@@ -785,6 +785,12 @@ impl SettingsApp {
         ui.add_space(6.0);
 
         ui.checkbox(
+            &mut self.config.backspace_by_syllable,
+            "Backspace xóa cả âm tiết: Nhấn Backspace để xóa toàn bộ âm tiết đang gõ thay vì từng ký tự. Mặc định TẮT.",
+        );
+        ui.add_space(6.0);
+
+        ui.checkbox(
             &mut self.config.free_marking,
             "Cho phép bỏ dấu tự do trên bất kỳ nguyên âm nào",
         );

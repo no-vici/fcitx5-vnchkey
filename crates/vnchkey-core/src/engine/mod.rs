@@ -86,6 +86,8 @@ pub struct EngineConfig {
     pub initial_case_anchor: bool,
     /// Automatically capitalize the first letter of a new sentence (after `.`, `?`, `!`, `\n`). Defaults to false.
     pub auto_capitalize: bool,
+    /// Xóa toàn bộ âm tiết khi nhấn Backspace (thay vì từng ký tự). Mặc định TẮT.
+    pub backspace_by_syllable: bool,
     /// Automatically complete missing circumflex/horn on unambiguous closed syllables (e.g. `truongf` -> `trường`). Defaults to false.
     pub smart_fuzzy_vowel: bool,
     /// Protect ALL-CAPS acronyms (2..=5 chars, e.g. OS, IOS, VPS, AWS) from Telex tone distortion. Defaults to true.
@@ -133,6 +135,7 @@ impl Default for EngineConfig {
             allow_vietnamese_in_backtick: false,
             auto_space_after_punctuation: false,
             auto_capitalize_proper_nouns: false,
+            backspace_by_syllable: false,
             sentence_momentum: false,
             math_context: false,
         }
@@ -771,6 +774,16 @@ impl Engine {
         self.config.auto_capitalize_proper_nouns
     }
 
+    /// Enables or disables Backspace xóa cả âm tiết.
+    pub fn set_backspace_by_syllable(&mut self, enabled: bool) {
+        self.config.backspace_by_syllable = enabled;
+    }
+
+    /// Returns whether Backspace xóa cả âm tiết là được kích hoạt.
+    pub fn backspace_by_syllable(&self) -> bool {
+        self.config.backspace_by_syllable
+    }
+
     /// Enables or disables Sentence Momentum (preserve English for ambiguous collision words after English anchor words).
     pub fn set_sentence_momentum(&mut self, enabled: bool) {
         self.config.sentence_momentum = enabled;
@@ -985,6 +998,25 @@ impl Engine {
                 return true;
             }
             self.reset();
+            false
+        } else if self.config.backspace_by_syllable {
+            // Xóa toàn bộ âm tiết đang gõ khi cờ bật
+            let was_accented = has_vietnamese_diacritic(&self.current_word)
+                && self.raw_strokes != self.current_word
+                && self.raw_strokes.len() >= 2;
+            let cand_to_save = if was_accented && self.deleted_accented_candidate.is_none() {
+                Some((self.raw_strokes.clone(), self.current_word.clone()))
+            } else {
+                None
+            };
+
+            self.current_word.clear();
+            self.raw_strokes.clear();
+            // Arm deleted_accented_candidate for BackspaceRetype learning only if the word was accented
+            if let Some(cand) = cand_to_save {
+                self.deleted_accented_candidate = Some(cand);
+            }
+            self.reset_word_buffers();
             false
         } else {
             let was_accented = has_vietnamese_diacritic(&self.current_word)

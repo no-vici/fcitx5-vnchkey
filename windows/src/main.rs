@@ -605,6 +605,10 @@ mod win_app {
                             let val = v == "true" || v == "1";
                             st.engine.set_auto_capitalize_proper_nouns(val);
                         }
+                        "backspace_by_syllable" => {
+                            let val = v == "true" || v == "1";
+                            st.engine.set_backspace_by_syllable(val);
+                        }
                         "per_app" => {
                             st.per_app = v == "true" || v == "1";
                         }
@@ -655,6 +659,7 @@ mod win_app {
              math_context={}\n\
              auto_space_after_punctuation={}\n\
              auto_capitalize_proper_nouns={}\n\
+             backspace_by_syllable={}\n\
              per_app={}\n\
              ctrl={}\n\
              shift={}\n\
