@@ -502,6 +502,28 @@ pub unsafe extern "C" fn fcitx5_vnchkey_set_tone_style(ctx: *mut Fcitx5VnchkeyCo
     }
 }
 
+/// Configures Backspace xóa cả âm tiết.
+#[no_mangle]
+pub unsafe extern "C" fn fcitx5_vnchkey_set_backspace_by_syllable(
+    ctx: *mut Fcitx5VnchkeyContext,
+    enabled: bool,
+) {
+    if !ctx.is_null() {
+        (*ctx).engine.set_backspace_by_syllable(enabled);
+    }
+}
+
+/// Configures Macro Preview inline.
+#[no_mangle]
+pub unsafe extern "C" fn fcitx5_vnchkey_set_macro_preview(
+    ctx: *mut Fcitx5VnchkeyContext,
+    enabled: bool,
+) {
+    if !ctx.is_null() {
+        (*ctx).engine.set_macro_preview(enabled);
+    }
+}
+
 /// Sets keystroke idle timeout in milliseconds (0 = disabled).
 #[no_mangle]
 pub unsafe extern "C" fn fcitx5_vnchkey_set_idle_timeout(ctx: *mut Fcitx5VnchkeyContext, ms: u64) {

@@ -63,6 +63,8 @@ extern "C" {
     void fcitx5_vnchkey_set_quick_end_consonant(void* ctx, bool enabled);
     void fcitx5_vnchkey_set_w2u(void* ctx, uint32_t mode);
     void fcitx5_vnchkey_set_tone_style(void* ctx, uint32_t style);
+    void fcitx5_vnchkey_set_backspace_by_syllable(void* ctx, bool enabled);
+    void fcitx5_vnchkey_set_macro_preview(void* ctx, bool enabled);
     uint32_t fcitx5_vnchkey_get_tone_style(void* ctx);
     void fcitx5_vnchkey_set_charset(void* ctx, uint32_t charset);
     void fcitx5_vnchkey_set_idle_timeout(void* ctx, uint64_t ms);
@@ -158,6 +160,8 @@ private:
     bool config_allow_vietnamese_in_backtick_ = false;
     bool config_sentence_momentum_ = false;
     bool config_math_context_ = false;
+    bool config_backspace_by_syllable_ = false;
+    bool config_macro_preview_ = false;
     bool config_learn_typing_habits_ = true;
     uint32_t config_habit_promote_threshold_ = 0;
 
