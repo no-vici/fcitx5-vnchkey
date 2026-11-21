@@ -609,6 +609,14 @@ mod win_app {
                             let val = v == "true" || v == "1";
                             st.engine.set_auto_capitalize_proper_nouns(val);
                         }
+                        "user_vietnamese_words" => {
+                            let words: Vec<String> = v
+                                .split(',')
+                                .map(|s| s.trim().to_lowercase())
+                                .filter(|s| !s.is_empty())
+                                .collect();
+                            st.engine.set_user_vietnamese_words(words);
+                        }
                         "backspace_by_syllable" => {
                             let val = v == "true" || v == "1";
                             st.engine.set_backspace_by_syllable(val);
@@ -668,6 +676,7 @@ mod win_app {
              auto_space_after_punctuation={}\n\
              auto_capitalize={}\n\
              auto_capitalize_proper_nouns={}\n\
+             user_vietnamese_words={}\n\
              backspace_by_syllable={}\n\
              macro_preview={}\n\
              per_app={}\n\
@@ -705,6 +714,7 @@ mod win_app {
             st.engine.auto_space_after_punctuation(),
             st.engine.auto_capitalize(),
             st.engine.auto_capitalize_proper_nouns(),
+            st.engine.user_vietnamese_words().join(","),
             st.engine.backspace_by_syllable(),
             st.engine.macro_preview(),
             st.per_app,

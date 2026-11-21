@@ -64,6 +64,7 @@ extern "C" {
     void fcitx5_vnchkey_set_w2u(void* ctx, uint32_t mode);
     void fcitx5_vnchkey_set_tone_style(void* ctx, uint32_t style);
     void fcitx5_vnchkey_set_auto_capitalize(void* ctx, bool enabled);
+    void fcitx5_vnchkey_set_user_vietnamese_words(void* ctx, const char* words_csv);
     void fcitx5_vnchkey_set_backspace_by_syllable(void* ctx, bool enabled);
     void fcitx5_vnchkey_set_macro_preview(void* ctx, bool enabled);
     uint32_t fcitx5_vnchkey_get_tone_style(void* ctx);
@@ -162,6 +163,7 @@ private:
     bool config_sentence_momentum_ = false;
     bool config_math_context_ = false;
     bool config_auto_capitalize_ = false;
+    std::string config_user_vietnamese_words_;
     bool config_backspace_by_syllable_ = false;
     bool config_macro_preview_ = false;
     bool config_learn_typing_habits_ = true;

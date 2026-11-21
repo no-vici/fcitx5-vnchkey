@@ -524,6 +524,14 @@ public class KeyTapManager {
         return self.autoCapitalizeEnabled
     }
 
+    public func setUserVietnameseWords(_ wordsCsv: String) {
+        if let engine = self.engine {
+            wordsCsv.withCString { cstr in
+                fcitx5_vnchkey_set_user_vietnamese_words(engine, cstr)
+            }
+        }
+    }
+
     public func setW2U(_ mode: UInt32) { // 0: NonStart, 1: Always, 2: Disabled
         if let engine = self.engine {
             fcitx5_vnchkey_set_w2u(engine, mode)

@@ -167,6 +167,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         km.setSentenceMomentum(defaults.bool(forKey: "vnchkey.sentenceMomentum"))
         km.setMathContext(defaults.bool(forKey: "vnchkey.mathContext"))
         km.setAutoCapitalize(defaults.bool(forKey: "vnchkey.autoCapitalize"))
+        if let savedVnWords = defaults.string(forKey: "vnchkey.userVietnameseWords") {
+            km.setUserVietnameseWords(savedVnWords)
+        }
         km.setW2U(UInt32(defaults.integer(forKey: "vnchkey.w2u")))
         km.setIdleTimeout(UInt64(defaults.integer(forKey: "vnchkey.idleTimeout")))
         km.setQuickTelex(defaults.bool(forKey: "vnchkey.quick_telex"))
@@ -350,6 +353,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         let autoCapitalizeItem = NSMenuItem(title: "Tự động viết hoa đầu câu", action: #selector(toggleAutoCapitalize(_:)), keyEquivalent: "")
         autoCapitalizeItem.state = km.getAutoCapitalize() ? .on : .off
         menu.addItem(autoCapitalizeItem)
+
+        let userVnDictItem = NSMenuItem(title: "Từ điển Tiếng Việt cá nhân...", action: #selector(promptUserVietnameseWords), keyEquivalent: "")
+        menu.addItem(userVnDictItem)
 
         // Menu con: Tùy chọn Tốc ký (Quick Consonants)
         let quickMenu = NSMenu()
@@ -691,6 +697,26 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         defaults.set(next, forKey: "vnchkey.autoCapitalize")
         km.setAutoCapitalize(next)
         rebuildMenu()
+    }
+
+    @objc func promptUserVietnameseWords() {
+        guard let km = keyManager else { return }
+        let alert = NSAlert()
+        alert.messageText = "Từ điển Tiếng Việt cá nhân"
+        alert.informativeText = "Nhập các từ lóng hoặc từ riêng (phân cách bằng dấu phẩy). Các từ này sẽ luôn hợp lệ kể cả khi bật Kiểm tra Chánh Tả."
+        alert.addButton(withTitle: "Lưu")
+        alert.addButton(withTitle: "Hủy")
+
+        let input = NSTextField(frame: NSRect(x: 0, y: 0, width: 320, height: 24))
+        input.stringValue = defaults.string(forKey: "vnchkey.userVietnameseWords") ?? ""
+        input.placeholderString = "Ví dụ: xịn, dzui, oke, lỏd"
+        alert.accessoryView = input
+
+        if alert.runModal() == .alertFirstButtonReturn {
+            let val = input.stringValue.trimmingCharacters(in: .whitespacesAndNewlines)
+            defaults.set(val, forKey: "vnchkey.userVietnameseWords")
+            km.setUserVietnameseWords(val)
+        }
     }
 
     @objc func toggleMacro(_ sender: NSMenuItem) {

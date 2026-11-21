@@ -764,6 +764,25 @@ pub unsafe extern "C" fn fcitx5_vnchkey_set_auto_capitalize(
     }
 }
 
+/// Sets the user's personal Vietnamese dictionary (comma or newline separated words).
+#[no_mangle]
+pub unsafe extern "C" fn fcitx5_vnchkey_set_user_vietnamese_words(
+    ctx: *mut Fcitx5VnchkeyContext,
+    words_csv: *const c_char,
+) {
+    if ctx.is_null() || words_csv.is_null() {
+        return;
+    }
+    if let Ok(s) = CStr::from_ptr(words_csv).to_str() {
+        let words: Vec<String> = s
+            .split(|c| c == ',' || c == '\n' || c == ';')
+            .map(|w| w.trim().to_string())
+            .filter(|w| !w.is_empty())
+            .collect();
+        (*ctx).engine.set_user_vietnamese_words(words);
+    }
+}
+
 /// Enables or disables smart fuzzy vowel completion on Space.
 #[no_mangle]
 pub unsafe extern "C" fn fcitx5_vnchkey_set_smart_fuzzy_vowel(

@@ -63,6 +63,8 @@ pub struct VnchkeyConfig {
     pub macro_preview: bool,
     #[serde(default = "default_proper_nouns_list")]
     pub proper_nouns_list: Vec<String>,
+    #[serde(default)]
+    pub user_vietnamese_words: Vec<String>,
 }
 
 fn default_true() -> bool {
@@ -121,6 +123,7 @@ impl Default for VnchkeyConfig {
             backspace_by_syllable: false,
             macro_preview: false,
             proper_nouns_list: vec![],
+            user_vietnamese_words: vec![],
         }
     }
 }
@@ -271,6 +274,13 @@ impl ConfigManager {
         if let Some(v) = map.get("AutoSpaceAfterPunctuation") { cfg.auto_space_after_punctuation = v.eq_ignore_ascii_case("true"); }
         if let Some(v) = map.get("BackspaceBySyllable") { cfg.backspace_by_syllable = v.eq_ignore_ascii_case("true"); }
         if let Some(v) = map.get("MacroPreview") { cfg.macro_preview = v.eq_ignore_ascii_case("true"); }
+        if let Some(v) = map.get("UserVietnameseWords") {
+            cfg.user_vietnamese_words = v
+                .split(',')
+                .map(|s| s.trim().to_lowercase())
+                .filter(|s| !s.is_empty())
+                .collect();
+        }
         }
 
         cfg
@@ -329,6 +339,7 @@ impl ConfigManager {
         lines.push(format!("AutoSpaceAfterPunctuation={}", if cfg.auto_space_after_punctuation { "True" } else { "False" }));
         lines.push(format!("BackspaceBySyllable={}", if cfg.backspace_by_syllable { "True" } else { "False" }));
         lines.push(format!("MacroPreview={}", if cfg.macro_preview { "True" } else { "False" }));
+        lines.push(format!("UserVietnameseWords={}", cfg.user_vietnamese_words.join(",")));
 
         Self::atomic_write(&Self::conf_path(), &(lines.join("\n") + "\n"))?;
         Self::reload_fcitx5();

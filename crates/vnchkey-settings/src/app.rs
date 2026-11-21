@@ -1768,6 +1768,30 @@ impl SettingsApp {
             }
         }
         ui.add_space(4.0);
+
+        ui.separator();
+        ui.add_space(4.0);
+        ui.label(egui::RichText::new("Từ điển Tiếng Việt cá nhân (từ lóng / từ riêng):").strong());
+        ui.label(
+            egui::RichText::new("Các từ thêm ở đây sẽ luôn được coi là hợp lệ kể cả khi bật Kiểm tra Chánh Tả.")
+                .small()
+                .weak(),
+        );
+        let mut vn_words_str = self.config.user_vietnamese_words.join(", ");
+        let resp = ui.add(
+            egui::TextEdit::multiline(&mut vn_words_str)
+                .hint_text("Nhập từ lóng / từ cá nhân phân cách dấu phẩy (ví dụ: xịn, dzui, oke, lỏd)")
+                .desired_width(360.0)
+                .desired_rows(2)
+                .font(egui::FontId::proportional(12.0)),
+        );
+        if resp.changed() {
+            self.config.user_vietnamese_words = vn_words_str
+                .split(|c| c == ',' || c == '\n' || c == ';')
+                .map(|s| s.trim().to_lowercase())
+                .filter(|s| !s.is_empty())
+                .collect();
+        }
         ui.label(format!("Danh sách đang có: {} từ", self.config.proper_nouns_list.len()));
         ui.add_space(12.0);
 

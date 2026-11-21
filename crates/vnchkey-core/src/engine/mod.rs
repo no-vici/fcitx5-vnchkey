@@ -280,6 +280,7 @@ pub struct Engine {
     habit_learner: HabitLearner,
     casing: CaseTracker,
     macro_table: MacroTable,
+    user_vietnamese_words: std::collections::HashSet<String>,
     current_word: String,
     raw_strokes: String,
     word_used_telex: bool,
@@ -567,6 +568,7 @@ impl Engine {
             },
             casing: CaseTracker::new(),
             macro_table: MacroTable::new(),
+            user_vietnamese_words: std::collections::HashSet::new(),
             config,
             current_word: String::with_capacity(32),
             raw_strokes: String::with_capacity(32),
@@ -740,6 +742,34 @@ impl Engine {
     /// Returns whether automatic sentence-start capitalization is enabled.
     pub fn auto_capitalize(&self) -> bool {
         self.config.auto_capitalize
+    }
+
+    /// Replaces the user's personal Vietnamese dictionary (slang/custom words).
+    /// Words in this set are treated as valid Vietnamese even when `spell_check` is enabled.
+    pub fn set_user_vietnamese_words(&mut self, words: Vec<String>) {
+        self.user_vietnamese_words = words
+            .into_iter()
+            .map(|w| w.trim().to_lowercase())
+            .filter(|w| !w.is_empty())
+            .collect();
+    }
+
+    /// Returns the sorted list of personal Vietnamese dictionary words.
+    pub fn user_vietnamese_words(&self) -> Vec<String> {
+        let mut words: Vec<String> = self.user_vietnamese_words.iter().cloned().collect();
+        words.sort();
+        words
+    }
+
+    /// Returns true if `word` (case-insensitive) is in the user's personal Vietnamese dictionary.
+    pub fn is_user_vietnamese_word(&self, word: &str) -> bool {
+        !self.user_vietnamese_words.is_empty()
+            && self.user_vietnamese_words.contains(&word.to_lowercase())
+    }
+
+    /// Returns true if `word` is in either the built-in Vietnamese dictionary or the user's personal Vietnamese dictionary.
+    fn is_in_any_vietnamese_dictionary(&self, word: &str) -> bool {
+        is_in_vietnamese_dictionary(word) || self.is_user_vietnamese_word(word)
     }
 
     /// Enables or disables smart fuzzy vowel completion on Space.
@@ -1832,7 +1862,8 @@ impl Engine {
                 // Valid Vietnamese words formed with digits (e.g. gio72 -> giờ, duoc975 -> được) are never restored.
                 let has_digits = self.raw_strokes.chars().any(|c| c.is_ascii_digit());
                 let is_elongated_vn = is_valid_elongated_vietnamese_word(&self.current_word);
-                let is_invalid_syllable = !is_elongated_vn && !is_valid_vietnamese_syllable(&self.current_word);
+                let is_user_vn_word = self.is_user_vietnamese_word(&self.current_word);
+                let is_invalid_syllable = !is_elongated_vn && !is_user_vn_word && !is_valid_vietnamese_syllable(&self.current_word);
                 // Always try dict-guarded fuzzy vowel resolution for invalid syllables.
                 // This safely fixes common unambiguous cases like nuoc1->nước, nguoi2->người
                 // even when smart_fuzzy_vowel is OFF.
@@ -1920,9 +1951,10 @@ impl Engine {
                         || (self.config.auto_restore_english
                             && !has_digits
                             && !is_elongated_vn
+                            && !is_user_vn_word
                             && (has_phonology_violation(&self.current_word)
                                 || (self.config.spell_check
-                                    && !is_in_vietnamese_dictionary(&self.current_word))));
+                                    && !self.is_in_any_vietnamese_dictionary(&self.current_word))));
 
                     if learned_restore || dict_restore || english_or_spell_restore {
                         let restored_word = self.raw_strokes.clone();
@@ -2483,7 +2515,11 @@ impl Engine {
             new_word = self.raw_strokes.clone();
             self.english_locked = true;
             auto_restored = true;
-        } else if self.config.spell_check && !self.manual_undo && was_transformed && invalid_structure
+        } else if self.config.spell_check
+            && !self.manual_undo
+            && was_transformed
+            && invalid_structure
+            && !self.is_user_vietnamese_word(&new_word)
         {
             // If Chánh Tả is enabled (even when Restore English is disabled), prevent invalid Vietnamese syllable marks
             new_word = format!("{}{}", self.current_word, ch);
