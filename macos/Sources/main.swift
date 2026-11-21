@@ -166,6 +166,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         km.setAllowVietnameseInBacktick(defaults.bool(forKey: "vnchkey.allowVietnameseInBacktick"))
         km.setSentenceMomentum(defaults.bool(forKey: "vnchkey.sentenceMomentum"))
         km.setMathContext(defaults.bool(forKey: "vnchkey.mathContext"))
+        km.setAutoCapitalize(defaults.bool(forKey: "vnchkey.autoCapitalize"))
         km.setW2U(UInt32(defaults.integer(forKey: "vnchkey.w2u")))
         km.setIdleTimeout(UInt64(defaults.integer(forKey: "vnchkey.idleTimeout")))
         km.setQuickTelex(defaults.bool(forKey: "vnchkey.quick_telex"))
@@ -345,6 +346,10 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         let mathContextItem = NSMenuItem(title: "Math Context (giữ tiếng Anh sau sin/cos/tan)", action: #selector(toggleMathContext(_:)), keyEquivalent: "")
         mathContextItem.state = km.getMathContext() ? .on : .off
         menu.addItem(mathContextItem)
+
+        let autoCapitalizeItem = NSMenuItem(title: "Tự động viết hoa đầu câu", action: #selector(toggleAutoCapitalize(_:)), keyEquivalent: "")
+        autoCapitalizeItem.state = km.getAutoCapitalize() ? .on : .off
+        menu.addItem(autoCapitalizeItem)
 
         // Menu con: Tùy chọn Tốc ký (Quick Consonants)
         let quickMenu = NSMenu()
@@ -678,6 +683,14 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         km.setMathContext(next)
         rebuildMenu()
         syncDashboardControls()
+    }
+
+    @objc func toggleAutoCapitalize(_ sender: NSMenuItem) {
+        guard let km = keyManager else { return }
+        let next = !km.getAutoCapitalize()
+        defaults.set(next, forKey: "vnchkey.autoCapitalize")
+        km.setAutoCapitalize(next)
+        rebuildMenu()
     }
 
     @objc func toggleMacro(_ sender: NSMenuItem) {

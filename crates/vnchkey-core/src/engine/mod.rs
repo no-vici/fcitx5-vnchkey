@@ -737,6 +737,11 @@ impl Engine {
         self.config.auto_capitalize = enabled;
     }
 
+    /// Returns whether automatic sentence-start capitalization is enabled.
+    pub fn auto_capitalize(&self) -> bool {
+        self.config.auto_capitalize
+    }
+
     /// Enables or disables smart fuzzy vowel completion on Space.
     pub fn set_smart_fuzzy_vowel(&mut self, enabled: bool) {
         self.config.smart_fuzzy_vowel = enabled;

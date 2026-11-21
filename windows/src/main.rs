@@ -601,6 +601,10 @@ mod win_app {
                             let val = v == "true" || v == "1";
                             st.engine.set_auto_space_after_punctuation(val);
                         }
+                        "auto_capitalize" => {
+                            let val = v == "true" || v == "1";
+                            st.engine.set_auto_capitalize(val);
+                        }
                         "auto_capitalize_proper_nouns" => {
                             let val = v == "true" || v == "1";
                             st.engine.set_auto_capitalize_proper_nouns(val);
@@ -662,6 +666,7 @@ mod win_app {
              sentence_momentum={}\n\
              math_context={}\n\
              auto_space_after_punctuation={}\n\
+             auto_capitalize={}\n\
              auto_capitalize_proper_nouns={}\n\
              backspace_by_syllable={}\n\
              macro_preview={}\n\
@@ -698,6 +703,7 @@ mod win_app {
             st.engine.sentence_momentum(),
             st.engine.math_context(),
             st.engine.auto_space_after_punctuation(),
+            st.engine.auto_capitalize(),
             st.engine.auto_capitalize_proper_nouns(),
             st.engine.backspace_by_syllable(),
             st.engine.macro_preview(),

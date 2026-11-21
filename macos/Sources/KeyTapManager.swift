@@ -511,6 +511,19 @@ public class KeyTapManager {
         return fcitx5_vnchkey_get_math_context(engine)
     }
 
+    private var autoCapitalizeEnabled = false
+
+    public func setAutoCapitalize(_ enabled: Bool) {
+        self.autoCapitalizeEnabled = enabled
+        if let engine = self.engine {
+            fcitx5_vnchkey_set_auto_capitalize(engine, enabled)
+        }
+    }
+
+    public func getAutoCapitalize() -> Bool {
+        return self.autoCapitalizeEnabled
+    }
+
     public func setW2U(_ mode: UInt32) { // 0: NonStart, 1: Always, 2: Disabled
         if let engine = self.engine {
             fcitx5_vnchkey_set_w2u(engine, mode)
