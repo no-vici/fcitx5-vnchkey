@@ -1634,8 +1634,30 @@ void VnchkeyEngine::keyEvent(const fcitx::InputMethodEntry &entry, fcitx::KeyEve
             return;
         }
 
-        // Direct Mode: let the app delete character naturally, sync engine state
-        fcitx5_vnchkey_handle_backspace(ctx);
+        // Direct Mode: sync engine state; if backspace-by-syllable is active,
+        // delete the whole composing syllable from the app.
+        char* cur_before = fcitx5_vnchkey_get_current_word(ctx);
+        std::string cur_before_str = cur_before ? cur_before : "";
+        if (cur_before) {
+            fcitx5_vnchkey_free_string(cur_before);
+        }
+
+        bool reopened = fcitx5_vnchkey_handle_backspace(ctx);
+        if (config_backspace_by_syllable_ && !cur_before_str.empty() && !reopened) {
+            size_t char_len = utf8CharCount(cur_before_str);
+            if (ic && char_len > 0) {
+                // Physical BackSpace already consumed by us; remove entire syllable.
+                ic->deleteSurroundingText(-static_cast<int>(char_len), static_cast<unsigned int>(char_len));
+            }
+            if (ic) {
+                ic->inputPanel().reset();
+                ic->updatePreedit();
+                ic->updateUserInterface(fcitx::UserInterfaceComponent::InputPanel);
+            }
+            keyEvent.filterAndAccept();
+            return;
+        }
+
         if (ic) {
             char* cur = fcitx5_vnchkey_get_current_word(ctx);
             if (cur) {
@@ -1647,6 +1669,7 @@ void VnchkeyEngine::keyEvent(const fcitx::InputMethodEntry &entry, fcitx::KeyEve
                 ic->updateUserInterface(fcitx::UserInterfaceComponent::InputPanel);
             }
         }
+        // Let the physical BackSpace pass through to the app for normal single-char deletion.
         return;
     }
 
