@@ -104,8 +104,8 @@ fn test_01_out_of_order_and_delayed_modifiers() {
         ("khuyesne ", "khuyến "),
         ("tuyeesn ", "tuyến "),
         ("tuyesne ", "tuyến "),
-        // Chưa gõ bù mũ ê mà bấm Space -> từ trung gian 'tuyén' tự động hoàn nguyên raw
-        ("tuyesn ", "tuyesn "),
+        // Thiếu mũ ê nhưng nhấn Space: dict-guarded fuzzy resolve hoàn thành thành 'tuyến'
+        ("tuyesn ", "tuyến "),
         ("nghieeng ", "nghiêng "),
         // Bấm đúp chữ 'đ' ở cuối từ khi đã gõ xong cả âm tiết
         ("duocjd ", "được "),

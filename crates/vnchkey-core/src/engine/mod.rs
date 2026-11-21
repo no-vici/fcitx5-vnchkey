@@ -230,7 +230,7 @@ fn try_resolve_fuzzy_intermediate_vowel(word: &str, tone_style: ToneStyle) -> Op
     let is_upper_third = parsed.nucleus.chars().nth(2).map(|c| c.is_uppercase()).unwrap_or(false);
 
     let resolved_nucleus = match nuc_lower.as_str() {
-        "uo" if matches!(coda_lower.as_str(), "ng" | "t" | "m" | "p" | "i") => {
+        "uo" if matches!(coda_lower.as_str(), "c" | "ch" | "i" | "m" | "n" | "ng" | "p" | "t") => {
             let u_ch = if is_upper_first { 'Ư' } else { 'ư' };
             let o_ch = if is_upper_second { 'Ơ' } else { 'ơ' };
             format!("{}{}", u_ch, o_ch)
@@ -1828,7 +1828,10 @@ impl Engine {
                 let has_digits = self.raw_strokes.chars().any(|c| c.is_ascii_digit());
                 let is_elongated_vn = is_valid_elongated_vietnamese_word(&self.current_word);
                 let is_invalid_syllable = !is_elongated_vn && !is_valid_vietnamese_syllable(&self.current_word);
-                if ch == ' ' && is_invalid_syllable && self.config.smart_fuzzy_vowel && !self.manual_undo {
+                // Always try dict-guarded fuzzy vowel resolution for invalid syllables.
+                // This safely fixes common unambiguous cases like nuoc1->nước, nguoi2->người
+                // even when smart_fuzzy_vowel is OFF.
+                if ch == ' ' && is_invalid_syllable && !self.manual_undo {
                     if let Some(resolved) = try_resolve_fuzzy_intermediate_vowel(&self.current_word, self.config.tone_style) {
                         let target = format!("{}{}", resolved, ch);
                         let formatted_old = self.format_commit(&self.current_word);

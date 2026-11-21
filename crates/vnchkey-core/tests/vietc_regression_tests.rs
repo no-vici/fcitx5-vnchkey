@@ -172,11 +172,12 @@ fn test_vietc_auto_restore_cases() {
         ("hello ", "hello "),
         ("the ", "the "),
         ("and ", "and "),
-        // Intermediate syllables without the second accent (duòng, tién, nuóc) must restore to raw text on Space
-        ("duongf ", "duongf "),
-        ("tiens ", "tiens "),
-        ("nuocs ", "nuocs "),
-        ("tuongf ", "tuongf "),
+        // Intermediate syllables without the second accent: dict-guarded fuzzy resolve
+        // auto-completes to valid Vietnamese words when unambiguous.
+        ("duongf ", "dường "),
+        ("tiens ", "tiến "),
+        ("nuocs ", "nước "),
+        ("tuongf ", "tường "),
         ("buongf ", "buongf "),
     ];
 

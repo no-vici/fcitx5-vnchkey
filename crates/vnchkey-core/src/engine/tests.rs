@@ -809,10 +809,11 @@
 
     #[test]
     fn test_intermediate_two_stroke_accent_and_space_restore() {
-        // Test VNI: intermediate state 'duong2' -> 'duòng', 'duong27' -> 'dường', 'duong2 ' -> 'duong2 '
+        // VNI: intermediate state shows visually while typing, then Space can auto-resolve
+        // to a valid Vietnamese word via dict-guarded fuzzy vowel resolution.
         let mut vni_engine = Engine::new(EngineConfig {
             method: InputMethod::Vni,
-            auto_restore_english: false, // Must restore even when auto_restore_english is false!
+            auto_restore_english: false,
             ..EngineConfig::default()
         });
 
@@ -825,18 +826,18 @@
         let out_dường = type_word(&mut vni_engine, "duong27 ");
         assert_eq!(out_dường, "dường ");
 
-        // 3. Typing Space while in intermediate state restores to raw text
+        // 3. Space on intermediate forms: auto-resolve to valid VN word when unambiguous
         vni_engine.reset();
-        let out_space = type_word(&mut vni_engine, "duong2 ");
-        assert_eq!(out_space, "duong2 ");
+        assert_eq!(type_word(&mut vni_engine, "duong2 "), "dường ");
 
         vni_engine.reset();
-        let out_nuoc1 = type_word(&mut vni_engine, "nuoc1 ");
-        assert_eq!(out_nuoc1, "nuoc1 ");
+        assert_eq!(type_word(&mut vni_engine, "nuoc1 "), "nước ");
 
         vni_engine.reset();
-        let out_tien1 = type_word(&mut vni_engine, "tien1 ");
-        assert_eq!(out_tien1, "tien1 ");
+        assert_eq!(type_word(&mut vni_engine, "nguoi2 "), "người ");
+
+        vni_engine.reset();
+        assert_eq!(type_word(&mut vni_engine, "tien1 "), "tiến ");
 
         // 4. Genuine complete words with numbers (gio72 -> giờ, duoc975 -> được) MUST NOT restore
         vni_engine.reset();
@@ -847,7 +848,7 @@
         let out_duoc = type_word(&mut vni_engine, "duoc975 ");
         assert_eq!(out_duoc, "được ");
 
-        // Test Telex: intermediate state 'duongf' -> 'duòng', 'duongfw' -> 'dường', 'duongf ' -> 'duongf '
+        // Telex equivalents
         let mut telex_engine = Engine::new(EngineConfig {
             method: InputMethod::Telex,
             auto_restore_english: false,
@@ -862,27 +863,25 @@
         assert_eq!(out_tfw, "dường ");
 
         telex_engine.reset();
-        let out_tf_space = type_word(&mut telex_engine, "duongf ");
-        assert_eq!(out_tf_space, "duongf ");
+        assert_eq!(type_word(&mut telex_engine, "duongf "), "dường ");
 
         telex_engine.reset();
-        let out_ts_space = type_word(&mut telex_engine, "tiens ");
-        assert_eq!(out_ts_space, "tiens ");
+        assert_eq!(type_word(&mut telex_engine, "tiens "), "tiến ");
 
-        // Intermediate forms with 'uye' (Huyèn, chuyén) and Space restore
+        // 'uye' intermediate forms: auto-resolve to valid Vietnamese word
         vni_engine.reset();
         assert_eq!(type_word(&mut vni_engine, "Huyen2"), "Huyèn");
         vni_engine.reset();
         assert_eq!(type_word(&mut vni_engine, "Huyen26 "), "Huyền ");
         vni_engine.reset();
-        assert_eq!(type_word(&mut vni_engine, "Huyen2 "), "Huyen2 ");
+        assert_eq!(type_word(&mut vni_engine, "Huyen2 "), "Huyền ");
 
         telex_engine.reset();
         assert_eq!(type_word(&mut telex_engine, "Huyenf"), "Huyèn");
         telex_engine.reset();
         assert_eq!(type_word(&mut telex_engine, "Huyenfe "), "Huyền ");
         telex_engine.reset();
-        assert_eq!(type_word(&mut telex_engine, "Huyenf "), "Huyenf ");
+        assert_eq!(type_word(&mut telex_engine, "Huyenf "), "Huyền ");
 
         telex_engine.reset();
         let out_tse = type_word(&mut telex_engine, "tiense ");
