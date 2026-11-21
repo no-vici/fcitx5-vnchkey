@@ -176,6 +176,7 @@ private:
     size_t utf8CharCount(const std::string& str) const;
 
     bool is_forwarding_ = false;
+    bool is_reopened_word_ = false;
 
     // Fcitx5 Tray & Status Menu
     std::unique_ptr<fcitx::SimpleAction> statusAction_;

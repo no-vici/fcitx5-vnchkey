@@ -1642,13 +1642,10 @@ void VnchkeyEngine::keyEvent(const fcitx::InputMethodEntry &entry, fcitx::KeyEve
             fcitx5_vnchkey_free_string(cur_before);
         }
 
-        if (config_backspace_by_syllable_ && cur_before_str.empty()) {
-            fcitx5_vnchkey_reset(ctx);
-            return;
-        }
-
         bool reopened = fcitx5_vnchkey_handle_backspace(ctx);
-        if (config_backspace_by_syllable_ && !cur_before_str.empty() && !reopened) {
+        if (reopened) {
+            is_reopened_word_ = true;
+        } else if (config_backspace_by_syllable_ && !cur_before_str.empty() && !is_reopened_word_) {
             size_t char_len = utf8CharCount(cur_before_str);
             if (ic && char_len > 0) {
                 // Physical BackSpace already consumed by us; remove entire syllable.
@@ -1670,6 +1667,8 @@ void VnchkeyEngine::keyEvent(const fcitx::InputMethodEntry &entry, fcitx::KeyEve
             }
             keyEvent.filterAndAccept();
             return;
+        } else if (cur_before_str.empty() || !fcitx5_vnchkey_has_active_word(ctx)) {
+            is_reopened_word_ = false;
         }
 
         if (ic) {
