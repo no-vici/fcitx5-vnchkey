@@ -195,19 +195,35 @@ impl TypingStats {
 /// khi người dùng bật `smart_fuzzy_vowel`.
 fn try_resolve_fuzzy_intermediate_vowel(word: &str, tone_style: ToneStyle) -> Option<String> {
     let mut parsed = crate::syllable_parser::parse_syllable(word)?;
-    if parsed.tone == crate::syllable_parser::ToneMark::None || parsed.coda.is_empty() {
+    if parsed.tone == crate::syllable_parser::ToneMark::None {
         return None;
     }
 
     let nuc_lower = parsed.nucleus.to_lowercase();
+    // Open syllables like `nguòi` (người) have no coda; allow them only for the
+    // unambiguous `uoi` -> `ươi` promotion. Closed syllables keep the original rule.
+    let coda_lower = parsed.coda.to_lowercase();
+    let allow_open = nuc_lower == "uoi";
+    if parsed.coda.is_empty() && !allow_open {
+        return None;
+    }
+
     let is_upper_second = parsed.nucleus.chars().nth(1).map(|c| c.is_uppercase()).unwrap_or(false);
     let is_upper_first = parsed.nucleus.chars().next().map(|c| c.is_uppercase()).unwrap_or(false);
+    let is_upper_third = parsed.nucleus.chars().nth(2).map(|c| c.is_uppercase()).unwrap_or(false);
 
     let resolved_nucleus = match nuc_lower.as_str() {
-        "uo" if matches!(parsed.coda.to_lowercase().as_str(), "ng" | "t" | "m" | "p") => {
+        "uo" if matches!(coda_lower.as_str(), "ng" | "t" | "m" | "p" | "i") => {
             let u_ch = if is_upper_first { 'Ư' } else { 'ư' };
             let o_ch = if is_upper_second { 'Ơ' } else { 'ơ' };
             format!("{}{}", u_ch, o_ch)
+        }
+        "uoi" => {
+            let u_ch = if is_upper_first { 'Ư' } else { 'ư' };
+            let o_ch = if is_upper_second { 'Ơ' } else { 'ơ' };
+            let i_ch = parsed.nucleus.chars().nth(2).unwrap_or('i');
+            let i_out = if is_upper_third { i_ch.to_uppercase().next().unwrap_or(i_ch) } else { i_ch.to_lowercase().next().unwrap_or(i_ch) };
+            format!("{}{}{}", u_ch, o_ch, i_out)
         }
         "ye" => {
             let y_ch = parsed.nucleus.chars().next().unwrap_or('y');
