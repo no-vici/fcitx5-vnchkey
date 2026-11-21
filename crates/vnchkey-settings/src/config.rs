@@ -100,7 +100,7 @@ impl Default for VnchkeyConfig {
             temp_english_mode: "Disabled".to_string(),
             tray_icon_theme: "Default".to_string(),
             show_indicator_badge: true,
-            learn_typing_habits: true,
+            learn_typing_habits: false,
             habit_promote_threshold: 0,
             initial_case_anchor: false,
             developer_mode: true,

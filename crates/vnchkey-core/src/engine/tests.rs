@@ -750,6 +750,7 @@
             method: InputMethod::Telex,
             spell_check: false, // disable built-in dictionary spell check to test pure habit learning
             auto_restore_english: false,
+            habit_learning_enabled: true, // explicitly enable for this test
             habit_promote_threshold: 4, // Higher threshold (4 times) to prevent accidental whitelisting
             ..EngineConfig::default()
         });

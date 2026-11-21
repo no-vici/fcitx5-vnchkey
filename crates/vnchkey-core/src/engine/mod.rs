@@ -127,7 +127,7 @@ impl Default for EngineConfig {
             quick_telex: false,
             quick_start_consonant: false,
             quick_end_consonant: false,
-            habit_learning_enabled: true,
+            habit_learning_enabled: false,
             habit_promote_threshold: 0,
             initial_case_anchor: false,
             auto_capitalize: false,
