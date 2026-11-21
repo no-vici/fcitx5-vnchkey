@@ -597,6 +597,10 @@ mod win_app {
                             let val = v == "true" || v == "1";
                             st.engine.set_math_context(val);
                         }
+                        "auto_space_after_punctuation" => {
+                            let val = v == "true" || v == "1";
+                            st.engine.set_auto_space_after_punctuation(val);
+                        }
                         "per_app" => {
                             st.per_app = v == "true" || v == "1";
                         }
@@ -645,6 +649,7 @@ mod win_app {
              allow_vietnamese_in_backtick={}\n\
              sentence_momentum={}\n\
              math_context={}\n\
+             auto_space_after_punctuation={}\n\
              per_app={}\n\
              ctrl={}\n\
              shift={}\n\

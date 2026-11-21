@@ -94,6 +94,8 @@ pub struct EngineConfig {
     pub developer_mode: bool,
     /// Allow typing Vietnamese inside Markdown backticks (`` ` ``) and fenced code blocks (```` ``` ````).
     pub allow_vietnamese_in_backtick: bool,
+    /// Auto-space after sentence-ending punctuation (`.`, `?`, `!`) when the previous char is a letter. Defaults to false (opt-in).
+    pub auto_space_after_punctuation: bool,
     /// Sentence Momentum: preserve English for ambiguous collision words after English anchor words (e.g. `the tree`, `he must see this room`). Defaults to false (opt-in).
     pub sentence_momentum: bool,
     /// Math Context: preserve English for ambiguous collision words after math function anchors (e.g. `sin and cos`, `tan or cos`). Defaults to false (opt-in).
@@ -127,6 +129,7 @@ impl Default for EngineConfig {
             acronym_bypass: true,
             developer_mode: true,
             allow_vietnamese_in_backtick: false,
+            auto_space_after_punctuation: false,
             sentence_momentum: false,
             math_context: false,
         }
@@ -743,6 +746,16 @@ impl Engine {
     /// Returns whether typing Vietnamese inside Markdown backticks is allowed.
     pub fn allow_vietnamese_in_backtick(&self) -> bool {
         self.config.allow_vietnamese_in_backtick
+    }
+
+    /// Enables or disables Auto-space after sentence-ending punctuation.
+    pub fn set_auto_space_after_punctuation(&mut self, enabled: bool) {
+        self.config.auto_space_after_punctuation = enabled;
+    }
+
+    /// Returns whether Auto-space after sentence-ending punctuation is enabled.
+    pub fn auto_space_after_punctuation(&self) -> bool {
+        self.config.auto_space_after_punctuation
     }
 
     /// Enables or disables Sentence Momentum (preserve English for ambiguous collision words after English anchor words).
@@ -1431,6 +1444,7 @@ impl Engine {
                 adaptive_delay_ms: 0,
             };
         }
+        let prev_char = self.last_char;
         self.last_char = Some(ch);
 
         let timeout_ms = self.config.idle_timeout_ms as f64;
@@ -1923,10 +1937,19 @@ impl Engine {
                 self.stats.words_typed += 1;
                 self.last_completed_word = Some(formatted_target);
             }
+            let auto_space = self.config.auto_space_after_punctuation
+                && matches!(ch, '.' | '?' | '!')
+                && !self.dev_code_state.is_bypassing()
+                && prev_char.map(|c| c.is_alphabetic()).unwrap_or(false);
+            let commit_text = if auto_space {
+                format!("{} ", ch)
+            } else {
+                ch.to_string()
+            };
             return EngineOutput {
                 backspaces: 0,
-                commit_text: ch.to_string(),
-                consumed: false,
+                commit_text,
+                consumed: auto_space,
                 auto_restored: false,
                 macro_expanded: false,
                 adaptive_delay_ms: 0,

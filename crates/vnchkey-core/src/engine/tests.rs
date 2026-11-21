@@ -1158,3 +1158,35 @@
         });
         assert_eq!(type_word(&mut engine_math, "sin and cos "), "sin and cos ");
     }
+
+    #[test]
+    fn test_auto_space_after_punctuation_default_off() {
+        // Default OFF: không chèn space tự động
+        let mut engine = Engine::new(EngineConfig {
+            method: InputMethod::Vni,
+            ..EngineConfig::default()
+        });
+        // Gõ "chào." không nên có space tự động
+        assert_eq!(type_word(&mut engine, "chào."), "chào.");
+        // Gõ "chào ?" cũng không
+        assert_eq!(type_word(&mut engine, "chào ?"), "chào ?");
+    }
+
+    #[test]
+    fn test_auto_space_after_punctuation_enabled() {
+        let mut engine = Engine::new(EngineConfig {
+            method: InputMethod::Vni,
+            auto_space_after_punctuation: true,
+            ..EngineConfig::default()
+        });
+        // Gõ "chào." -> tự chèn space (chấm sau là chữ cái trước đó)
+        assert_eq!(type_word(&mut engine, "chào."), "chào. ");
+        // Gõ "chào?" -> tự chèn space
+        assert_eq!(type_word(&mut engine, "chào?"), "chào? ");
+        // Gõ "chào!" -> tự chèn space
+        assert_eq!(type_word(&mut engine, "chào!"), "chào! ");
+        // Gõ "chào ," (dấu phẩy không trong list) không nên chèn space
+        assert_eq!(type_word(&mut engine, "chào ,"), "chào ,");
+        // Gõ "1.5" (số chấm số) không nên chèn space (prev_char là số)
+        assert_eq!(type_word(&mut engine, "1.5 "), "1.5 ");
+    }

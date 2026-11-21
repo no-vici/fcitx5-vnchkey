@@ -51,6 +51,8 @@ pub struct VnchkeyConfig {
     pub sentence_momentum: bool,
     #[serde(default)]
     pub math_context: bool,
+    #[serde(default)]
+    pub auto_space_after_punctuation: bool,
 }
 
 fn default_true() -> bool {
@@ -99,6 +101,7 @@ impl Default for VnchkeyConfig {
             allow_vietnamese_in_backtick: false,
             sentence_momentum: false,
             math_context: false,
+            auto_space_after_punctuation: false,
         }
     }
 }
@@ -244,6 +247,7 @@ impl ConfigManager {
             if let Some(v) = map.get("AllowVietnameseInBacktick") { cfg.allow_vietnamese_in_backtick = v.eq_ignore_ascii_case("true"); }
             if let Some(v) = map.get("SentenceMomentum") { cfg.sentence_momentum = v.eq_ignore_ascii_case("true"); }
             if let Some(v) = map.get("MathContext") { cfg.math_context = v.eq_ignore_ascii_case("true"); }
+        if let Some(v) = map.get("AutoSpaceAfterPunctuation") { cfg.auto_space_after_punctuation = v.eq_ignore_ascii_case("true"); }
         }
 
         cfg
@@ -297,6 +301,7 @@ impl ConfigManager {
         lines.push(format!("AllowVietnameseInBacktick={}", if cfg.allow_vietnamese_in_backtick { "True" } else { "False" }));
         lines.push(format!("SentenceMomentum={}", if cfg.sentence_momentum { "True" } else { "False" }));
         lines.push(format!("MathContext={}", if cfg.math_context { "True" } else { "False" }));
+        lines.push(format!("AutoSpaceAfterPunctuation={}", if cfg.auto_space_after_punctuation { "True" } else { "False" }));
 
         Self::atomic_write(&Self::conf_path(), &(lines.join("\n") + "\n"))?;
         Self::reload_fcitx5();
