@@ -348,6 +348,7 @@ pub struct LastMacroExpansion {
     pub stage: MacroUndoStage,
 }
 
+/// Preview state for an inline macro expansion hint.
 #[derive(Debug, Clone)]
 pub struct PendingMacroPreview {
     /// The trigger keystroke that started the preview (e.g. "vn")
