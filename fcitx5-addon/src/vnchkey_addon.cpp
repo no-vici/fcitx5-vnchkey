@@ -1647,7 +1647,16 @@ void VnchkeyEngine::keyEvent(const fcitx::InputMethodEntry &entry, fcitx::KeyEve
             size_t char_len = utf8CharCount(cur_before_str);
             if (ic && char_len > 0) {
                 // Physical BackSpace already consumed by us; remove entire syllable.
-                ic->deleteSurroundingText(-static_cast<int>(char_len), static_cast<unsigned int>(char_len));
+                if (ic->capabilityFlags().test(fcitx::CapabilityFlag::SurroundingText) &&
+                    ic->surroundingText().isValid()) {
+                    ic->deleteSurroundingText(-static_cast<int>(char_len), static_cast<unsigned int>(char_len));
+                } else {
+                    is_forwarding_ = true;
+                    for (size_t i = 0; i < char_len; ++i) {
+                        ic->forwardKey(fcitx::Key(FcitxKey_BackSpace));
+                    }
+                    is_forwarding_ = false;
+                }
             }
             if (ic) {
                 ic->inputPanel().reset();
