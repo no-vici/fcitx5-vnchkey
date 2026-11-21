@@ -779,6 +779,12 @@ impl SettingsApp {
         ui.add_space(6.0);
 
         ui.checkbox(
+            &mut self.config.auto_capitalize_proper_nouns,
+            "Auto-capitalize proper nouns: Viết hoa tự động các từ riêng (Việt Nam, Hà Nội, Sài Gòn, OpenAI, GitHub). Mặc định TẮT.",
+        );
+        ui.add_space(6.0);
+
+        ui.checkbox(
             &mut self.config.free_marking,
             "Cho phép bỏ dấu tự do trên bất kỳ nguyên âm nào",
         );

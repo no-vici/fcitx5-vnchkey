@@ -96,6 +96,8 @@ pub struct EngineConfig {
     pub allow_vietnamese_in_backtick: bool,
     /// Auto-space after sentence-ending punctuation (`.`, `?`, `!`) when the previous char is a letter. Defaults to false (opt-in).
     pub auto_space_after_punctuation: bool,
+    /// Auto-capitalize proper nouns from a curated list (e.g. `Việt Nam`, `Hà Nội`, `Sài Gòn`, `OpenAI`, `GitHub`). Defaults to false (opt-in).
+    pub auto_capitalize_proper_nouns: bool,
     /// Sentence Momentum: preserve English for ambiguous collision words after English anchor words (e.g. `the tree`, `he must see this room`). Defaults to false (opt-in).
     pub sentence_momentum: bool,
     /// Math Context: preserve English for ambiguous collision words after math function anchors (e.g. `sin and cos`, `tan or cos`). Defaults to false (opt-in).
@@ -130,6 +132,7 @@ impl Default for EngineConfig {
             developer_mode: true,
             allow_vietnamese_in_backtick: false,
             auto_space_after_punctuation: false,
+            auto_capitalize_proper_nouns: false,
             sentence_momentum: false,
             math_context: false,
         }
@@ -756,6 +759,16 @@ impl Engine {
     /// Returns whether Auto-space after sentence-ending punctuation is enabled.
     pub fn auto_space_after_punctuation(&self) -> bool {
         self.config.auto_space_after_punctuation
+    }
+
+    /// Enables or disables Auto-capitalize proper nouns from a curated list.
+    pub fn set_auto_capitalize_proper_nouns(&mut self, enabled: bool) {
+        self.config.auto_capitalize_proper_nouns = enabled;
+    }
+
+    /// Returns whether Auto-capitalize proper nouns is enabled.
+    pub fn auto_capitalize_proper_nouns(&self) -> bool {
+        self.config.auto_capitalize_proper_nouns
     }
 
     /// Enables or disables Sentence Momentum (preserve English for ambiguous collision words after English anchor words).
@@ -1897,10 +1910,27 @@ impl Engine {
             }
             self.deleted_accented_candidate = None;
 
+            let completed_word_done = self.current_word.clone();
+
+            // Auto-capitalize proper nouns (opt-in, default OFF)
+            if self.config.auto_capitalize_proper_nouns
+                && !completed_word_done.is_empty()
+            {
+                let lc = completed_word_done.to_lowercase();
+                if lc == "hanoi" || lc == "openai" || lc == "github"
+                {
+                    let mut chars: Vec<char> = completed_word_done.chars().collect();
+                    if let Some(c) = chars.first_mut() {
+                        *c = c.to_ascii_uppercase();
+                    }
+                    self.current_word = chars.into_iter().collect();
+                }
+            }
+
             // No macro or auto-restore needed: reset word buffer and let delimiter pass through natively
             let has_word = !self.current_word.is_empty();
             let raw_lower_done = self.raw_strokes.to_lowercase();
-            let completed_word_done = self.current_word.clone();
+            let completed_word_done = self.current_word.clone(); // re-clone after possible capitalization
             let was_english_locked_done = self.english_locked;
             let raw_target = format!("{}{}", self.current_word, ch);
             let formatted_target = self.format_commit(&raw_target);
