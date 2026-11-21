@@ -1704,7 +1704,7 @@ impl SettingsApp {
             "Từ điển Tiếng Anh bỏ qua không thêm dấu & Từ điển Tiếng Việt tích hợp (Chánh Tả).",
         );
 
-        let vn_count = vnchkey_core::vietnamese_word_set().len();
+        let vn_count = vnchkey_core::vietnamese_word_count();
         egui::Frame::new()
             .fill(egui::Color32::from_rgb(0x18, 0x18, 0x25))
             .stroke(egui::Stroke::new(1.0_f32, egui::Color32::from_rgb(0x28, 0x2a, 0x36)))

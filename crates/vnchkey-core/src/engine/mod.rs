@@ -2171,7 +2171,9 @@ impl Engine {
             }
         };
 
-        let test_chars: Vec<char> = format!("{}{}", self.current_word, ch.to_ascii_lowercase()).chars().collect();
+        let mut test_chars: Vec<char> = Vec::with_capacity(self.current_word.len() + 1);
+        test_chars.extend(self.current_word.chars());
+        test_chars.push(ch.to_ascii_lowercase());
         let is_valid_viet_continuation = is_valid_in_progress_syllable(&test_chars);
 
         if prev_has_lower && ch.is_ascii_uppercase() && !can_transform_vietnamese && !is_valid_viet_continuation {
@@ -2350,7 +2352,7 @@ impl Engine {
 
         // Quick Telex Consonants (cc->ch, gg->gi, kk->kh, nn->ng, pp->ph, qq->qu, tt->th)
         if self.config.quick_telex && matches!(self.config.method, InputMethod::Telex | InputMethod::Auto | InputMethod::SimpleTelex) {
-            if let Some(&last_ch) = self.current_word.chars().collect::<Vec<char>>().last() {
+            if let Some(last_ch) = self.current_word.chars().next_back() {
                 if last_ch.eq_ignore_ascii_case(&ch) && ch.is_ascii_alphabetic() {
                     let is_upper = last_ch.is_ascii_uppercase() || ch.is_ascii_uppercase();
                     let pair_rep = match ch.to_ascii_lowercase() {
@@ -2388,7 +2390,7 @@ impl Engine {
         if self.config.quick_end_consonant && matches!(self.config.method, InputMethod::Telex | InputMethod::Auto) {
             let has_vowel = self.current_word.chars().any(crate::telex::is_vietnamese_vowel);
             if has_vowel {
-                if let Some(&last_ch) = self.current_word.chars().collect::<Vec<char>>().last() {
+                if let Some(last_ch) = self.current_word.chars().next_back() {
                     if crate::telex::is_vietnamese_vowel(last_ch) {
                         let is_upper = ch.is_ascii_uppercase();
                         let final_rep = match ch.to_ascii_lowercase() {
