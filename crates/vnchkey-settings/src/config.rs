@@ -59,10 +59,16 @@ pub struct VnchkeyConfig {
     pub backspace_by_syllable: bool,
     #[serde(default)]
     pub macro_preview: bool,
+    #[serde(default = "default_proper_nouns_list")]
+    pub proper_nouns_list: Vec<String>,
 }
 
 fn default_true() -> bool {
     true
+}
+
+fn default_proper_nouns_list() -> Vec<String> {
+    vec![]
 }
 
 impl Default for VnchkeyConfig {
@@ -111,6 +117,7 @@ impl Default for VnchkeyConfig {
             auto_capitalize_proper_nouns: false,
             backspace_by_syllable: false,
             macro_preview: false,
+            proper_nouns_list: vec![],
         }
     }
 }

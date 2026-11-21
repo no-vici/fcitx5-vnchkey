@@ -102,6 +102,10 @@ pub struct EngineConfig {
     pub auto_space_after_punctuation: bool,
     /// Auto-capitalize proper nouns from a curated list (e.g. `Việt Nam`, `Hà Nội`, `Sài Gòn`, `OpenAI`, `GitHub`). Defaults to false (opt-in).
     pub auto_capitalize_proper_nouns: bool,
+    /// Danh sách từ riêng do user định nghĩa (chữ thường). Danh sách rỗng nghĩa tính năng tắt.
+    /// Ví dụ: ["hanoi", "openai", "github", "sai gon", "university"].
+    /// List này được tải từ JSON config (vnchkey-settings) và cập nhật động qua Settings UI.
+    pub proper_nouns_list: Vec<String>,
     /// Sentence Momentum: preserve English for ambiguous collision words after English anchor words (e.g. `the tree`, `he must see this room`). Defaults to false (opt-in).
     pub sentence_momentum: bool,
     /// Math Context: preserve English for ambiguous collision words after math function anchors (e.g. `sin and cos`, `tan or cos`). Defaults to false (opt-in).
@@ -137,6 +141,7 @@ impl Default for EngineConfig {
             allow_vietnamese_in_backtick: false,
             auto_space_after_punctuation: false,
             auto_capitalize_proper_nouns: false,
+            proper_nouns_list: vec![],
             backspace_by_syllable: false,
             sentence_momentum: false,
             math_context: false,
@@ -785,6 +790,16 @@ impl Engine {
     /// Returns whether Auto-capitalize proper nouns is enabled.
     pub fn auto_capitalize_proper_nouns(&self) -> bool {
         self.config.auto_capitalize_proper_nouns
+    }
+
+    /// Enables or disables Macro preview (preedit hint when typing macro trigger).
+    pub fn set_macro_preview(&mut self, enabled: bool) {
+        self.config.macro_preview = enabled;
+    }
+
+    /// Returns whether Macro preview is enabled.
+    pub fn macro_preview(&self) -> bool {
+        self.config.macro_preview
     }
 
     /// Enables or disables Backspace xóa cả âm tiết.
@@ -1965,11 +1980,17 @@ impl Engine {
             let completed_word_done = self.current_word.clone();
 
             // Auto-capitalize proper nouns (opt-in, default OFF)
+            // Sử dụng danh sách từ được user định nghĩa qua config (proper_nouns_list).
+            // List rỗng nghĩa là tính năng tắt (không tự viết hoa bất kỳ từ nào).
             if self.config.auto_capitalize_proper_nouns
                 && !completed_word_done.is_empty()
             {
                 let lc = completed_word_done.to_lowercase();
-                if lc == "hanoi" || lc == "openai" || lc == "github"
+                if self
+                    .config
+                    .proper_nouns_list
+                    .iter()
+                    .any(|s| s.to_lowercase() == lc)
                 {
                     let mut chars: Vec<char> = completed_word_done.chars().collect();
                     if let Some(c) = chars.first_mut() {

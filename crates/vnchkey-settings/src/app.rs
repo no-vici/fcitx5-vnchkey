@@ -1731,6 +1731,38 @@ impl SettingsApp {
                 }
             });
 
+        // Hiển thị và nhập danh sách từ riêng cho auto-capitalize
+        let mut nouns_list_str = self.config.proper_nouns_list.join(", ");
+        ui.horizontal(|ui| {
+            let list_text = egui::TextEdit::multiline(&mut nouns_list_str)
+                .hint_text("Nhập từ riêng phân cách dấu phẩy (ví dụ: hanoi, openai, github)")
+                .desired_width(300.0)
+                .font(egui::FontId::proportional(12.0));
+            ui.add(list_text);
+        });
+        if ui.button("Lưu từ riêng").clicked() {
+            let input = self.config.proper_nouns_list.join(", ");
+            let new_words: Vec<String> = input
+                .split(',')
+                .map(|s| s.trim().to_lowercase())
+                .filter(|s| !s.is_empty())
+                .collect();
+            if new_words.is_empty() {
+                self.status_message = Some(("Vui lòng nhập ít nhất 1 từ!".to_string(), false));
+            } else {
+                // Merge với list cũ (tránh duplicate)
+                let mut existing = self.config.proper_nouns_list.clone();
+                for w in &new_words {
+                    if !existing.iter().any(|e| e == w) {
+                        existing.push(w.clone());
+                    }
+                }
+                self.config.proper_nouns_list = existing;
+                self.status_message = Some((format!("Đã thêm {} từ mới!", new_words.len()), true));
+            }
+        }
+        ui.add_space(4.0);
+        ui.label(format!("Danh sách đang có: {} từ", self.config.proper_nouns_list.len()));
         ui.add_space(12.0);
 
         ui.horizontal(|ui| {
@@ -2178,7 +2210,6 @@ impl SettingsApp {
 
             ui.add_space(20.0);
             ui.separator();
-            ui.add_space(12.0);
 
             // Credits
             ui.label(
