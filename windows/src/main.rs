@@ -609,6 +609,10 @@ mod win_app {
                             let val = v == "true" || v == "1";
                             st.engine.set_backspace_by_syllable(val);
                         }
+                        "macro_preview" => {
+                            let val = v == "true" || v == "1";
+                            st.engine.set_macro_preview(val);
+                        }
                         "per_app" => {
                             st.per_app = v == "true" || v == "1";
                         }
@@ -660,6 +664,7 @@ mod win_app {
              auto_space_after_punctuation={}\n\
              auto_capitalize_proper_nouns={}\n\
              backspace_by_syllable={}\n\
+             macro_preview={}\n\
              per_app={}\n\
              ctrl={}\n\
              shift={}\n\

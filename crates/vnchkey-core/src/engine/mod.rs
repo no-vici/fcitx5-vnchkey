@@ -68,6 +68,8 @@ pub struct EngineConfig {
     pub bracket_transform: bool,
     /// Enable macro expansions
     pub enable_macro: bool,
+    /// Hiển thị gợi ý macro (preedit hint) khi gõ trigger macro. Mặc định TẮT.
+    pub macro_preview: bool,
     /// Idle keystroke timeout in milliseconds (0 = disabled, default = 0ms)
     pub idle_timeout_ms: u64,
     /// Hardware key debounce filter in milliseconds (0 = disabled, default = 0ms)
@@ -138,6 +140,7 @@ impl Default for EngineConfig {
             backspace_by_syllable: false,
             sentence_momentum: false,
             math_context: false,
+            macro_preview: false,
         }
     }
 }
@@ -282,6 +285,7 @@ pub struct Engine {
     english_locked: bool,
     last_completed_word: Option<String>,
     last_macro: Option<LastMacroExpansion>,
+    pending_macro_preview: Option<PendingMacroPreview>,
     suppressed_macro: Option<String>,
     reopen_history: std::collections::VecDeque<ReopenWordState>,
     deleted_accented_candidate: Option<(String, String)>,
@@ -337,6 +341,14 @@ pub struct LastMacroExpansion {
     pub delimiter: char,
     /// The current undo stage
     pub stage: MacroUndoStage,
+}
+
+#[derive(Debug, Clone)]
+pub struct PendingMacroPreview {
+    /// The trigger keystroke that started the preview (e.g. "vn")
+    pub trigger: String,
+    /// The expansion that will be shown as hint (e.g. "Việt Nam")
+    pub expansion: String,
 }
 
 /// Returns whether a punctuation mark should snap directly to the preceding word
@@ -560,6 +572,7 @@ impl Engine {
             english_locked: false,
             last_completed_word: None,
             last_macro: None,
+            pending_macro_preview: None,
             suppressed_macro: None,
             reopen_history: std::collections::VecDeque::with_capacity(16),
             deleted_accented_candidate: None,
@@ -1774,6 +1787,13 @@ impl Engine {
                             stage: MacroUndoStage::Expanded,
                         });
                         self.last_completed_word = Some(target);
+                        // If macro preview is enabled, store the preview state for the addon to display a hint
+                        if self.config.macro_preview {
+                            self.pending_macro_preview = Some(PendingMacroPreview {
+                                trigger: self.current_word.clone(),
+                                expansion: expansion.clone(),
+                            });
+                        }
                         return EngineOutput {
                             backspaces,
                             commit_text,
