@@ -57,6 +57,8 @@ mod win_app {
     const ID_TOGGLE_BRACKET: usize = 1033;
     const ID_TOGGLE_CASE_ANCHOR: usize = 1065;
     const ID_TOGGLE_DEV_MODE: usize = 1066;
+    const ID_TOGGLE_SENTENCE_MOMENTUM: usize = 1067;
+    const ID_TOGGLE_MATH_CONTEXT: usize = 1068;
     const ID_TOGGLE_MACRO: usize = 1034;
     const ID_TOGGLE_DICT: usize = 1035;
     const ID_TOGGLE_HABIT_LEARNING: usize = 1053;
@@ -587,6 +589,14 @@ mod win_app {
                             let val = v != "false" && v != "0";
                             st.engine.set_developer_mode(val);
                         }
+                        "sentence_momentum" => {
+                            let val = v == "true" || v == "1";
+                            st.engine.set_sentence_momentum(val);
+                        }
+                        "math_context" => {
+                            let val = v == "true" || v == "1";
+                            st.engine.set_math_context(val);
+                        }
                         "per_app" => {
                             st.per_app = v == "true" || v == "1";
                         }
@@ -633,6 +643,8 @@ mod win_app {
              initial_case_anchor={}\n\
              developer_mode={}\n\
              allow_vietnamese_in_backtick={}\n\
+             sentence_momentum={}\n\
+             math_context={}\n\
              per_app={}\n\
              ctrl={}\n\
              shift={}\n\
@@ -663,6 +675,8 @@ mod win_app {
             st.engine.initial_case_anchor(),
             st.engine.developer_mode(),
             st.engine.allow_vietnamese_in_backtick(),
+            st.engine.sentence_momentum(),
+            st.engine.math_context(),
             st.per_app,
             st.shortcut.ctrl, st.shortcut.shift, st.shortcut.alt, st.shortcut.win, st.shortcut.key_code,
             st.flip_shortcut.ctrl, st.flip_shortcut.shift, st.flip_shortcut.alt, st.flip_shortcut.win, st.flip_shortcut.key_code,
@@ -2240,7 +2254,7 @@ Start-Process -FilePath $batch -WindowStyle Hidden;
         AppendMenuW(menu, MF_SEPARATOR, 0, null_mut());
 
         // 5. Tính năng thông minh Checkboxes
-        let (quick_telex, quick_start, quick_end, dev_mode) = STATE.with(|s| {
+        let (quick_telex, quick_start, quick_end, dev_mode, sentence_momentum, math_context) = STATE.with(|s| {
             s.try_borrow()
                 .ok()
                 .map(|st| {
@@ -2249,9 +2263,11 @@ Start-Process -FilePath $batch -WindowStyle Hidden;
                         st.engine.quick_start_consonant(),
                         st.engine.quick_end_consonant(),
                         st.engine.developer_mode(),
+                        st.engine.sentence_momentum(),
+                        st.engine.math_context(),
                     )
                 })
-                .unwrap_or((false, false, false, true))
+                .unwrap_or((false, false, false, true, false, false))
         });
 
         AppendMenuW(
@@ -2289,6 +2305,18 @@ Start-Process -FilePath $batch -WindowStyle Hidden;
             MF_STRING | if dev_mode { MF_CHECKED } else { 0 },
             ID_TOGGLE_DEV_MODE,
             to_wstring("Chế độ Code (Tự ngắt dấu trong `code`)").as_ptr(),
+        );
+        AppendMenuW(
+            menu,
+            MF_STRING | if sentence_momentum { MF_CHECKED } else { 0 },
+            ID_TOGGLE_SENTENCE_MOMENTUM,
+            to_wstring("Sentence Momentum (giữ tiếng Anh trong câu song ngữ)").as_ptr(),
+        );
+        AppendMenuW(
+            menu,
+            MF_STRING | if math_context { MF_CHECKED } else { 0 },
+            ID_TOGGLE_MATH_CONTEXT,
+            to_wstring("Math Context (giữ tiếng Anh sau sin/cos/tan)").as_ptr(),
         );
 
         // Tùy chọn Tốc ký
@@ -2704,6 +2732,16 @@ Start-Process -FilePath $batch -WindowStyle Hidden;
                         ID_TOGGLE_DEV_MODE => {
                             let val = !st.engine.developer_mode();
                             st.engine.set_developer_mode(val);
+                            save_app_config(&st);
+                        }
+                        ID_TOGGLE_SENTENCE_MOMENTUM => {
+                            let val = !st.engine.sentence_momentum();
+                            st.engine.set_sentence_momentum(val);
+                            save_app_config(&st);
+                        }
+                        ID_TOGGLE_MATH_CONTEXT => {
+                            let val = !st.engine.math_context();
+                            st.engine.set_math_context(val);
                             save_app_config(&st);
                         }
                         ID_TOGGLE_QUICK_TELEX => {

@@ -33,6 +33,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     private var dashDictCheckbox: NSButton?
     private var dashOpenAtLoginCheckbox: NSButton?
     private var dashPerAppCheckbox: NSButton?
+    private var dashSentenceMomentumCheckbox: NSButton?
+    private var dashMathContextCheckbox: NSButton?
 
     // Biến instance giữ reference tới CLI IPC server
     private var ipcServer: VnchKeyIPCServer?
@@ -162,6 +164,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         let devModeVal = defaults.object(forKey: "vnchkey.developerMode") != nil ? defaults.bool(forKey: "vnchkey.developerMode") : true
         km.setDeveloperMode(devModeVal)
         km.setAllowVietnameseInBacktick(defaults.bool(forKey: "vnchkey.allowVietnameseInBacktick"))
+        km.setSentenceMomentum(defaults.bool(forKey: "vnchkey.sentenceMomentum"))
+        km.setMathContext(defaults.bool(forKey: "vnchkey.mathContext"))
         km.setW2U(UInt32(defaults.integer(forKey: "vnchkey.w2u")))
         km.setIdleTimeout(UInt64(defaults.integer(forKey: "vnchkey.idleTimeout")))
         km.setQuickTelex(defaults.bool(forKey: "vnchkey.quick_telex"))
@@ -333,6 +337,14 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         let allowBacktickItem = NSMenuItem(title: "Cho phép gõ Tiếng Việt trong `backtick` / ```code```", action: #selector(toggleAllowVietnameseInBacktick(_:)), keyEquivalent: "")
         allowBacktickItem.state = km.getAllowVietnameseInBacktick() ? .on : .off
         menu.addItem(allowBacktickItem)
+
+        let sentenceMomentumItem = NSMenuItem(title: "Sentence Momentum (giữ tiếng Anh trong câu song ngữ)", action: #selector(toggleSentenceMomentum(_:)), keyEquivalent: "")
+        sentenceMomentumItem.state = km.getSentenceMomentum() ? .on : .off
+        menu.addItem(sentenceMomentumItem)
+
+        let mathContextItem = NSMenuItem(title: "Math Context (giữ tiếng Anh sau sin/cos/tan)", action: #selector(toggleMathContext(_:)), keyEquivalent: "")
+        mathContextItem.state = km.getMathContext() ? .on : .off
+        menu.addItem(mathContextItem)
 
         // Menu con: Tùy chọn Tốc ký (Quick Consonants)
         let quickMenu = NSMenu()
@@ -650,6 +662,24 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         syncDashboardControls()
     }
 
+    @objc func toggleSentenceMomentum(_ sender: NSMenuItem) {
+        guard let km = keyManager else { return }
+        let next = !km.getSentenceMomentum()
+        defaults.set(next, forKey: "vnchkey.sentenceMomentum")
+        km.setSentenceMomentum(next)
+        rebuildMenu()
+        syncDashboardControls()
+    }
+
+    @objc func toggleMathContext(_ sender: NSMenuItem) {
+        guard let km = keyManager else { return }
+        let next = !km.getMathContext()
+        defaults.set(next, forKey: "vnchkey.mathContext")
+        km.setMathContext(next)
+        rebuildMenu()
+        syncDashboardControls()
+    }
+
     @objc func toggleMacro(_ sender: NSMenuItem) {
         guard let km = keyManager else { return }
         let next = !km.getMacroEnabled()
@@ -740,6 +770,16 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         perAppCheck.frame = NSRect(x: 230, y: 162, width: 230, height: 22)
         generalBox.addSubview(perAppCheck)
         self.dashPerAppCheckbox = perAppCheck
+
+        let sentenceMomentumCheck = NSButton(checkboxWithTitle: "Sentence Momentum (giữ tiếng Anh trong câu song ngữ)", target: self, action: #selector(dashToggleSentenceMomentum(_:)))
+        sentenceMomentumCheck.frame = NSRect(x: 16, y: 138, width: 230, height: 22)
+        generalBox.addSubview(sentenceMomentumCheck)
+        self.dashSentenceMomentumCheckbox = sentenceMomentumCheck
+
+        let mathContextCheck = NSButton(checkboxWithTitle: "Math Context (giữ tiếng Anh sau sin/cos/tan)", target: self, action: #selector(dashToggleMathContext(_:)))
+        mathContextCheck.frame = NSRect(x: 230, y: 138, width: 250, height: 22)
+        generalBox.addSubview(mathContextCheck)
+        self.dashMathContextCheckbox = mathContextCheck
 
         let methodLabel = NSTextField(labelWithString: "Kiểu gõ:")
         methodLabel.frame = NSRect(x: 16, y: 130, width: 150, height: 20)
@@ -975,6 +1015,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         dashDictCheckbox?.state = km.getDictionaryEnabled() ? .on : .off
         dashOpenAtLoginCheckbox?.state = isOpenAtLoginEnabled() ? .on : .off
         dashPerAppCheckbox?.state = isPerAppEnabled() ? .on : .off
+        dashSentenceMomentumCheckbox?.state = km.getSentenceMomentum() ? .on : .off
+        dashMathContextCheckbox?.state = km.getMathContext() ? .on : .off
     }
 
     @objc func dashToggleEnabled(_ sender: NSButton) {
@@ -1627,6 +1669,24 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     @objc func dashPerAppChanged(_ sender: NSButton) {
         let next = (sender.state == .on)
         defaults.set(next, forKey: "vnchkey.perApp")
+        rebuildMenu()
+        syncDashboardControls()
+    }
+
+    @objc func dashToggleSentenceMomentum(_ sender: NSButton) {
+        guard let km = keyManager else { return }
+        let next = (sender.state == .on)
+        defaults.set(next, forKey: "vnchkey.sentenceMomentum")
+        km.setSentenceMomentum(next)
+        rebuildMenu()
+        syncDashboardControls()
+    }
+
+    @objc func dashToggleMathContext(_ sender: NSButton) {
+        guard let km = keyManager else { return }
+        let next = (sender.state == .on)
+        defaults.set(next, forKey: "vnchkey.mathContext")
+        km.setMathContext(next)
         rebuildMenu()
         syncDashboardControls()
     }

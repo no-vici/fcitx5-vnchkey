@@ -976,6 +976,8 @@
             enable_dictionary: true,
             enable_macro: true,
             developer_mode: true,
+            sentence_momentum: true,
+            math_context: true,
             ..EngineConfig::default()
         });
 
@@ -1099,4 +1101,38 @@
                 let _ = engine.process_key(ch, 0.0);
             }
         }
+    }
+
+    #[test]
+    fn test_sentence_momentum_math_context_optional() {
+        // Default OFF: d9a4 -> đã (no trap)
+        let mut engine_off = Engine::new(EngineConfig {
+            method: InputMethod::Vni,
+            ..EngineConfig::default()
+        });
+        assert_eq!(type_word(&mut engine_off, "d9a4 "), "đã ");
+
+        // Default OFF: bilingual collisions resolve to Vietnamese
+        let mut engine_off2 = Engine::new(EngineConfig {
+            method: InputMethod::Telex,
+            ..EngineConfig::default()
+        });
+        assert_eq!(type_word(&mut engine_off2, "the tree "), "the trê ");
+        assert_eq!(type_word(&mut engine_off2, "sin and cos "), "sin and có ");
+
+        // ON: preserve English collision after anchor
+        let mut engine_on = Engine::new(EngineConfig {
+            method: InputMethod::Telex,
+            sentence_momentum: true,
+            ..EngineConfig::default()
+        });
+        assert_eq!(type_word(&mut engine_on, "the tree "), "the tree ");
+
+        // Math context ON
+        let mut engine_math = Engine::new(EngineConfig {
+            method: InputMethod::Telex,
+            math_context: true,
+            ..EngineConfig::default()
+        });
+        assert_eq!(type_word(&mut engine_math, "sin and cos "), "sin and cos ");
     }

@@ -152,6 +152,8 @@ private:
     bool config_initial_case_anchor_ = false;
     bool config_developer_mode_ = true;
     bool config_allow_vietnamese_in_backtick_ = false;
+    bool config_sentence_momentum_ = false;
+    bool config_math_context_ = false;
     bool config_learn_typing_habits_ = true;
     uint32_t config_habit_promote_threshold_ = 0;
 

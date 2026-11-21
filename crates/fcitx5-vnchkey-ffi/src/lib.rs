@@ -1,4 +1,5 @@
 //! C ABI Bridge for Fcitx5 Addon Integration.
+#![allow(clippy::missing_safety_doc)]
 
 use std::ffi::{CStr, CString};
 use std::os::raw::{c_char, c_int};
@@ -801,6 +802,64 @@ pub unsafe extern "C" fn fcitx5_vnchkey_get_allow_vietnamese_in_backtick(
 ) -> bool {
     if !ctx.is_null() {
         (*ctx).engine.allow_vietnamese_in_backtick()
+    } else {
+        false
+    }
+}
+
+/// Enables or disables Sentence Momentum.
+///
+/// # Safety
+/// `ctx` must be a valid pointer returned by `fcitx5_vnchkey_init` or null.
+#[no_mangle]
+pub unsafe extern "C" fn fcitx5_vnchkey_set_sentence_momentum(
+    ctx: *mut Fcitx5VnchkeyContext,
+    enabled: bool,
+) {
+    if !ctx.is_null() {
+        (*ctx).engine.set_sentence_momentum(enabled);
+    }
+}
+
+/// Returns whether Sentence Momentum is enabled.
+///
+/// # Safety
+/// `ctx` must be a valid pointer returned by `fcitx5_vnchkey_init` or null.
+#[no_mangle]
+pub unsafe extern "C" fn fcitx5_vnchkey_get_sentence_momentum(
+    ctx: *const Fcitx5VnchkeyContext,
+) -> bool {
+    if !ctx.is_null() {
+        (*ctx).engine.sentence_momentum()
+    } else {
+        false
+    }
+}
+
+/// Enables or disables Math Context.
+///
+/// # Safety
+/// `ctx` must be a valid pointer returned by `fcitx5_vnchkey_init` or null.
+#[no_mangle]
+pub unsafe extern "C" fn fcitx5_vnchkey_set_math_context(
+    ctx: *mut Fcitx5VnchkeyContext,
+    enabled: bool,
+) {
+    if !ctx.is_null() {
+        (*ctx).engine.set_math_context(enabled);
+    }
+}
+
+/// Returns whether Math Context is enabled.
+///
+/// # Safety
+/// `ctx` must be a valid pointer returned by `fcitx5_vnchkey_init` or null.
+#[no_mangle]
+pub unsafe extern "C" fn fcitx5_vnchkey_get_math_context(
+    ctx: *const Fcitx5VnchkeyContext,
+) -> bool {
+    if !ctx.is_null() {
+        (*ctx).engine.math_context()
     } else {
         false
     }

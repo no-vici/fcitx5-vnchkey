@@ -192,6 +192,8 @@ Kế thừa thuật toán từ điển tĩnh từ **GoNhanh**:
 - Khi gõ các từ vựng lập trình hoặc Tiếng Anh phổ biến (`text`, `post`, `struct`, `general`, `filter`, `return`, `window`, `user`...):
 - Khi vừa hoàn thành từ (bằng phím Space hoặc dấu câu), engine nhận diện từ không phải Tiếng Việt hoặc trùng với từ điển Tiếng Anh và lập tức khôi phục về dạng ký tự thô nguyên bản.
 
+> **Lưu ý — Sentence Momentum & Math Context (mặc định TẮT):** Tính năng bảo vệ từ tiếng Anh va chạm trong câu song ngữ (`the tree`, `he must see this room`) và sau hàm toán (`sin and cos`, `tan or cos`) **mặc định TẮT**. Bật lên trong Cài Đặt nếu bạn thường gõ bilingual. Nếu gặp khó gõ `đế`, `để`, `đó`, `đã`… hãy tắt lại.
+
 ---
 
 ### 3.6. Chế Độ Gõ Đa Năng: Auto, Telex, VNI

@@ -206,5 +206,3 @@ if matching.len() == 1 {
 - **P1:** atomic write macros/dict/app_modes; SmallVec.
 - **P2:** extract_last_syllable_index; parity VNI `6`.
 - **P3:** tách module engine; docs API.
-path">
-/home/codegpt/antigravity/vnchKey/docs/CORE_HARDENING_AND_PERF_PATCH_IDEAS.md

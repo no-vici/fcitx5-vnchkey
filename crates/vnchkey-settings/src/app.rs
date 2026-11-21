@@ -761,6 +761,18 @@ impl SettingsApp {
         ui.add_space(6.0);
 
         ui.checkbox(
+            &mut self.config.sentence_momentum,
+            "Sentence Momentum: Giữ nguyên từ Tiếng Anh va chạm trong câu song ngữ (the tree, he must see this room). Mặc định TẮT — có thể gây khó gõ đế/để/đó/đã, tắt nếu gặp vấn đề.",
+        );
+        ui.add_space(6.0);
+
+        ui.checkbox(
+            &mut self.config.math_context,
+            "Math Context: Giữ nguyên từ Tiếng Anh va chạm sau hàm toán (sin and cos, tan or cos). Mặc định TẮT.",
+        );
+        ui.add_space(6.0);
+
+        ui.checkbox(
             &mut self.config.free_marking,
             "Cho phép bỏ dấu tự do trên bất kỳ nguyên âm nào",
         );
@@ -1459,7 +1471,7 @@ impl SettingsApp {
         {
             "Direct".to_string()
         } else {
-            "Direct".to_string()
+            "Default".to_string()
         }
     }
 

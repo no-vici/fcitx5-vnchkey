@@ -47,6 +47,10 @@ pub struct VnchkeyConfig {
     #[serde(default = "default_true")]
     pub developer_mode: bool,
     pub allow_vietnamese_in_backtick: bool,
+    #[serde(default)]
+    pub sentence_momentum: bool,
+    #[serde(default)]
+    pub math_context: bool,
 }
 
 fn default_true() -> bool {
@@ -93,6 +97,8 @@ impl Default for VnchkeyConfig {
             initial_case_anchor: false,
             developer_mode: true,
             allow_vietnamese_in_backtick: false,
+            sentence_momentum: false,
+            math_context: false,
         }
     }
 }
@@ -236,6 +242,8 @@ impl ConfigManager {
             if let Some(v) = map.get("InitialCaseAnchor") { cfg.initial_case_anchor = v.eq_ignore_ascii_case("true"); }
             if let Some(v) = map.get("DeveloperMode") { cfg.developer_mode = v.eq_ignore_ascii_case("true"); }
             if let Some(v) = map.get("AllowVietnameseInBacktick") { cfg.allow_vietnamese_in_backtick = v.eq_ignore_ascii_case("true"); }
+            if let Some(v) = map.get("SentenceMomentum") { cfg.sentence_momentum = v.eq_ignore_ascii_case("true"); }
+            if let Some(v) = map.get("MathContext") { cfg.math_context = v.eq_ignore_ascii_case("true"); }
         }
 
         cfg
@@ -287,6 +295,8 @@ impl ConfigManager {
         lines.push(format!("HabitPromoteThreshold={}", cfg.habit_promote_threshold));
         lines.push(format!("DeveloperMode={}", if cfg.developer_mode { "True" } else { "False" }));
         lines.push(format!("AllowVietnameseInBacktick={}", if cfg.allow_vietnamese_in_backtick { "True" } else { "False" }));
+        lines.push(format!("SentenceMomentum={}", if cfg.sentence_momentum { "True" } else { "False" }));
+        lines.push(format!("MathContext={}", if cfg.math_context { "True" } else { "False" }));
 
         Self::atomic_write(&Self::conf_path(), &(lines.join("\n") + "\n"))?;
         Self::reload_fcitx5();
@@ -331,7 +341,7 @@ impl ConfigManager {
                     Some(p)
                 } else if let Some(p) = line.split_once(':') {
                     Some(p)
-                } else { line.split_once(';').map(|p| p) };
+                } else { line.split_once(';') };
                 if let Some((k, v)) = pair {
                     let key = k.trim().to_string();
                     let norm = key.to_lowercase();

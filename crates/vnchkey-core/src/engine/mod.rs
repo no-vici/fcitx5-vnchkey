@@ -94,6 +94,10 @@ pub struct EngineConfig {
     pub developer_mode: bool,
     /// Allow typing Vietnamese inside Markdown backticks (`` ` ``) and fenced code blocks (```` ``` ````).
     pub allow_vietnamese_in_backtick: bool,
+    /// Sentence Momentum: preserve English for ambiguous collision words after English anchor words (e.g. `the tree`, `he must see this room`). Defaults to false (opt-in).
+    pub sentence_momentum: bool,
+    /// Math Context: preserve English for ambiguous collision words after math function anchors (e.g. `sin and cos`, `tan or cos`). Defaults to false (opt-in).
+    pub math_context: bool,
 }
 
 impl Default for EngineConfig {
@@ -123,6 +127,8 @@ impl Default for EngineConfig {
             acronym_bypass: true,
             developer_mode: true,
             allow_vietnamese_in_backtick: false,
+            sentence_momentum: false,
+            math_context: false,
         }
     }
 }
@@ -717,6 +723,33 @@ impl Engine {
         self.config.allow_vietnamese_in_backtick
     }
 
+    /// Enables or disables Sentence Momentum (preserve English for ambiguous collision words after English anchor words).
+    pub fn set_sentence_momentum(&mut self, enabled: bool) {
+        self.config.sentence_momentum = enabled;
+        if !enabled {
+            self.in_english_context = false;
+            self.prev_word_was_english = false;
+        }
+    }
+
+    /// Returns whether Sentence Momentum is enabled.
+    pub fn sentence_momentum(&self) -> bool {
+        self.config.sentence_momentum
+    }
+
+    /// Enables or disables Math Context (preserve English for ambiguous collision words after math function anchors).
+    pub fn set_math_context(&mut self, enabled: bool) {
+        self.config.math_context = enabled;
+        if !enabled {
+            self.math_context_words_remaining = 0;
+        }
+    }
+
+    /// Returns whether Math Context is enabled.
+    pub fn math_context(&self) -> bool {
+        self.config.math_context
+    }
+
     /// Returns a compact live-inspector snapshot of the current engine state and syllable breakdown.
     pub fn inspect_state(&self) -> String {
         let syllable_info = if let Some(p) = crate::syllable_parser::parse_syllable(&self.current_word) {
@@ -857,27 +890,34 @@ impl Engine {
         let final_lower = final_word.to_lowercase();
         let is_anchor = !has_non_ascii && is_english_context_anchor(raw_lower);
 
-        if !has_non_ascii && is_math_function_anchor(raw_lower) {
-            self.math_context_words_remaining = 4;
-        } else if has_non_ascii {
-            self.math_context_words_remaining = 0;
-        } else if self.math_context_words_remaining > 0 {
-            let is_joiner = matches!(raw_lower, "and" | "or" | "plus" | "minus");
-            if is_joiner {
-                self.math_context_words_remaining -= 1;
-            } else {
+        if self.config.math_context {
+            if !has_non_ascii && is_math_function_anchor(raw_lower) {
+                self.math_context_words_remaining = 4;
+            } else if has_non_ascii {
                 self.math_context_words_remaining = 0;
+            } else if self.math_context_words_remaining > 0 {
+                let is_joiner = matches!(raw_lower, "and" | "or" | "plus" | "minus");
+                if is_joiner {
+                    self.math_context_words_remaining -= 1;
+                } else {
+                    self.math_context_words_remaining = 0;
+                }
             }
+        } else {
+            self.math_context_words_remaining = 0;
         }
 
         if has_non_ascii || is_vietnamese_context_reset(&final_lower) {
             self.in_english_context = false;
             self.in_vietnamese_context = true;
             self.prev_word_was_english = false;
-        } else if is_anchor {
+        } else if is_anchor && self.config.sentence_momentum {
             self.in_english_context = true;
             self.in_vietnamese_context = false;
             self.prev_word_was_english = true;
+        } else if !self.config.sentence_momentum {
+            self.in_english_context = false;
+            self.prev_word_was_english = was_english_restore || self.auto_restore.is_english_keyword(raw_lower);
         } else { self.prev_word_was_english = was_english_restore || self.auto_restore.is_english_keyword(raw_lower); }
     }
 
@@ -1703,11 +1743,13 @@ impl Engine {
                     && !self.manual_undo
                     && self.current_word != self.raw_strokes
                     && matches!(raw_lower.as_str(), "os" | "sys" | "io" | "fs" | "db" | "re");
-                let math_context_collision = self.math_context_words_remaining > 0
+                let math_context_collision = self.config.math_context
+                    && self.math_context_words_remaining > 0
                     && !self.manual_undo
                     && self.current_word != self.raw_strokes
                     && raw_lower == "cos";
-                let sentence_momentum_collision = self.in_english_context
+                let sentence_momentum_collision = self.config.sentence_momentum
+                    && self.in_english_context
                     && !self.manual_undo
                     && self.current_word != self.raw_strokes
                     && is_context_english_collision_word(&raw_lower);

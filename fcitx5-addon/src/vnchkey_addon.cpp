@@ -957,6 +957,10 @@ void VnchkeyEngine::loadConfig() {
                 config_developer_mode_ = (line.find("False") == std::string::npos && line.find("false") == std::string::npos);
             } else if (line.rfind("AllowVietnameseInBacktick=", 0) == 0) {
                 config_allow_vietnamese_in_backtick_ = (line.find("True") != std::string::npos || line.find("true") != std::string::npos);
+            } else if (line.rfind("SentenceMomentum=", 0) == 0) {
+                config_sentence_momentum_ = (line.find("True") != std::string::npos || line.find("true") != std::string::npos);
+            } else if (line.rfind("MathContext=", 0) == 0) {
+                config_math_context_ = (line.find("True") != std::string::npos || line.find("true") != std::string::npos);
             } else if (line.rfind("LearnTypingHabits=", 0) == 0) {
                 config_learn_typing_habits_ = (line.find("False") == std::string::npos && line.find("false") == std::string::npos);
             } else if (line.rfind("HabitPromoteThreshold=", 0) == 0) {
@@ -995,6 +999,8 @@ void VnchkeyEngine::loadConfig() {
         fcitx5_vnchkey_set_initial_case_anchor(ctx, config_initial_case_anchor_);
         fcitx5_vnchkey_set_developer_mode(ctx, config_developer_mode_);
         fcitx5_vnchkey_set_allow_vietnamese_in_backtick(ctx, config_allow_vietnamese_in_backtick_);
+        fcitx5_vnchkey_set_sentence_momentum(ctx, config_sentence_momentum_);
+        fcitx5_vnchkey_set_math_context(ctx, config_math_context_);
         fcitx5_vnchkey_set_habit_learning_enabled(ctx, config_learn_typing_habits_);
         fcitx5_vnchkey_set_habit_promote_threshold(ctx, config_habit_promote_threshold_);
     }
@@ -1039,6 +1045,8 @@ void VnchkeyEngine::saveConfig() {
                     l.rfind("InitialCaseAnchor=", 0) != 0 &&
                     l.rfind("DeveloperMode=", 0) != 0 &&
                     l.rfind("AllowVietnameseInBacktick=", 0) != 0 &&
+                    l.rfind("SentenceMomentum=", 0) != 0 &&
+                    l.rfind("MathContext=", 0) != 0 &&
                     l.rfind("LearnTypingHabits=", 0) != 0 &&
                     l.rfind("HabitPromoteThreshold=", 0) != 0) {
                     lines.push_back(l);
@@ -1076,6 +1084,8 @@ void VnchkeyEngine::saveConfig() {
         out << "InitialCaseAnchor=" << (config_initial_case_anchor_ ? "True" : "False") << "\n";
         out << "DeveloperMode=" << (config_developer_mode_ ? "True" : "False") << "\n";
         out << "AllowVietnameseInBacktick=" << (config_allow_vietnamese_in_backtick_ ? "True" : "False") << "\n";
+        out << "SentenceMomentum=" << (config_sentence_momentum_ ? "True" : "False") << "\n";
+        out << "MathContext=" << (config_math_context_ ? "True" : "False") << "\n";
         out << "LearnTypingHabits=" << (config_learn_typing_habits_ ? "True" : "False") << "\n";
         out << "HabitPromoteThreshold=" << config_habit_promote_threshold_ << "\n";
     }
