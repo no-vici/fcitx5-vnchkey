@@ -184,6 +184,7 @@ Tích hợp sẵn danh mục ~6.750 từ đơn gốc Tiếng Việt và bộ lu�
   - `thuo` + râu $\to$ `thuơ` (cho từ `thuở`).
   - `quon` / `quo` + râu $\to$ `quơn` / `quơ` (cho từ `quởn`, `quỡn`, `quơ tay`, chữ `u` sau `q` không bao giờ biến thành `ư`).
   - `huo` + râu $\to$ `huơ` (cho từ `huơ tay`, `huơ dao`).
+- **Từ Điển Tiếng Việt Cá Nhân (`UserVietnameseWords`)**: Cho phép thêm từ lóng/từ riêng; các từ này được coi là hợp lệ kể cả khi bật **Kiểm tra Chánh Tả**. Settings hỗ trợ **Gộp preset phương ngữ** (`presets/vietnamese-dialect-user-dict.txt`) và **Nhập từ file...** (merge chuẩn hóa, dedup, không ghi đè). Preset/user dict không làm thay đổi built-in dict/bloom.
 
 ---
 

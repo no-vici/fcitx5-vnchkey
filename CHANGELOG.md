@@ -12,6 +12,10 @@ Tất cả những thay đổi nổi bật của dự án **vnchKey** (**fcitx5-
 - **Từ Điển Tiếng Việt Cá Nhân (`UserVietnameseWords`)**:
   - Cho phép người dùng tự do thêm từ lóng / từ cá nhân; các từ này luôn được coi là hợp lệ kể cả khi bật **Kiểm tra Chánh Tả** (`spell_check`).
   - Hỗ trợ lưu/đọc config và UI nhập liệu trên cả 3 nền tảng (Linux, Windows, macOS) cùng FFI `fcitx5_vnchkey_set_user_vietnamese_words`.
+  - **Preset + Import/Merge trong Settings**: thêm `presets/vietnamese-dialect-user-dict.txt` (preset phương ngữ/từ bổ sung) và nút **Gộp preset phương ngữ** / **Nhập từ file...**; merge chuẩn hóa lowercase, bỏ comment `#`, dedup, không ghi đè entry cũ.
+
+### 🐛 Sửa Lỗi & Audit
+- **User Vietnamese Dict có hiệu lực đầy đủ trong core**: audit các đường dùng `is_in_vietnamese_dictionary`/validation — `auto_restore`, fuzzy vowel resolver (`uo/ươ`...), elongated word check, và digit-restore spell check giờ đều tôn trọng `UserVietnameseWords`. Không merge vào built-in dict/bloom; preset được quản lý qua user dict.
 
 ### ⚡ Tối Ưu Hiệu Năng & Bộ Nhớ (`vnchkey-core`, `vnchkey-settings`)
 - Loại bỏ cấp phát `Vec<char>` và `String` tạm không cần thiết ở hot-path trong `process_key` (`chars().next_back()`, `Vec::with_capacity` thay cho `format!` + `collect`).
