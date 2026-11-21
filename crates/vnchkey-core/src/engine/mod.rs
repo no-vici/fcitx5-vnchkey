@@ -7,6 +7,7 @@ use crate::macros::MacroTable;
 pub use crate::telex::W2UType;
 use crate::telex::{
     extract_last_syllable_index, has_vietnamese_diacritic, is_valid_elongated_vietnamese_word,
+    is_valid_elongated_vietnamese_word_with_user_dict,
     is_valid_in_progress_syllable, is_valid_vietnamese_syllable, TelexEngine,
 };
 use crate::vietnamese_dict::{has_phonology_violation, is_in_vietnamese_dictionary};
@@ -210,7 +211,11 @@ impl TypingStats {
 
 /// Thử suy luận dấu mũ/móc bị thiếu trên các vần trung gian duy nhất của tiếng Việt
 /// khi người dùng bật `smart_fuzzy_vowel`.
-fn try_resolve_fuzzy_intermediate_vowel(word: &str, tone_style: ToneStyle) -> Option<String> {
+fn try_resolve_fuzzy_intermediate_vowel(
+    word: &str,
+    tone_style: ToneStyle,
+    user_vietnamese_words: &std::collections::HashSet<String>,
+) -> Option<String> {
     let mut parsed = crate::syllable_parser::parse_syllable(word)?;
     if parsed.tone == crate::syllable_parser::ToneMark::None {
         return None;
@@ -263,7 +268,9 @@ fn try_resolve_fuzzy_intermediate_vowel(word: &str, tone_style: ToneStyle) -> Op
 
     parsed.nucleus = resolved_nucleus;
     let candidate = parsed.reconstruct(tone_style);
-    if is_in_vietnamese_dictionary(&candidate) {
+    if is_in_vietnamese_dictionary(&candidate)
+        || user_vietnamese_words.contains(&candidate.to_lowercase())
+    {
         Some(candidate)
     } else {
         None
@@ -1861,14 +1868,21 @@ impl Engine {
                 // (e.g. intermediate forms like 'duong2' -> 'duòng ' where the user hit Space before adding the 2nd accent).
                 // Valid Vietnamese words formed with digits (e.g. gio72 -> giờ, duoc975 -> được) are never restored.
                 let has_digits = self.raw_strokes.chars().any(|c| c.is_ascii_digit());
-                let is_elongated_vn = is_valid_elongated_vietnamese_word(&self.current_word);
+                let is_elongated_vn = is_valid_elongated_vietnamese_word_with_user_dict(
+                    &self.current_word,
+                    &self.user_vietnamese_words,
+                );
                 let is_user_vn_word = self.is_user_vietnamese_word(&self.current_word);
                 let is_invalid_syllable = !is_elongated_vn && !is_user_vn_word && !is_valid_vietnamese_syllable(&self.current_word);
                 // Always try dict-guarded fuzzy vowel resolution for invalid syllables.
                 // This safely fixes common unambiguous cases like nuoc1->nước, nguoi2->người
                 // even when smart_fuzzy_vowel is OFF.
                 if ch == ' ' && is_invalid_syllable && !self.manual_undo {
-                    if let Some(resolved) = try_resolve_fuzzy_intermediate_vowel(&self.current_word, self.config.tone_style) {
+                    if let Some(resolved) = try_resolve_fuzzy_intermediate_vowel(
+                        &self.current_word,
+                        self.config.tone_style,
+                        &self.user_vietnamese_words,
+                    ) {
                         let target = format!("{}{}", resolved, ch);
                         let formatted_old = self.format_commit(&self.current_word);
                         let formatted_target = self.format_commit(&target);
@@ -1943,6 +1957,7 @@ impl Engine {
                             &self.current_word,
                             true,
                             self.config.acronym_bypass,
+                            &self.user_vietnamese_words,
                         );
                     // Invalid intermediate syllables (duòng, tién, nuóc) MUST auto-restore on Space even if auto_restore_english is false.
                     let english_or_spell_restore = is_known_english
@@ -2250,7 +2265,7 @@ impl Engine {
                                 && (self.auto_restore.is_english_keyword(&self.raw_strokes)
                                     || has_phonology_violation(&self.current_word)
                                     || (self.config.spell_check
-                                        && !is_in_vietnamese_dictionary(&self.current_word)))));
+                                        && !self.is_in_any_vietnamese_dictionary(&self.current_word)))));
                     self.raw_strokes.push(ch);
                     if should_restore_before_digit {
                         self.current_word = self.raw_strokes.clone();
@@ -2287,7 +2302,7 @@ impl Engine {
                                     && (self.auto_restore.is_english_keyword(&self.raw_strokes)
                                         || has_phonology_violation(&self.current_word)
                                         || (self.config.spell_check
-                                            && !is_in_vietnamese_dictionary(&self.current_word)))));
+                                            && !self.is_in_any_vietnamese_dictionary(&self.current_word)))));
                         if should_restore_before_digit {
                             self.raw_strokes.push(ch);
                             self.current_word = self.raw_strokes.clone();
@@ -2485,7 +2500,11 @@ impl Engine {
             has_digits || self.word_used_vni || self.config.method == InputMethod::Vni;
         let has_diacritic = has_vietnamese_diacritic(&new_word);
         let new_chars: Vec<char> = new_word.chars().collect();
-        let is_elongated_vn = has_diacritic && is_valid_elongated_vietnamese_word(&new_word);
+        let is_elongated_vn = has_diacritic
+            && is_valid_elongated_vietnamese_word_with_user_dict(
+                &new_word,
+                &self.user_vietnamese_words,
+            );
         let invalid_structure = has_diacritic
             && !is_elongated_vn
             && (!is_valid_in_progress_syllable(&new_chars) || has_phonology_violation(&new_word));
@@ -2505,6 +2524,7 @@ impl Engine {
                     &new_word,
                     true,
                     false,
+                    &self.user_vietnamese_words,
                 );
 
         if !self.manual_undo

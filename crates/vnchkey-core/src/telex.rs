@@ -1183,6 +1183,16 @@ pub fn extract_last_syllable_index(word: &str) -> usize {
 /// (e.g. `ừaaa`, `ờaaa`, `mưaaaa`, `trờiiii`, `ừeee`, `nhéeee`, `điiiii`),
 /// where the trailing identical plain ASCII vowels (`a`, `e`, `i`, `o`, `u`, `y`) repeat the final vowel of a valid accented Vietnamese stem.
 pub fn is_valid_elongated_vietnamese_word(word: &str) -> bool {
+    static EMPTY: std::sync::OnceLock<std::collections::HashSet<String>> = std::sync::OnceLock::new();
+    let empty = EMPTY.get_or_init(std::collections::HashSet::new);
+    is_valid_elongated_vietnamese_word_with_user_dict(word, empty)
+}
+
+/// Like [`is_valid_elongated_vietnamese_word`] but also accepts stems in the user's Vietnamese dictionary.
+pub fn is_valid_elongated_vietnamese_word_with_user_dict(
+    word: &str,
+    user_vietnamese_words: &std::collections::HashSet<String>,
+) -> bool {
     let chars: Vec<char> = word.chars().collect();
     if chars.len() < 3 {
         return false;
@@ -1216,7 +1226,8 @@ pub fn is_valid_elongated_vietnamese_word(word: &str) -> bool {
                 || c == 'Đ'
                 || matches!(decompose_vowel(c), Some(('ă' | 'â' | 'ê' | 'ô' | 'ơ' | 'ư', _, _)))
         });
-        let stem_in_dict = crate::vietnamese_dict::is_in_vietnamese_dictionary(&stem);
+        let stem_in_dict = crate::vietnamese_dict::is_in_vietnamese_dictionary(&stem)
+            || user_vietnamese_words.contains(&stem.to_lowercase());
         let stem_valid_horned = has_horn_or_stroke && is_valid_vietnamese_syllable(&stem);
         if stem_in_dict || stem_valid_horned {
             return true;

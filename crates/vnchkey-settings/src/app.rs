@@ -20,6 +20,23 @@ pub enum TabPage {
     About,
 }
 
+fn merge_user_vietnamese_words(existing: &mut Vec<String>, content: &str) -> (usize, usize) {
+    let mut seen: std::collections::HashSet<String> = existing.iter().cloned().collect();
+    let mut added = 0usize;
+    for raw in content.split(|c: char| c == ',' || c == ';' || c == '\n' || c == '\r') {
+        let word = raw.trim();
+        if word.is_empty() || word.starts_with('#') {
+            continue;
+        }
+        let normalized = word.to_lowercase();
+        if seen.insert(normalized.clone()) {
+            existing.push(normalized);
+            added += 1;
+        }
+    }
+    (added, existing.len())
+}
+
 pub struct SettingsApp {
     current_page: TabPage,
     config: VnchkeyConfig,
@@ -1792,7 +1809,41 @@ impl SettingsApp {
                 .filter(|s| !s.is_empty())
                 .collect();
         }
-        ui.label(format!("Danh sách đang có: {} từ", self.config.proper_nouns_list.len()));
+        ui.horizontal(|ui| {
+            if ui.button("Gộp preset phương ngữ").clicked() {
+                const PRESET: &str = include_str!("../../../presets/vietnamese-dialect-user-dict.txt");
+                let (added, total) = merge_user_vietnamese_words(&mut self.config.user_vietnamese_words, PRESET);
+                self.status_message = Some((
+                    format!("Đã gộp preset phương ngữ: +{} từ mới (tổng {}).", added, total),
+                    true,
+                ));
+            }
+            if ui.button("Nhập từ file...").clicked() {
+                if let Some(path) = rfd::FileDialog::new()
+                    .add_filter("Text", &["txt", "csv", "list"])
+                    .pick_file()
+                {
+                    match std::fs::read_to_string(&path) {
+                        Ok(content) => {
+                            let (added, total) = merge_user_vietnamese_words(&mut self.config.user_vietnamese_words, &content);
+                            self.status_message = Some((
+                                format!(
+                                    "Đã nhập {}: +{} từ mới (tổng {}).",
+                                    path.file_name().unwrap_or_default().to_string_lossy(),
+                                    added,
+                                    total
+                                ),
+                                true,
+                            ));
+                        }
+                        Err(e) => {
+                            self.status_message = Some((format!("Lỗi đọc file: {}", e), false));
+                        }
+                    }
+                }
+            }
+        });
+        ui.label(format!("Danh sách đang có: {} từ", self.config.user_vietnamese_words.len()));
         ui.add_space(12.0);
 
         ui.horizontal(|ui| {

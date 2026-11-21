@@ -253,16 +253,19 @@ impl EnglishAutoRestore {
     /// Determines if `current_word` (transformed from `raw_strokes`) should be restored
     /// to `raw_strokes` based on the User Dictionary and Built-in Vietnamese Dictionary.
     pub fn should_restore(&self, raw_strokes: &str, current_word: &str, use_dictionary: bool) -> bool {
-        self.should_restore_with_options(raw_strokes, current_word, use_dictionary, true)
+        static EMPTY: std::sync::OnceLock<std::collections::HashSet<String>> = std::sync::OnceLock::new();
+        let empty = EMPTY.get_or_init(std::collections::HashSet::new);
+        self.should_restore_with_options(raw_strokes, current_word, use_dictionary, true, empty)
     }
 
-    /// Extended `should_restore` with explicit `acronym_bypass` toggle.
+    /// Extended `should_restore` with explicit `acronym_bypass` toggle and user Vietnamese words.
     pub fn should_restore_with_options(
         &self,
         raw_strokes: &str,
         current_word: &str,
         use_dictionary: bool,
         acronym_bypass: bool,
+        user_vietnamese_words: &std::collections::HashSet<String>,
     ) -> bool {
         let raw_trimmed = raw_strokes.trim();
         let cur_trimmed = current_word.trim();
@@ -283,14 +286,18 @@ impl EnglishAutoRestore {
                         && raw_trimmed.len() <= 5
                         && raw_trimmed.chars().all(|c| c.is_ascii_uppercase())
                         && raw_trimmed != cur_trimmed;
-                    if is_all_caps_acronym && !is_in_vietnamese_dictionary(cur_clean) {
+                    if is_all_caps_acronym
+                        && !is_in_vietnamese_dictionary(cur_clean)
+                        && !user_vietnamese_words.contains(cur_clean)
+                    {
                         return true;
                     }
                 }
 
                 // Rule 2: Protect common Vietnamese collision words ("this" -> "thí", "these" -> "thế", "there" -> "thể")
                 if VIETNAMESE_COLLISION_EXCEPTIONS.contains(&raw_clean)
-                    && is_in_vietnamese_dictionary(cur_clean)
+                    && (is_in_vietnamese_dictionary(cur_clean)
+                        || user_vietnamese_words.contains(cur_clean))
                 {
                     return false;
                 }
@@ -298,10 +305,14 @@ impl EnglishAutoRestore {
                 // Rule 3: If User Dictionary is enabled and raw_strokes is in the English/User dictionary:
                 // - Restore if raw_strokes is >= 4 chars (e.g. "text", "post", "cost", "user", "window", "linux")
                 // - Or restore if the resulting 2-3 letter word is NOT in the Vietnamese dictionary (e.g. "fix" -> "fĩ", "web" -> "ưeb", "yes" -> "ýe")
-                if use_dictionary && self.keywords.contains(raw_clean)
-                    && (raw_clean.len() >= 4 || !is_in_vietnamese_dictionary(cur_clean)) {
-                        return true;
-                    }
+                if use_dictionary
+                    && self.keywords.contains(raw_clean)
+                    && (raw_clean.len() >= 4
+                        || !(is_in_vietnamese_dictionary(cur_clean)
+                            || user_vietnamese_words.contains(cur_clean)))
+                {
+                    return true;
+                }
 
                 false
             })
