@@ -6,7 +6,7 @@ use crate::habit_learner::{CorrectionKind, HabitLearner};
 use crate::macros::MacroTable;
 pub use crate::telex::W2UType;
 use crate::telex::{
-    extract_last_syllable_index, has_vietnamese_diacritic, is_valid_elongated_vietnamese_word,
+    extract_last_syllable_index, has_vietnamese_diacritic,
     is_valid_elongated_vietnamese_word_with_user_dict,
     is_valid_in_progress_syllable, is_valid_vietnamese_syllable, TelexEngine,
 };
