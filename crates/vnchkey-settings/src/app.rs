@@ -1795,20 +1795,25 @@ impl SettingsApp {
                 .weak(),
         );
         let mut vn_words_str = self.config.user_vietnamese_words.join(", ");
-        let resp = ui.add(
-            egui::TextEdit::multiline(&mut vn_words_str)
-                .hint_text("Nhập từ lóng / từ cá nhân phân cách dấu phẩy (ví dụ: xịn, dzui, oke, lỏd)")
-                .desired_width(360.0)
-                .desired_rows(2)
-                .font(egui::FontId::proportional(12.0)),
-        );
-        if resp.changed() {
-            self.config.user_vietnamese_words = vn_words_str
-                .split(|c| c == ',' || c == '\n' || c == ';')
-                .map(|s| s.trim().to_lowercase())
-                .filter(|s| !s.is_empty())
-                .collect();
-        }
+        egui::ScrollArea::vertical()
+            .id_salt("user_vn_words_scroll")
+            .max_height(140.0)
+            .show(ui, |ui| {
+                let resp = ui.add(
+                    egui::TextEdit::multiline(&mut vn_words_str)
+                        .hint_text("Nhập từ lóng / từ cá nhân phân cách dấu phẩy (ví dụ: xịn, dzui, oke, lỏd)")
+                        .desired_width(f32::INFINITY)
+                        .desired_rows(3)
+                        .font(egui::FontId::proportional(12.0)),
+                );
+                if resp.changed() {
+                    self.config.user_vietnamese_words = vn_words_str
+                        .split(|c| c == ',' || c == '\n' || c == ';')
+                        .map(|s| s.trim().to_lowercase())
+                        .filter(|s| !s.is_empty())
+                        .collect();
+                }
+            });
         ui.horizontal(|ui| {
             if ui.button("Gộp preset phương ngữ").clicked() {
                 const PRESET: &str = include_str!("../../../presets/vietnamese-dialect-user-dict.txt");
