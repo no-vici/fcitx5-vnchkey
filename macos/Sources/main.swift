@@ -711,6 +711,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         alert.messageText = "Từ điển Tiếng Việt cá nhân"
         alert.informativeText = "Nhập các từ lóng hoặc từ riêng (phân cách bằng dấu phẩy). Các từ này sẽ luôn hợp lệ kể cả khi bật Kiểm tra Chánh Tả."
         alert.addButton(withTitle: "Lưu")
+        alert.addButton(withTitle: "Gộp preset phương ngữ")
         alert.addButton(withTitle: "Hủy")
 
         let input = NSTextField(frame: NSRect(x: 0, y: 0, width: 320, height: 24))
@@ -718,8 +719,61 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         input.placeholderString = "Ví dụ: xịn, dzui, oke, lỏd"
         alert.accessoryView = input
 
-        if alert.runModal() == .alertFirstButtonReturn {
+        let response = alert.runModal()
+        if response == .alertFirstButtonReturn {
             let val = input.stringValue.trimmingCharacters(in: .whitespacesAndNewlines)
+            defaults.set(val, forKey: "vnchkey.userVietnameseWords")
+            km.setUserVietnameseWords(val)
+        } else if response == .alertSecondButtonReturn {
+            let preset = [
+                "bạm", "bẳng", "bậng", "bệu", "bín", "bíp", "bót", "bựa", "bửng", "bớn",
+                "cà", "càm", "cẳng", "cẳn", "chảnh", "chành", "chát", "chấu", "chậy", "chém",
+                "chếp", "chệt", "chĩa", "chịec", "chịn", "choác", "choại", "chỏi", "chổi", "chỏng",
+                "chộn", "chớn", "chủm", "chuỗi", "chựng", "cộ", "cọc", "cọp", "cù", "cùi",
+                "cún", "cưng", "cuông", "cược", "dàm", "dấm", "dãn", "dảnh", "dăm", "dẩu",
+                "dây", "dềnh", "dém", "dệ", "dên", "dền", "dết", "dí", "dĩn", "dọ",
+                "doàng", "doạng", "dóng", "dỗ", "dổm", "dộp", "dợm", "dơn", "dớn", "dợn",
+                "dũa", "dụi", "duộc", "duối", "duồn", "dụt", "dứng", "dướn", "đăm", "đé",
+                "đẹt", "đìa", "điềm", "điop", "điot", "đoác", "đỏng", "đơ", "đuềnh", "đũi",
+                "đụi", "đuông", "đuống", "đứ", "đừ", "gại", "gánh", "gắt", "gày", "gay",
+                "gấy", "gầy", "ghệch", "ghềnh", "ghém", "ghín", "ghính", "ghít", "ghịt", "giam",
+                "giặm", "giáy", "giắc", "giầm", "giấn", "gioàng", "gioăng", "giốc", "giỗi", "giới",
+                "go", "guộn", "guột", "hảnh", "háp", "hảy", "hãm", "hẩm", "hễm", "hễ",
+                "hớ", "hoãng", "hoáng", "hờm", "hỡm", "hủ", "hụ", "hùi", "huốt", "hườm",
+                "hỷ", "hý", "kèo", "kên", "kênh", "khạp", "khẩm", "khẩn", "khềnh", "khịa",
+                "khín", "khịu", "khó", "khoặm", "khỏe", "khòn", "khới", "khùa", "khứa", "khuy",
+                "khụy", "kiếng", "kiôt", "kính", "lạng", "layơn", "lẩu", "lày", "lậy", "lẹo",
+                "lía", "lích", "liệc", "lỉnh", "loã", "lõa", "loá", "loán", "lọp", "lố",
+                "lũa", "lủm", "luột", "luý", "luých", "luýt", "lựa", "lươn", "mám", "mayô",
+                "mậm", "mần", "mẩu", "mậy", "méc", "mẹc", "miếng", "míu", "mlem", "móp",
+                "mọp", "mội", "mớn", "mủm", "muồng", "mụt", "mưng", "mừng", "mược", "mưỡu",
+                "nảo", "nắn", "nấn", "nấy", "nêông", "nệp", "ngán", "ngáng", "ngánh", "ngáo",
+                "ngặt", "nghẽ", "nghệ", "nghệt", "ngoạch", "ngoáp", "ngoạp", "ngoẻm", "ngoém", "ngoẻo",
+                "ngoẹo", "ngộp", "ngù", "ngúm", "ngún", "nguội", "nhại", "nhão", "nhào", "nhàu",
+                "nhảy", "nhẩy", "nhể", "nhếch", "nhệch", "nhễu", "nhóc", "nhòng", "nhội", "nhốp",
+                "nhời", "nhờm", "nhỡn", "nhúi", "nhuồn", "nhướn", "nị", "nòm", "nóp", "nôen",
+                "nổng", "nốp", "nứng", "oáp", "pẹc", "phang", "phé", "phèn", "phít", "phôn",
+                "phốt", "phởn", "phùa", "phủng", "phụp", "pích", "píp", "pít", "quạu", "quạng",
+                "quắc", "quến", "quẹo", "quích", "quới", "quờn", "quớt", "quých", "quỵp", "quỷu",
+                "rá", "rạ", "rạm", "rặc", "rặm", "rặn", "rêm", "rén", "riểu", "rím",
+                "rìn", "rĩn", "rịu", "ròn", "rọn", "rỏng", "rốn", "rộn", "rớp", "rớ",
+                "ruê", "rủi", "rụm", "rụp", "rút", "rựng", "rương", "sạc", "sâng", "sấy",
+                "sên", "sẹp", "sệp", "sều", "siếc", "sò", "sộc", "sú", "sượng", "tào",
+                "tầu", "tẹc", "tèm", "téo", "thẹo", "thấy", "thính", "thuội", "thửng", "thười",
+                "thưởng", "toá", "toang", "tở", "tởn", "trạn", "tranh", "trạt", "trấm", "trấu",
+                "trét", "tríu", "trỗi", "trỏng", "trộng", "trốt", "trớt", "trờm", "truồi", "trừu",
+                "túa", "tuồi", "tuýp", "tỳ", "tý", "uầy", "vái", "vãi", "vảnh", "vẹc",
+                "xài", "xải", "xàm", "xạm", "xáng", "xạo", "xập", "xất", "xầu", "xệ",
+                "xém", "xéo", "xìa", "xịn", "xín", "xỉn", "xịt", "xò", "xoạt", "xoắn",
+                "xớ", "xớn", "xụi", "xuộm", "xự", "xừng", "xượt", "dzui", "oke", "lỏd"
+            ]
+            let existing = input.stringValue
+                .split { $0 == "," || $0 == "\n" || $0 == ";" }
+                .map { $0.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() }
+                .filter { !$0.isEmpty }
+            var merged = Array(Set(existing + preset))
+            merged.sort()
+            let val = merged.joined(separator: ", ")
             defaults.set(val, forKey: "vnchkey.userVietnameseWords")
             km.setUserVietnameseWords(val)
         }
