@@ -92,6 +92,7 @@ mod win_app {
     const ID_OPEN_MACROS: usize = 1050;
     const ID_OPEN_DICT: usize = 1051;
     const ID_RELOAD_FILES: usize = 1052;
+    const ID_OPEN_SETTINGS: usize = 1069;
 
     type HANDLE = *mut std::ffi::c_void;
     const WM_APP_RELOAD_MACROS: u32 = 0x8002;
@@ -835,6 +836,21 @@ mod win_app {
 
     fn open_file_in_notepad(path: PathBuf) {
         let _ = Command::new("notepad.exe").arg(path).spawn();
+    }
+
+    fn open_settings_panel() {
+        if let Ok(exe_path) = std::env::current_exe() {
+            if let Some(exe_dir) = exe_path.parent() {
+                for name in ["vnchkey-settings.exe", "vnchkey-settings"] {
+                    let candidate = exe_dir.join(name);
+                    if candidate.exists() {
+                        let _ = Command::new(candidate).spawn();
+                        return;
+                    }
+                }
+            }
+        }
+        let _ = Command::new("vnchkey-settings.exe").spawn();
     }
 
     const IDC_EDIT_SHORTCUT: i32 = 101;
@@ -2385,6 +2401,13 @@ Start-Process -FilePath $batch -WindowStyle Hidden;
         // 6. Gõ Tắt & Từ Điển
         AppendMenuW(
             menu,
+            MF_STRING,
+            ID_OPEN_SETTINGS,
+            to_wstring("Mở Bảng Điều Khiển...").as_ptr(),
+        );
+        AppendMenuW(menu, MF_SEPARATOR, 0, null_mut());
+        AppendMenuW(
+            menu,
             MF_STRING | if macro_en { MF_CHECKED } else { 0 },
             ID_TOGGLE_MACRO,
             to_wstring("Bật Gõ Tắt (Macro)").as_ptr(),
@@ -2813,6 +2836,9 @@ Start-Process -FilePath $batch -WindowStyle Hidden;
                         }
                         ID_RELOAD_FILES => {
                             reload_files(&mut st.engine);
+                        }
+                        ID_OPEN_SETTINGS => {
+                            open_settings_panel();
                         }
                         ID_TOGGLE_HABIT_LEARNING => {
                             let val = !st.engine.habit_learning_enabled();
