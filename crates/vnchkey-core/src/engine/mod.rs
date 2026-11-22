@@ -2044,6 +2044,9 @@ impl Engine {
 
             let completed_word_done = self.current_word.clone();
 
+            let orig_word_before_proper = completed_word_done.clone();
+            let mut proper_noun_capitalized = false;
+
             // Auto-capitalize proper nouns (opt-in, default OFF)
             // Sử dụng danh sách từ được user định nghĩa qua config (proper_nouns_list).
             // List rỗng nghĩa là tính năng tắt (không tự viết hoa bất kỳ từ nào).
@@ -2059,9 +2062,13 @@ impl Engine {
                 {
                     let mut chars: Vec<char> = completed_word_done.chars().collect();
                     if let Some(c) = chars.first_mut() {
-                        *c = c.to_ascii_uppercase();
+                        *c = c.to_uppercase().next().unwrap_or(*c);
                     }
-                    self.current_word = chars.into_iter().collect();
+                    let capitalized: String = chars.into_iter().collect();
+                    if capitalized != completed_word_done {
+                        self.current_word = capitalized;
+                        proper_noun_capitalized = true;
+                    }
                 }
             }
 
@@ -2072,6 +2079,30 @@ impl Engine {
             let was_english_locked_done = self.english_locked;
             let raw_target = format!("{}{}", self.current_word, ch);
             let formatted_target = self.format_commit(&raw_target);
+            if proper_noun_capitalized {
+                let formatted_old = self.format_commit(&orig_word_before_proper);
+                let (backspaces, commit_text) =
+                    compare_and_split_strings(&formatted_old, &formatted_target);
+                self.update_sentence_context_after_word(
+                    &raw_lower_done,
+                    &completed_word_done,
+                    was_english_locked_done,
+                    ch,
+                );
+                self.reset_word_buffers();
+                self.preceded_by_tech_delimiter = next_tech_delim;
+                self.preceded_by_leading_slash = next_leading_slash;
+                self.stats.words_typed += 1;
+                self.last_completed_word = Some(raw_target);
+                return EngineOutput {
+                    backspaces,
+                    commit_text,
+                    consumed: true,
+                    auto_restored: false,
+                    macro_expanded: false,
+                    adaptive_delay_ms: 0,
+                };
+            }
             if ch == ' ' && has_word && self.raw_strokes.len() <= 32 {
                 if self.reopen_history.len() >= 16 {
                     self.reopen_history.pop_front();
