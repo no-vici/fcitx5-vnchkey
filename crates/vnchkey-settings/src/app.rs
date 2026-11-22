@@ -1785,7 +1785,10 @@ impl SettingsApp {
                 const PRESET: &str = include_str!("../../../presets/vietnamese-dialect-user-dict.txt");
                 let (added, total) = merge_user_vietnamese_words(&mut self.config.user_vietnamese_words, PRESET);
                 self.status_message = Some((
-                    format!("Đã gộp preset phương ngữ: +{} từ mới (tổng {}).", added, total),
+                    format!(
+                        "Đã gộp preset phương ngữ: +{} từ mới (tổng {}). Nhớ bấm Lưu & Áp dụng để có hiệu lực.",
+                        added, total
+                    ),
                     true,
                 ));
             }
@@ -1799,7 +1802,7 @@ impl SettingsApp {
                             let (added, total) = merge_user_vietnamese_words(&mut self.config.user_vietnamese_words, &content);
                             self.status_message = Some((
                                 format!(
-                                    "Đã nhập {}: +{} từ mới (tổng {}).",
+                                    "Đã nhập {}: +{} từ mới (tổng {}). Nhớ bấm Lưu & Áp dụng để có hiệu lực.",
                                     path.file_name().unwrap_or_default().to_string_lossy(),
                                     added,
                                     total
