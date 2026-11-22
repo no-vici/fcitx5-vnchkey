@@ -33,8 +33,6 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     private var dashDictCheckbox: NSButton?
     private var dashOpenAtLoginCheckbox: NSButton?
     private var dashPerAppCheckbox: NSButton?
-    private var dashSentenceMomentumCheckbox: NSButton?
-    private var dashMathContextCheckbox: NSButton?
 
     // Biến instance giữ reference tới CLI IPC server
     private var ipcServer: VnchKeyIPCServer?
@@ -810,16 +808,6 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         generalBox.addSubview(perAppCheck)
         self.dashPerAppCheckbox = perAppCheck
 
-        let sentenceMomentumCheck = NSButton(checkboxWithTitle: "Sentence Momentum (giữ tiếng Anh trong câu song ngữ)", target: self, action: #selector(dashToggleSentenceMomentum(_:)))
-        sentenceMomentumCheck.frame = NSRect(x: 16, y: 138, width: 230, height: 22)
-        generalBox.addSubview(sentenceMomentumCheck)
-        self.dashSentenceMomentumCheckbox = sentenceMomentumCheck
-
-        let mathContextCheck = NSButton(checkboxWithTitle: "Math Context (giữ tiếng Anh sau sin/cos/tan)", target: self, action: #selector(dashToggleMathContext(_:)))
-        mathContextCheck.frame = NSRect(x: 230, y: 138, width: 250, height: 22)
-        generalBox.addSubview(mathContextCheck)
-        self.dashMathContextCheckbox = mathContextCheck
-
         let methodLabel = NSTextField(labelWithString: "Kiểu gõ:")
         methodLabel.frame = NSRect(x: 16, y: 130, width: 150, height: 20)
         generalBox.addSubview(methodLabel)
@@ -1054,8 +1042,6 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         dashDictCheckbox?.state = km.getDictionaryEnabled() ? .on : .off
         dashOpenAtLoginCheckbox?.state = isOpenAtLoginEnabled() ? .on : .off
         dashPerAppCheckbox?.state = isPerAppEnabled() ? .on : .off
-        dashSentenceMomentumCheckbox?.state = km.getSentenceMomentum() ? .on : .off
-        dashMathContextCheckbox?.state = km.getMathContext() ? .on : .off
     }
 
     @objc func dashToggleEnabled(_ sender: NSButton) {
@@ -1708,24 +1694,6 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     @objc func dashPerAppChanged(_ sender: NSButton) {
         let next = (sender.state == .on)
         defaults.set(next, forKey: "vnchkey.perApp")
-        rebuildMenu()
-        syncDashboardControls()
-    }
-
-    @objc func dashToggleSentenceMomentum(_ sender: NSButton) {
-        guard let km = keyManager else { return }
-        let next = (sender.state == .on)
-        defaults.set(next, forKey: "vnchkey.sentenceMomentum")
-        km.setSentenceMomentum(next)
-        rebuildMenu()
-        syncDashboardControls()
-    }
-
-    @objc func dashToggleMathContext(_ sender: NSButton) {
-        guard let km = keyManager else { return }
-        let next = (sender.state == .on)
-        defaults.set(next, forKey: "vnchkey.mathContext")
-        km.setMathContext(next)
         rebuildMenu()
         syncDashboardControls()
     }
