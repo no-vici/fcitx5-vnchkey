@@ -830,6 +830,15 @@ impl Engine {
         self.config.auto_capitalize_proper_nouns = enabled;
     }
 
+    /// Sets the custom proper-nouns list used when `auto_capitalize_proper_nouns` is enabled.
+    pub fn set_proper_nouns_list(&mut self, words: Vec<String>) {
+        self.config.proper_nouns_list = words
+            .into_iter()
+            .map(|w| w.trim().to_lowercase())
+            .filter(|w| !w.is_empty())
+            .collect();
+    }
+
     /// Returns whether Auto-capitalize proper nouns is enabled.
     pub fn auto_capitalize_proper_nouns(&self) -> bool {
         self.config.auto_capitalize_proper_nouns

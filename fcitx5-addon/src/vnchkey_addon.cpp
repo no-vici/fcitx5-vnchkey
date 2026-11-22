@@ -965,6 +965,10 @@ void VnchkeyEngine::loadConfig() {
                 config_auto_capitalize_ = (line.find("True") != std::string::npos || line.find("true") != std::string::npos);
             } else if (line.rfind("UserVietnameseWords=", 0) == 0) {
                 config_user_vietnamese_words_ = line.substr(20);
+            } else if (line.rfind("AutoCapitalizeProperNouns=", 0) == 0) {
+                config_auto_capitalize_proper_nouns_ = (line.find("True") != std::string::npos || line.find("true") != std::string::npos);
+            } else if (line.rfind("ProperNounsList=", 0) == 0) {
+                config_proper_nouns_list_ = line.substr(16);
             } else if (line.rfind("BackspaceBySyllable=", 0) == 0 || line.rfind("backspace_by_syllable=", 0) == 0) {
                 config_backspace_by_syllable_ = (line.find("True") != std::string::npos || line.find("true") != std::string::npos);
             } else if (line.rfind("MacroPreview=", 0) == 0 || line.rfind("macro_preview=", 0) == 0) {
@@ -1011,6 +1015,8 @@ void VnchkeyEngine::loadConfig() {
         fcitx5_vnchkey_set_math_context(ctx, config_math_context_);
         fcitx5_vnchkey_set_auto_capitalize(ctx, config_auto_capitalize_);
         fcitx5_vnchkey_set_user_vietnamese_words(ctx, config_user_vietnamese_words_.c_str());
+        fcitx5_vnchkey_set_auto_capitalize_proper_nouns(ctx, config_auto_capitalize_proper_nouns_);
+        fcitx5_vnchkey_set_proper_nouns_list(ctx, config_proper_nouns_list_.c_str());
         fcitx5_vnchkey_set_backspace_by_syllable(ctx, config_backspace_by_syllable_);
         fcitx5_vnchkey_set_macro_preview(ctx, config_macro_preview_);
         fcitx5_vnchkey_set_habit_learning_enabled(ctx, config_learn_typing_habits_);
@@ -1062,6 +1068,8 @@ void VnchkeyEngine::saveConfig() {
                     l.rfind("AutoCapitalize=", 0) != 0 &&
                     l.rfind("auto_capitalize=", 0) != 0 &&
                     l.rfind("UserVietnameseWords=", 0) != 0 &&
+                    l.rfind("AutoCapitalizeProperNouns=", 0) != 0 &&
+                    l.rfind("ProperNounsList=", 0) != 0 &&
                     l.rfind("BackspaceBySyllable=", 0) != 0 &&
                     l.rfind("backspace_by_syllable=", 0) != 0 &&
                     l.rfind("MacroPreview=", 0) != 0 &&
@@ -1107,6 +1115,8 @@ void VnchkeyEngine::saveConfig() {
         out << "MathContext=" << (config_math_context_ ? "True" : "False") << "\n";
         out << "AutoCapitalize=" << (config_auto_capitalize_ ? "True" : "False") << "\n";
         out << "UserVietnameseWords=" << config_user_vietnamese_words_ << "\n";
+        out << "AutoCapitalizeProperNouns=" << (config_auto_capitalize_proper_nouns_ ? "True" : "False") << "\n";
+        out << "ProperNounsList=" << config_proper_nouns_list_ << "\n";
         out << "BackspaceBySyllable=" << (config_backspace_by_syllable_ ? "True" : "False") << "\n";
         out << "MacroPreview=" << (config_macro_preview_ ? "True" : "False") << "\n";
         out << "LearnTypingHabits=" << (config_learn_typing_habits_ ? "True" : "False") << "\n";
