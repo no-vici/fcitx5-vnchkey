@@ -3269,8 +3269,32 @@ fn add_or_update_macro_file(
 
 fn main() {
     #[cfg(windows)]
-    unsafe {
-        win_app::run();
+    {
+        let args: Vec<String> = std::env::args().collect();
+        if args.iter().any(|a| a == "--settings" || a == "-s") {
+            if let Ok(exe_path) = std::env::current_exe() {
+                if let Some(exe_dir) = exe_path.parent() {
+                    for name in [
+                        "fcitx5-vnchkey-settings.exe",
+                        "fcitx5-vnchkey-settings",
+                        "vnchkey-settings.exe",
+                        "vnchkey-settings",
+                    ] {
+                        let candidate = exe_dir.join(name);
+                        if candidate.exists() {
+                            let _ = std::process::Command::new(candidate).spawn();
+                            return;
+                        }
+                    }
+                }
+            }
+            let _ = std::process::Command::new("fcitx5-vnchkey-settings.exe").spawn();
+            return;
+        }
+
+        unsafe {
+            win_app::run();
+        }
     }
 
     #[cfg(not(windows))]
