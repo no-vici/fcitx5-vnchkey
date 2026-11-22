@@ -320,40 +320,48 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         restoreItem.state = km.getAutoRestore() ? .on : .off
         menu.addItem(restoreItem)
 
-        let escItem = NSMenuItem(title: "Hoàn nguyên từ bằng phím Esc", action: #selector(toggleEscRestore(_:)), keyEquivalent: "")
-        escItem.state = km.escRestoreEnabled ? .on : .off
-        menu.addItem(escItem)
-
-        let bracketItem = NSMenuItem(title: "Gõ [ ] thành ơ ư", action: #selector(toggleBracket(_:)), keyEquivalent: "")
-        bracketItem.state = defaults.bool(forKey: "vnchkey.bracket") ? .on : .off
-        menu.addItem(bracketItem)
-
-        let caseAnchorItem = NSMenuItem(title: "Đồng nhất chữ hoa theo chữ cái đầu (Được, được)", action: #selector(toggleCaseAnchor(_:)), keyEquivalent: "")
-        caseAnchorItem.state = defaults.bool(forKey: "vnchkey.caseAnchor") ? .on : .off
-        menu.addItem(caseAnchorItem)
-
-        let devModeItem = NSMenuItem(title: "Chế độ Code (Tự ngắt dấu trong `code`)", action: #selector(toggleDeveloperMode(_:)), keyEquivalent: "")
-        devModeItem.state = km.getDeveloperMode() ? .on : .off
-        menu.addItem(devModeItem)
-
-        let allowBacktickItem = NSMenuItem(title: "Cho phép gõ Tiếng Việt trong `backtick` / ```code```", action: #selector(toggleAllowVietnameseInBacktick(_:)), keyEquivalent: "")
-        allowBacktickItem.state = km.getAllowVietnameseInBacktick() ? .on : .off
-        menu.addItem(allowBacktickItem)
-
-        let sentenceMomentumItem = NSMenuItem(title: "Sentence Momentum (giữ tiếng Anh trong câu song ngữ)", action: #selector(toggleSentenceMomentum(_:)), keyEquivalent: "")
-        sentenceMomentumItem.state = km.getSentenceMomentum() ? .on : .off
-        menu.addItem(sentenceMomentumItem)
-
-        let mathContextItem = NSMenuItem(title: "Math Context (giữ tiếng Anh sau sin/cos/tan)", action: #selector(toggleMathContext(_:)), keyEquivalent: "")
-        mathContextItem.state = km.getMathContext() ? .on : .off
-        menu.addItem(mathContextItem)
-
         let autoCapitalizeItem = NSMenuItem(title: "Tự động viết hoa đầu câu", action: #selector(toggleAutoCapitalize(_:)), keyEquivalent: "")
         autoCapitalizeItem.state = km.getAutoCapitalize() ? .on : .off
         menu.addItem(autoCapitalizeItem)
 
         let userVnDictItem = NSMenuItem(title: "Từ điển Tiếng Việt cá nhân...", action: #selector(promptUserVietnameseWords), keyEquivalent: "")
         menu.addItem(userVnDictItem)
+
+        // Menu con: Tùy chọn nâng cao (gom gọn giống Fcitx5)
+        let advancedMenu = NSMenu()
+        let escItem = NSMenuItem(title: "Hoàn nguyên từ bằng phím Esc", action: #selector(toggleEscRestore(_:)), keyEquivalent: "")
+        escItem.state = km.escRestoreEnabled ? .on : .off
+        advancedMenu.addItem(escItem)
+
+        let bracketItem = NSMenuItem(title: "Gõ [ ] thành ơ ư", action: #selector(toggleBracket(_:)), keyEquivalent: "")
+        bracketItem.state = defaults.bool(forKey: "vnchkey.bracket") ? .on : .off
+        advancedMenu.addItem(bracketItem)
+
+        let caseAnchorItem = NSMenuItem(title: "Đồng nhất chữ hoa theo chữ cái đầu (Được, được)", action: #selector(toggleCaseAnchor(_:)), keyEquivalent: "")
+        caseAnchorItem.state = defaults.bool(forKey: "vnchkey.caseAnchor") ? .on : .off
+        advancedMenu.addItem(caseAnchorItem)
+
+        advancedMenu.addItem(NSMenuItem.separator())
+
+        let devModeItem = NSMenuItem(title: "Chế độ Code (Tự ngắt dấu trong `code`)", action: #selector(toggleDeveloperMode(_:)), keyEquivalent: "")
+        devModeItem.state = km.getDeveloperMode() ? .on : .off
+        advancedMenu.addItem(devModeItem)
+
+        let allowBacktickItem = NSMenuItem(title: "Cho phép gõ Tiếng Việt trong `backtick` / ```code```", action: #selector(toggleAllowVietnameseInBacktick(_:)), keyEquivalent: "")
+        allowBacktickItem.state = km.getAllowVietnameseInBacktick() ? .on : .off
+        advancedMenu.addItem(allowBacktickItem)
+
+        let sentenceMomentumItem = NSMenuItem(title: "Sentence Momentum (giữ tiếng Anh trong câu song ngữ)", action: #selector(toggleSentenceMomentum(_:)), keyEquivalent: "")
+        sentenceMomentumItem.state = km.getSentenceMomentum() ? .on : .off
+        advancedMenu.addItem(sentenceMomentumItem)
+
+        let mathContextItem = NSMenuItem(title: "Math Context (giữ tiếng Anh sau sin/cos/tan)", action: #selector(toggleMathContext(_:)), keyEquivalent: "")
+        mathContextItem.state = km.getMathContext() ? .on : .off
+        advancedMenu.addItem(mathContextItem)
+
+        let advancedParent = NSMenuItem(title: "Tùy chọn nâng cao...", action: nil, keyEquivalent: "")
+        advancedParent.submenu = advancedMenu
+        menu.addItem(advancedParent)
 
         // Menu con: Tùy chọn Tốc ký (Quick Consonants)
         let quickMenu = NSMenu()
