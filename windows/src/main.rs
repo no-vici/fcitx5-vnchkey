@@ -909,11 +909,11 @@ mod win_app {
     }
 
     unsafe fn set_check(hwnd: HWND, checked: bool) {
-        SendMessageW(hwnd, BM_SETCHECK, if checked { BST_CHECKED } else { 0 } as WPARAM, 0);
+        SendMessageW(hwnd, BM_SETCHECK, if checked { 1 } else { 0 } as WPARAM, 0);
     }
 
     unsafe fn get_check(hwnd: HWND) -> bool {
-        SendMessageW(hwnd, BM_GETCHECK, 0, 0) == BST_CHECKED as isize
+        SendMessageW(hwnd, BM_GETCHECK, 0, 0) == 1
     }
 
     unsafe fn combo_add(hwnd: HWND, text: &str) {
@@ -1177,7 +1177,6 @@ mod win_app {
         });
 
         ShowWindow(hwnd, SW_SHOW);
-        UpdateWindow(hwnd);
 
         let mut msg: MSG = std::mem::zeroed();
         while GetMessageW(&mut msg, null_mut(), 0, 0) > 0 {
