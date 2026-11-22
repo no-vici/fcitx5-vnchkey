@@ -841,7 +841,12 @@ mod win_app {
     fn open_settings_panel() {
         if let Ok(exe_path) = std::env::current_exe() {
             if let Some(exe_dir) = exe_path.parent() {
-                for name in ["vnchkey-settings.exe", "vnchkey-settings"] {
+                for name in [
+                    "fcitx5-vnchkey-settings.exe",
+                    "fcitx5-vnchkey-settings",
+                    "vnchkey-settings.exe",
+                    "vnchkey-settings",
+                ] {
                     let candidate = exe_dir.join(name);
                     if candidate.exists() {
                         let _ = Command::new(candidate).spawn();
@@ -850,7 +855,7 @@ mod win_app {
                 }
             }
         }
-        let _ = Command::new("vnchkey-settings.exe").spawn();
+        let _ = Command::new("fcitx5-vnchkey-settings.exe").spawn();
     }
 
     const IDC_EDIT_SHORTCUT: i32 = 101;
