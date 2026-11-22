@@ -802,12 +802,6 @@ impl SettingsApp {
         ui.add_space(6.0);
 
         ui.checkbox(
-            &mut self.config.auto_capitalize_proper_nouns,
-            "Auto-capitalize proper nouns: Viết hoa tự động các từ riêng (Việt Nam, Hà Nội, Sài Gòn, OpenAI, GitHub). Mặc định TẮT.",
-        );
-        ui.add_space(6.0);
-
-        ui.checkbox(
             &mut self.config.backspace_by_syllable,
             "Backspace xóa cả âm tiết: Nhấn Backspace để xóa toàn bộ âm tiết đang gõ thay vì từng ký tự. Mặc định TẮT.",
         );
@@ -1755,52 +1749,6 @@ impl SettingsApp {
                 }
             });
 
-        // Hiển thị và nhập danh sách từ riêng cho auto-capitalize
-        let nouns_buf_id = ui.make_persistent_id("proper_nouns_edit_buf");
-        let mut nouns_list_str = ui.data_mut(|d| {
-            d.get_temp_mut_or_insert_with(nouns_buf_id, || self.config.proper_nouns_list.join(", "))
-                .clone()
-        });
-        let resp_nouns = ui.add(
-            egui::TextEdit::multiline(&mut nouns_list_str)
-                .hint_text("Nhập từ riêng phân cách dấu phẩy (ví dụ: hanoi, openai, github)")
-                .desired_width(f32::INFINITY)
-                .desired_rows(2)
-                .font(egui::FontId::proportional(12.0)),
-        );
-        if resp_nouns.changed() {
-            ui.data_mut(|d| d.insert_temp(nouns_buf_id, nouns_list_str.clone()));
-            self.config.proper_nouns_list = nouns_list_str
-                .split(|c| c == ',' || c == '\n' || c == ';')
-                .map(|s| s.trim().to_lowercase())
-                .filter(|s| !s.is_empty())
-                .collect();
-        }
-        if ui.button("Lưu từ riêng").clicked() {
-            let input = self.config.proper_nouns_list.join(", ");
-            let new_words: Vec<String> = input
-                .split(',')
-                .map(|s| s.trim().to_lowercase())
-                .filter(|s| !s.is_empty())
-                .collect();
-            if new_words.is_empty() {
-                self.status_message = Some(("Vui lòng nhập ít nhất 1 từ!".to_string(), false));
-            } else {
-                // Merge với list cũ (tránh duplicate)
-                let mut existing = self.config.proper_nouns_list.clone();
-                for w in &new_words {
-                    if !existing.iter().any(|e| e == w) {
-                        existing.push(w.clone());
-                    }
-                }
-                self.config.proper_nouns_list = existing;
-                self.status_message = Some((format!("Đã thêm {} từ mới!", new_words.len()), true));
-            }
-        }
-        ui.add_space(4.0);
-
-        ui.separator();
-        ui.add_space(4.0);
         ui.label(egui::RichText::new("Từ điển Tiếng Việt cá nhân (từ lóng / từ riêng):").strong());
         ui.label(
             egui::RichText::new("Các từ thêm ở đây sẽ luôn được coi là hợp lệ kể cả khi bật Kiểm tra Chánh Tả.")

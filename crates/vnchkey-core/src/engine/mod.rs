@@ -101,12 +101,6 @@ pub struct EngineConfig {
     pub allow_vietnamese_in_backtick: bool,
     /// Auto-space after sentence-ending punctuation (`.`, `?`, `!`) when the previous char is a letter. Defaults to false (opt-in).
     pub auto_space_after_punctuation: bool,
-    /// Auto-capitalize proper nouns from a curated list (e.g. `Việt Nam`, `Hà Nội`, `Sài Gòn`, `OpenAI`, `GitHub`). Defaults to false (opt-in).
-    pub auto_capitalize_proper_nouns: bool,
-    /// Danh sách từ riêng do user định nghĩa (chữ thường). Danh sách rỗng nghĩa tính năng tắt.
-    /// Ví dụ: ["hanoi", "openai", "github", "sai gon", "university"].
-    /// List này được tải từ JSON config (vnchkey-settings) và cập nhật động qua Settings UI.
-    pub proper_nouns_list: Vec<String>,
     /// Sentence Momentum: preserve English for ambiguous collision words after English anchor words (e.g. `the tree`, `he must see this room`). Defaults to false (opt-in).
     pub sentence_momentum: bool,
     /// Math Context: preserve English for ambiguous collision words after math function anchors (e.g. `sin and cos`, `tan or cos`). Defaults to false (opt-in).
@@ -141,8 +135,6 @@ impl Default for EngineConfig {
             developer_mode: true,
             allow_vietnamese_in_backtick: false,
             auto_space_after_punctuation: false,
-            auto_capitalize_proper_nouns: false,
-            proper_nouns_list: vec![],
             backspace_by_syllable: false,
             sentence_momentum: false,
             math_context: false,
@@ -823,25 +815,6 @@ impl Engine {
     /// Returns whether Auto-space after sentence-ending punctuation is enabled.
     pub fn auto_space_after_punctuation(&self) -> bool {
         self.config.auto_space_after_punctuation
-    }
-
-    /// Enables or disables Auto-capitalize proper nouns from a curated list.
-    pub fn set_auto_capitalize_proper_nouns(&mut self, enabled: bool) {
-        self.config.auto_capitalize_proper_nouns = enabled;
-    }
-
-    /// Sets the custom proper-nouns list used when `auto_capitalize_proper_nouns` is enabled.
-    pub fn set_proper_nouns_list(&mut self, words: Vec<String>) {
-        self.config.proper_nouns_list = words
-            .into_iter()
-            .map(|w| w.trim().to_lowercase())
-            .filter(|w| !w.is_empty())
-            .collect();
-    }
-
-    /// Returns whether Auto-capitalize proper nouns is enabled.
-    pub fn auto_capitalize_proper_nouns(&self) -> bool {
-        self.config.auto_capitalize_proper_nouns
     }
 
     /// Enables or disables Macro preview (preedit hint when typing macro trigger).
@@ -2044,65 +2017,13 @@ impl Engine {
 
             let completed_word_done = self.current_word.clone();
 
-            let orig_word_before_proper = completed_word_done.clone();
-            let mut proper_noun_capitalized = false;
-
-            // Auto-capitalize proper nouns (opt-in, default OFF)
-            // Sử dụng danh sách từ được user định nghĩa qua config (proper_nouns_list).
-            // List rỗng nghĩa là tính năng tắt (không tự viết hoa bất kỳ từ nào).
-            if self.config.auto_capitalize_proper_nouns
-                && !completed_word_done.is_empty()
-            {
-                let lc = completed_word_done.to_lowercase();
-                if self
-                    .config
-                    .proper_nouns_list
-                    .iter()
-                    .any(|s| s.to_lowercase() == lc)
-                {
-                    let mut chars: Vec<char> = completed_word_done.chars().collect();
-                    if let Some(c) = chars.first_mut() {
-                        *c = c.to_uppercase().next().unwrap_or(*c);
-                    }
-                    let capitalized: String = chars.into_iter().collect();
-                    if capitalized != completed_word_done {
-                        self.current_word = capitalized;
-                        proper_noun_capitalized = true;
-                    }
-                }
-            }
-
             // No macro or auto-restore needed: reset word buffer and let delimiter pass through natively
             let has_word = !self.current_word.is_empty();
             let raw_lower_done = self.raw_strokes.to_lowercase();
-            let completed_word_done = self.current_word.clone(); // re-clone after possible capitalization
+            let completed_word_done = self.current_word.clone();
             let was_english_locked_done = self.english_locked;
             let raw_target = format!("{}{}", self.current_word, ch);
             let formatted_target = self.format_commit(&raw_target);
-            if proper_noun_capitalized {
-                let formatted_old = self.format_commit(&orig_word_before_proper);
-                let (backspaces, commit_text) =
-                    compare_and_split_strings(&formatted_old, &formatted_target);
-                self.update_sentence_context_after_word(
-                    &raw_lower_done,
-                    &completed_word_done,
-                    was_english_locked_done,
-                    ch,
-                );
-                self.reset_word_buffers();
-                self.preceded_by_tech_delimiter = next_tech_delim;
-                self.preceded_by_leading_slash = next_leading_slash;
-                self.stats.words_typed += 1;
-                self.last_completed_word = Some(raw_target);
-                return EngineOutput {
-                    backspaces,
-                    commit_text,
-                    consumed: true,
-                    auto_restored: false,
-                    macro_expanded: false,
-                    adaptive_delay_ms: 0,
-                };
-            }
             if ch == ' ' && has_word && self.raw_strokes.len() <= 32 {
                 if self.reopen_history.len() >= 16 {
                     self.reopen_history.pop_front();

@@ -783,36 +783,6 @@ pub unsafe extern "C" fn fcitx5_vnchkey_set_user_vietnamese_words(
     }
 }
 
-/// Enables or disables automatic proper-noun capitalization.
-#[no_mangle]
-pub unsafe extern "C" fn fcitx5_vnchkey_set_auto_capitalize_proper_nouns(
-    ctx: *mut Fcitx5VnchkeyContext,
-    enabled: bool,
-) {
-    if !ctx.is_null() {
-        (*ctx).engine.set_auto_capitalize_proper_nouns(enabled);
-    }
-}
-
-/// Sets the custom proper-nouns list (comma or newline separated words).
-#[no_mangle]
-pub unsafe extern "C" fn fcitx5_vnchkey_set_proper_nouns_list(
-    ctx: *mut Fcitx5VnchkeyContext,
-    words_csv: *const c_char,
-) {
-    if ctx.is_null() || words_csv.is_null() {
-        return;
-    }
-    if let Ok(s) = CStr::from_ptr(words_csv).to_str() {
-        let words: Vec<String> = s
-            .split(|c| c == ',' || c == '\n' || c == ';')
-            .map(|w| w.trim().to_string())
-            .filter(|w| !w.is_empty())
-            .collect();
-        (*ctx).engine.set_proper_nouns_list(words);
-    }
-}
-
 /// Enables or disables smart fuzzy vowel completion on Space.
 #[no_mangle]
 pub unsafe extern "C" fn fcitx5_vnchkey_set_smart_fuzzy_vowel(

@@ -605,10 +605,6 @@ mod win_app {
                             let val = v == "true" || v == "1";
                             st.engine.set_auto_capitalize(val);
                         }
-                        "auto_capitalize_proper_nouns" => {
-                            let val = v == "true" || v == "1";
-                            st.engine.set_auto_capitalize_proper_nouns(val);
-                        }
                         "user_vietnamese_words" => {
                             let words: Vec<String> = v
                                 .split(',')
@@ -675,7 +671,6 @@ mod win_app {
              math_context={}\n\
              auto_space_after_punctuation={}\n\
              auto_capitalize={}\n\
-             auto_capitalize_proper_nouns={}\n\
              user_vietnamese_words={}\n\
              backspace_by_syllable={}\n\
              macro_preview={}\n\
@@ -713,7 +708,6 @@ mod win_app {
             st.engine.math_context(),
             st.engine.auto_space_after_punctuation(),
             st.engine.auto_capitalize(),
-            st.engine.auto_capitalize_proper_nouns(),
             st.engine.user_vietnamese_words().join(","),
             st.engine.backspace_by_syllable(),
             st.engine.macro_preview(),

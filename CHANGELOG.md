@@ -11,7 +11,9 @@ Tất cả những thay đổi nổi bật của dự án **vnchKey** (**fcitx5-
   - Nối tùy chọn bật/tắt `auto_capitalize` (mặc định **TẮT**) ra UI và config trên cả 3 nền tảng: Linux (`vnchkey-settings`, `fcitx5-addon`), Windows (`windows/src/main.rs`), và macOS (`Bridging-Header.h`, `KeyTapManager.swift`, `main.swift`).
 - **Từ Điển Tiếng Việt Cá Nhân (`UserVietnameseWords`)**:
   - Cho phép người dùng tự do thêm từ lóng / từ cá nhân; các từ này luôn được coi là hợp lệ kể cả khi bật **Kiểm tra Chánh Tả** (`spell_check`).
-  - Hỗ trợ lưu/đọc config và UI nhập liệu trên cả 3 nền tảng (Linux, Windows, macOS) cùng FFI `fcitx5_vnchkey_set_user_vietnamese_words`.
+  - Hỗ trợ lưu/đọc config và UI nhập liệu trên cả 3 nền tảng (Linux, Windows, macOS), kèm FFI `fcitx5_vnchkey_set_user_vietnamese_words`.
+- **Dọn Gọn `AutoCapitalizeProperNouns`**:
+  - Gỡ bỏ `auto_capitalize_proper_nouns` và `proper_nouns_list` khỏi core, FFI, config và UI (dùng Macro cho danh từ riêng/cụm từ linh hoạt và chính xác hơn).
   - **Preset + Import/Merge trong Settings**: thêm `presets/vietnamese-dialect-user-dict.txt` (preset phương ngữ/từ bổ sung) và nút **Gộp preset phương ngữ** / **Nhập từ file...**; merge chuẩn hóa lowercase, bỏ comment `#`, dedup, không ghi đè entry cũ.
 
 ### 🐛 Sửa Lỗi & Audit
