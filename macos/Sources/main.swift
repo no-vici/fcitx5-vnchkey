@@ -762,14 +762,18 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     // MARK: - Bảng Điều Khiển (Dashboard Window kiểu xKey / OpenKey)
 
     @objc func openDashboardWindow() {
-        // Ưu tiên mở giao diện egui (fcitx5-vnchkey-settings) đồng bộ với Linux nếu có sẵn trong bundle
+        // Ưu tiên mở giao diện egui (fcitx5-vnchkey-settings) đồng bộ với Linux nếu có sẵn và chạy ổn định
         let bundleBin = Bundle.main.bundlePath + "/Contents/MacOS/fcitx5-vnchkey-settings"
         for candidate in [bundleBin, "/usr/local/bin/fcitx5-vnchkey-settings", "/opt/homebrew/bin/fcitx5-vnchkey-settings"] {
             if FileManager.default.isExecutableFile(atPath: candidate) {
                 let task = Process()
                 task.executableURL = URL(fileURLWithPath: candidate)
-                try? task.run()
-                return
+                if (try? task.run()) != nil {
+                    Thread.sleep(forTimeInterval: 0.15)
+                    if task.isRunning || task.terminationStatus == 0 {
+                        return
+                    }
+                }
             }
         }
 
