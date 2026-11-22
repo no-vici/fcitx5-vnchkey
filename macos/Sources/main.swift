@@ -1257,7 +1257,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             }
 
             let backupDict: [String: Any] = [
-                "version": "0.3.10",
+                "version": "0.4.0",
                 "method": km.getMethod(),
                 "charset": defaults.integer(forKey: "vnchkey.charset"),
                 "toneStyle": km.getToneStyle(),
@@ -1838,7 +1838,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         NSApp.activate(ignoringOtherApps: true)
         let alert = NSAlert()
         alert.messageText = "vnchKey — Tự Do Edition"
-        let curVer = "0.3.10"
+        let curVer = "0.4.0"
         alert.informativeText = """
         Phiên bản: v\(curVer) (Universal Binary: Apple Silicon & Intel)
 
@@ -1879,7 +1879,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         request.setValue("vnchKey-AutoUpdater", forHTTPHeaderField: "User-Agent")
         request.timeoutInterval = 10.0
 
-        let curVer = "0.3.10"
+        let curVer = "0.4.0"
         let task = URLSession.shared.dataTask(with: request) { data, response, error in
             DispatchQueue.main.async {
                 if let data = data,
