@@ -200,7 +200,6 @@ private:
     std::unique_ptr<fcitx::SimpleAction> actionMacro_;
     std::unique_ptr<fcitx::SimpleAction> actionSpellCheck_;
     std::unique_ptr<fcitx::SimpleAction> actionDictionary_;
-    std::unique_ptr<fcitx::SimpleAction> actionUserVnDict_;
 
     // Quick Consonants Submenu
     std::unique_ptr<fcitx::SimpleAction> actionQuickMenuParent_;
