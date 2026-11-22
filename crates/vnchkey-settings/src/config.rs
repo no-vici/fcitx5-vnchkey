@@ -143,12 +143,28 @@ pub struct ConfigManager;
 
 impl ConfigManager {
     pub fn config_dir() -> PathBuf {
+        #[cfg(target_os = "windows")]
+        {
+            if let Ok(appdata) = std::env::var("APPDATA") {
+                let mut p = PathBuf::from(appdata);
+                p.push("vnchKey");
+                return p;
+            }
+        }
+        #[cfg(target_os = "macos")]
+        {
+            if let Ok(home) = std::env::var("HOME") {
+                let mut p = PathBuf::from(home);
+                p.push("Library/Application Support/vnchKey");
+                return p;
+            }
+        }
         if let Ok(home) = std::env::var("HOME") {
             let mut p = PathBuf::from(home);
             p.push(".config/fcitx5/conf");
             p
         } else {
-            PathBuf::from("/tmp")
+            std::env::temp_dir()
         }
     }
 
@@ -581,19 +597,22 @@ impl ConfigManager {
     }
 
     pub fn reload_fcitx5() {
-        // 1. fcitx5-remote -r
-        let _ = Command::new("fcitx5-remote").arg("-r").output();
+        #[cfg(target_os = "linux")]
+        {
+            // 1. fcitx5-remote -r
+            let _ = Command::new("fcitx5-remote").arg("-r").output();
 
-        // 2. D-Bus reload method
-        let _ = Command::new("gdbus")
-            .args([
-                "call", "--session",
-                "--dest", "org.fcitx.Fcitx5",
-                "--object-path", "/controller",
-                "--method", "org.fcitx.Fcitx.Controller1.ReloadAddonConfig",
-                "vnchkey"
-            ])
-            .output();
+            // 2. D-Bus reload method
+            let _ = Command::new("gdbus")
+                .args([
+                    "call", "--session",
+                    "--dest", "org.fcitx.Fcitx5",
+                    "--object-path", "/controller",
+                    "--method", "org.fcitx.Fcitx.Controller1.ReloadAddonConfig",
+                    "vnchkey"
+                ])
+                .output();
+        }
     }
 }
 
