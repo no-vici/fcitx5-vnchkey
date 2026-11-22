@@ -363,11 +363,6 @@ Bổ sung nhóm tính năng tùy chọn, tất cả **mặc định TẮT** đ�
   - Không kích hoạt trong ngữ cảnh code/backtick bypass.
   - Cấu hình: `AutoSpaceAfterPunctuation=True/False`.
 
-- **Tự Viết Hoa Danh Từ Riêng (`AutoCapitalizeProperNouns`)**:
-  - Khi bật, nếu từ vừa hoàn thành khớp (không phân biệt hoa/thường) với một mục trong `proper_nouns_list` do người dùng định nghĩa, bộ gõ tự viết hoa ký tự đầu.
-  - Danh sách rỗng = không tự viết hoa từ nào (an toàn mặc định).
-  - Cấu hình: `AutoCapitalizeProperNouns=True/False`, `proper_nouns_list` trong config.
-
 - **Backspace Xóa Cả Âm Tiết (`BackspaceBySyllable`)**:
   - Khi bật, nhấn `BackSpace` trong lúc IME đang giữ buffer âm tiết sẽ xóa **toàn bộ âm tiết** thay vì xóa từng ký tự.
   - **Direct Mode**: addon xóa N ký tự trên app bằng `deleteSurroundingText` và filter phím BackSpace vật lý.
