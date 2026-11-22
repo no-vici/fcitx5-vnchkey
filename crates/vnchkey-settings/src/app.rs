@@ -1728,6 +1728,7 @@ impl SettingsApp {
             .corner_radius(egui::CornerRadius::same(8))
             .inner_margin(egui::Margin::same(12))
             .show(ui, |ui| {
+                ui.set_min_width(ui.available_width());
                 ui.checkbox(
                     &mut self.config.enable_dictionary,
                     "Bật User Dictionary (Tự động bỏ qua không bỏ dấu cho danh sách từ Tiếng Anh bên dưới)",
@@ -1755,7 +1756,11 @@ impl SettingsApp {
             });
 
         // Hiển thị và nhập danh sách từ riêng cho auto-capitalize
-        let mut nouns_list_str = self.config.proper_nouns_list.join(", ");
+        let nouns_buf_id = ui.make_persistent_id("proper_nouns_edit_buf");
+        let mut nouns_list_str = ui.data_mut(|d| {
+            d.get_temp_mut_or_insert_with(nouns_buf_id, || self.config.proper_nouns_list.join(", "))
+                .clone()
+        });
         let resp_nouns = ui.add(
             egui::TextEdit::multiline(&mut nouns_list_str)
                 .hint_text("Nhập từ riêng phân cách dấu phẩy (ví dụ: hanoi, openai, github)")
@@ -1764,6 +1769,7 @@ impl SettingsApp {
                 .font(egui::FontId::proportional(12.0)),
         );
         if resp_nouns.changed() {
+            ui.data_mut(|d| d.insert_temp(nouns_buf_id, nouns_list_str.clone()));
             self.config.proper_nouns_list = nouns_list_str
                 .split(|c| c == ',' || c == '\n' || c == ';')
                 .map(|s| s.trim().to_lowercase())
@@ -1801,7 +1807,11 @@ impl SettingsApp {
                 .small()
                 .weak(),
         );
-        let mut vn_words_str = self.config.user_vietnamese_words.join(", ");
+        let vn_buf_id = ui.make_persistent_id("user_vn_words_edit_buf");
+        let mut vn_words_str = ui.data_mut(|d| {
+            d.get_temp_mut_or_insert_with(vn_buf_id, || self.config.user_vietnamese_words.join(", "))
+                .clone()
+        });
         egui::ScrollArea::vertical()
             .id_salt("user_vn_words_scroll")
             .max_height(140.0)
@@ -1814,6 +1824,7 @@ impl SettingsApp {
                         .font(egui::FontId::proportional(12.0)),
                 );
                 if resp.changed() {
+                    ui.data_mut(|d| d.insert_temp(vn_buf_id, vn_words_str.clone()));
                     self.config.user_vietnamese_words = vn_words_str
                         .split(|c| c == ',' || c == '\n' || c == ';')
                         .map(|s| s.trim().to_lowercase())
@@ -1976,6 +1987,7 @@ impl SettingsApp {
             .corner_radius(egui::CornerRadius::same(8))
             .inner_margin(egui::Margin::same(12))
             .show(ui, |ui| {
+                ui.set_min_width(ui.available_width());
                 if habit_entries.is_empty() {
                     ui.label(
                         egui::RichText::new("Chưa có từ nào đang được học trong lịch sử gõ. Khi bạn sửa/xoá một từ Tiếng Anh nhiều lần, bộ gõ sẽ tự động theo dõi ở đây.")
