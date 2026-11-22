@@ -15,7 +15,7 @@ UBUNTU_SERIES="noble"                                 # noble (24.04), oracular 
 PKG_REVISION="1"
 # ------------------------
 
-VERSION="0.3.9"
+VERSION="0.3.10"
 PKGNAME="fcitx5-vnchkey"
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 STAGE_DIR="/tmp/${PKGNAME}-ppa-stage"

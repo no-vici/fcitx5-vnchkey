@@ -77,6 +77,7 @@ jobs:
 
       - name: Build vnchKey for Windows
         run: |
+          cargo build --release -p fcitx5-vnchkey-settings
           cd windows
           cargo build --release
 
@@ -89,6 +90,9 @@ jobs:
               Copy-Item windows/target/release/vnchKey.exe dist/
           } elseif (Test-Path target/release/vnchKey.exe) {
               Copy-Item target/release/vnchKey.exe dist/
+          }
+          if (Test-Path target/release/fcitx5-vnchkey-settings.exe) {
+              Copy-Item target/release/fcitx5-vnchkey-settings.exe dist/
           }
           Copy-Item windows/assets/vncharkey.ico dist/
           Copy-Item windows/README.md dist/

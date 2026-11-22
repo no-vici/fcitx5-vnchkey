@@ -8,7 +8,7 @@ RESOURCES_DIR = $(CONTENTS)/Resources
 
 SWIFT_SOURCES = Sources/main.swift Sources/KeyTapManager.swift
 BRIDGING_HEADER = Bridging-Header.h
-DMG_NAME = $(BUILD_DIR)/$(APP_NAME)-0.3.9.dmg
+DMG_NAME = $(BUILD_DIR)/$(APP_NAME)-0.3.10.dmg
 
 .PHONY: all rust app dmg run clean
 
@@ -53,7 +53,7 @@ app: rust
     <key>CFBundlePackageType</key>\
     <string>APPL</string>\
     <key>CFBundleShortVersionString</key>\
-    <string>0.3.9</string>\
+    <string>0.3.10</string>\
     <key>LSMinimumSystemVersion</key>\
     <string>11.0</string>\
     <key>LSUIElement</key>\
@@ -90,6 +90,12 @@ app: rust
 			-import-objc-header $(BRIDGING_HEADER) \
 			$(TARGET_DIR)/libfcitx5_vnchkey_ffi.a \
 			-o $(MACOS_DIR)/$(APP_NAME); \
+	fi
+	
+	# Build & bundle cross-platform egui settings UI (fcitx5-vnchkey-settings)
+	cd .. && cargo build --release -p fcitx5-vnchkey-settings || true
+	@if [ -f "../target/release/fcitx5-vnchkey-settings" ]; then \
+		cp -f ../target/release/fcitx5-vnchkey-settings $(MACOS_DIR)/fcitx5-vnchkey-settings; \
 	fi
 	
 	# Ad-hoc code signing với identifier cố định và timestamp bảo toàn TCC Identity
