@@ -4,7 +4,7 @@ Tất cả những thay đổi nổi bật của dự án **vnchKey** (**fcitx5-
 
 ---
 
-## [Unreleased]
+## [0.3.9] - 2026-11-22
 
 ### 🚀 Tính Năng Mới (Linux, Windows, macOS)
 - **Tự Động Viết Hoa Đầu Câu (`AutoCapitalize`)**:
