@@ -287,6 +287,13 @@ impl ConfigManager {
             if let Some(v) = map.get("MathContext") { cfg.math_context = v.eq_ignore_ascii_case("true"); }
         if let Some(v) = map.get("AutoCapitalize") { cfg.auto_capitalize = v.eq_ignore_ascii_case("true"); }
         if let Some(v) = map.get("AutoCapitalizeProperNouns") { cfg.auto_capitalize_proper_nouns = v.eq_ignore_ascii_case("true"); }
+        if let Some(v) = map.get("ProperNounsList") {
+            cfg.proper_nouns_list = v
+                .split(',')
+                .map(|s| s.trim().to_lowercase())
+                .filter(|s| !s.is_empty())
+                .collect();
+        }
         if let Some(v) = map.get("AutoSpaceAfterPunctuation") { cfg.auto_space_after_punctuation = v.eq_ignore_ascii_case("true"); }
         if let Some(v) = map.get("BackspaceBySyllable") { cfg.backspace_by_syllable = v.eq_ignore_ascii_case("true"); }
         if let Some(v) = map.get("MacroPreview") { cfg.macro_preview = v.eq_ignore_ascii_case("true"); }
@@ -352,6 +359,7 @@ impl ConfigManager {
         lines.push(format!("MathContext={}", if cfg.math_context { "True" } else { "False" }));
         lines.push(format!("AutoCapitalize={}", if cfg.auto_capitalize { "True" } else { "False" }));
         lines.push(format!("AutoCapitalizeProperNouns={}", if cfg.auto_capitalize_proper_nouns { "True" } else { "False" }));
+        lines.push(format!("ProperNounsList={}", cfg.proper_nouns_list.join(",")));
         lines.push(format!("AutoSpaceAfterPunctuation={}", if cfg.auto_space_after_punctuation { "True" } else { "False" }));
         lines.push(format!("BackspaceBySyllable={}", if cfg.backspace_by_syllable { "True" } else { "False" }));
         lines.push(format!("MacroPreview={}", if cfg.macro_preview { "True" } else { "False" }));
