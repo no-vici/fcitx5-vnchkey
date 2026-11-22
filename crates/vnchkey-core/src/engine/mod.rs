@@ -261,7 +261,11 @@ fn try_resolve_fuzzy_intermediate_vowel(
     parsed.nucleus = resolved_nucleus;
     let candidate = parsed.reconstruct(tone_style);
     if is_in_vietnamese_dictionary(&candidate)
-        || user_vietnamese_words.contains(&candidate.to_lowercase())
+        || if candidate.chars().any(|c| c.is_uppercase()) {
+            user_vietnamese_words.contains(candidate.to_lowercase().as_str())
+        } else {
+            user_vietnamese_words.contains(candidate.as_str())
+        }
     {
         Some(candidate)
     } else {
@@ -763,7 +767,11 @@ impl Engine {
     /// Returns true if `word` (case-insensitive) is in the user's personal Vietnamese dictionary.
     pub fn is_user_vietnamese_word(&self, word: &str) -> bool {
         !self.user_vietnamese_words.is_empty()
-            && self.user_vietnamese_words.contains(&word.to_lowercase())
+            && if word.chars().any(|c| c.is_uppercase()) {
+                self.user_vietnamese_words.contains(word.to_lowercase().as_str())
+            } else {
+                self.user_vietnamese_words.contains(word)
+            }
     }
 
     /// Returns true if `word` is in either the built-in Vietnamese dictionary or the user's personal Vietnamese dictionary.

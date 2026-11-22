@@ -35,6 +35,6 @@ pub use symbols::{lookup_symbol, search_symbols, SymbolEntry, SYMBOL_TABLE};
 pub use syllable_parser::{parse_syllable, ParsedSyllable, ToneMark};
 pub use telex::TelexEngine;
 pub use vietnamese_dict::{
-    has_phonology_violation, is_in_vietnamese_dictionary, vietnamese_word_count, vietnamese_word_set,
+    has_phonology_violation, is_in_vietnamese_dictionary, vietnamese_word_count,
 };
 pub use vni::VniEngine;

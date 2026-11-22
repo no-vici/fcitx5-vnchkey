@@ -1227,7 +1227,11 @@ pub fn is_valid_elongated_vietnamese_word_with_user_dict(
                 || matches!(decompose_vowel(c), Some(('ă' | 'â' | 'ê' | 'ô' | 'ơ' | 'ư', _, _)))
         });
         let stem_in_dict = crate::vietnamese_dict::is_in_vietnamese_dictionary(&stem)
-            || user_vietnamese_words.contains(&stem.to_lowercase());
+            || if stem.chars().any(|c| c.is_uppercase()) {
+                user_vietnamese_words.contains(stem.to_lowercase().as_str())
+            } else {
+                user_vietnamese_words.contains(stem.as_str())
+            };
         let stem_valid_horned = has_horn_or_stroke && is_valid_vietnamese_syllable(&stem);
         if stem_in_dict || stem_valid_horned {
             return true;

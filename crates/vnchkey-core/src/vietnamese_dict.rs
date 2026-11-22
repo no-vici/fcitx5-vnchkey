@@ -5,8 +5,7 @@
 //! and Classic (`hòa`, `thủy`) tone placement as well as Southern Vietnamese vocabulary (`chánh`,
 //! `bển`, `trển`, `nghen`, `hổng`, `thiệt`, `nhứt`, `ảnh`, `bả`, `ổng`, `cổ`).
 
-use std::collections::HashSet;
-use std::sync::OnceLock;
+
 
 include!("vietnamese_dict_data.rs");
 
@@ -102,65 +101,41 @@ pub const RARE_WORDS: &[&str] = &[
     "nhổng", "cháng", "chác", "cháo", "lữa", "nư", "hum", "mụi", "lét", "đéc",
 ];
 
-static VIETNAMESE_WORD_SET: OnceLock<HashSet<String>> = OnceLock::new();
-
-/// Returns the number of words in the built-in sorted Vietnamese dictionary without allocating a HashSet.
+/// Returns the number of words in the built-in sorted Vietnamese dictionary.
 pub fn vietnamese_word_count() -> usize {
     VIETNAMESE_WORDS_SORTED.len()
 }
 
-/// Returns a reference to the globally initialized Vietnamese word dictionary.
-pub fn vietnamese_word_set() -> &'static HashSet<String> {
-    VIETNAMESE_WORD_SET.get_or_init(|| {
-        let mut set = HashSet::with_capacity(7500);
-        for &word in VIETNAMESE_WORDS_SORTED {
-            set.insert(word.to_string());
+fn normalize_tone_variants_from_lower(lower: &str) -> (Option<String>, Option<String>) {
+    const MODERN_TO_CLASSIC: &[(&str, &str)] = &[
+        ("oà", "òa"), ("oá", "óa"), ("oả", "ỏa"), ("oã", "õa"), ("oạ", "ọa"),
+        ("oè", "òe"), ("oé", "óe"), ("oẻ", "ỏe"), ("oẽ", "õe"), ("oẹ", "ọe"),
+        ("uỳ", "ùy"), ("uý", "úy"), ("uỷ", "ủy"), ("uỹ", "ũy"), ("uỵ", "ụy"),
+    ];
+    let mut as_classic: Option<String> = None;
+    let mut as_modern: Option<String> = None;
+    for &(mod_pat, cls_pat) in MODERN_TO_CLASSIC {
+        let src_c = as_classic.as_deref().unwrap_or(lower);
+        if src_c.contains(mod_pat) {
+            as_classic = Some(src_c.replace(mod_pat, cls_pat));
         }
-        for &v in ALL_VIETNAMESE_SINGLE_VOWELS {
-            set.insert(v.to_string());
+        let src_m = as_modern.as_deref().unwrap_or(lower);
+        if src_m.contains(cls_pat) {
+            as_modern = Some(src_m.replace(cls_pat, mod_pat));
         }
-        for &w in RARE_WORDS {
-            set.insert(w.to_string());
-        }
-        // Insert both the full phrase and individual syllables of each place name
-        for &place in PLACE_NAMES {
-            set.insert(place.to_string());
-            for token in place.split_whitespace() {
-                set.insert(token.to_string());
-                if token.contains('\'') {
-                    for part in token.split('\'') {
-                        if !part.is_empty() {
-                            set.insert(part.to_string());
-                        }
-                    }
-                }
-            }
-        }
-        set
-    })
+    }
+    (as_modern, as_classic)
 }
 
 /// Normalizes tone style between Modern (`oà`, `oè`, `uý`) and Classic (`òa`, `òe`, `úy`)
 /// so both styles are recognized by the built-in dictionary.
 pub fn normalize_tone_variants(word: &str) -> (String, String) {
     let lower = word.to_lowercase();
-    let modern_to_classic = [
-        ("oà", "òa"), ("oá", "óa"), ("oả", "ỏa"), ("oã", "õa"), ("oạ", "ọa"),
-        ("oè", "òe"), ("oé", "óe"), ("oẻ", "ỏe"), ("oẽ", "õe"), ("oẹ", "ọe"),
-        ("uỳ", "ùy"), ("uý", "úy"), ("uỷ", "ủy"), ("uỹ", "ũy"), ("uỵ", "ụy"),
-    ];
-
-    let mut as_classic = lower.clone();
-    let mut as_modern = lower;
-    for &(mod_pat, cls_pat) in &modern_to_classic {
-        if as_classic.contains(mod_pat) {
-            as_classic = as_classic.replace(mod_pat, cls_pat);
-        }
-        if as_modern.contains(cls_pat) {
-            as_modern = as_modern.replace(cls_pat, mod_pat);
-        }
-    }
-    (as_modern, as_classic)
+    let (as_modern, as_classic) = normalize_tone_variants_from_lower(&lower);
+    (
+        as_modern.unwrap_or_else(|| lower.clone()),
+        as_classic.unwrap_or(lower),
+    )
 }
 
 /// Checks if a completed word is a valid Vietnamese syllable in the built-in ~6,750-word dictionary.
@@ -176,8 +151,13 @@ pub fn is_in_vietnamese_dictionary(word: &str) -> bool {
         return true;
     }
     let normalized = normalize_apostrophe(word);
-    let (modern, classic) = normalize_tone_variants(&normalized);
-    dict_contains(&modern) || dict_contains(&classic)
+    let lower = normalized.to_lowercase();
+    if dict_contains(&lower) {
+        return true;
+    }
+    let (modern, classic) = normalize_tone_variants_from_lower(&lower);
+    (modern.as_deref() != Some(lower.as_str()) && modern.as_deref().is_some_and(dict_contains))
+        || (classic.as_deref() != Some(lower.as_str()) && classic.as_deref().is_some_and(dict_contains))
 }
 
 /// Checks Vietnamese phonology rules (`c/k`, `g/gh`, `ng/ngh`) from OpenViet IME:
@@ -185,10 +165,9 @@ pub fn is_in_vietnamese_dictionary(word: &str) -> bool {
 /// - Rule 2 (`g/gh`): `'g'` (unless `'gh'` or `'gi'`) is never followed by `'e'`, `'ê'` (`get`, `general`, `gear`).
 /// - Rule 3 (`ng/ngh`): `'ng'` (unless `'ngh'`) is never followed by `'e'`, `'ê'`, `'i'` (`danger`, `finger`, `engine`).
 pub fn has_phonology_violation(word: &str) -> bool {
-    let chars: Vec<char> = word.chars().map(|c| c.to_lowercase().next().unwrap_or(c)).collect();
-    if chars.len() < 2 {
-        return false;
-    }
+    let mut it = word.chars().map(|c| c.to_lowercase().next().unwrap_or(c));
+    let Some(c0) = it.next() else { return false };
+    let Some(c1) = it.next() else { return false };
 
     let is_e_family = |c: char| {
         matches!(
@@ -200,22 +179,22 @@ pub fn has_phonology_violation(word: &str) -> bool {
     let is_y_family = |c: char| matches!(c, 'y' | 'ý' | 'ỳ' | 'ỷ' | 'ỹ' | 'ỵ');
 
     // Rule 1: 'c' followed by e, ê, i, y
-    if chars[0] == 'c' && (is_e_family(chars[1]) || is_i_family(chars[1]) || is_y_family(chars[1])) {
+    if c0 == 'c' && (is_e_family(c1) || is_i_family(c1) || is_y_family(c1)) {
         return true;
     }
 
     // Rule 2: 'g' followed directly by e, ê
-    if chars[0] == 'g' && is_e_family(chars[1]) {
+    if c0 == 'g' && is_e_family(c1) {
         return true;
     }
 
     // Rule 3: 'ng' followed directly by e, ê, i
-    if chars.len() >= 3
-        && chars[0] == 'n'
-        && chars[1] == 'g'
-        && (is_e_family(chars[2]) || is_i_family(chars[2]))
-    {
-        return true;
+    if c0 == 'n' && c1 == 'g' {
+        if let Some(c2) = it.next() {
+            if is_e_family(c2) || is_i_family(c2) {
+                return true;
+            }
+        }
     }
 
     false
