@@ -96,6 +96,7 @@ mod win_app {
 
     type HANDLE = *mut std::ffi::c_void;
     const WM_APP_RELOAD_MACROS: u32 = 0x8002;
+    const WM_APP_RELOAD_CONFIG: u32 = 0x8003;
     const FILE_NOTIFY_CHANGE_FILE_NAME: u32 = 0x00000001;
     const FILE_NOTIFY_CHANGE_SIZE: u32 = 0x00000008;
     const FILE_NOTIFY_CHANGE_LAST_WRITE: u32 = 0x00000010;
@@ -838,24 +839,357 @@ mod win_app {
         let _ = Command::new("notepad.exe").arg(path).spawn();
     }
 
-    fn open_settings_panel() {
-        if let Ok(exe_path) = std::env::current_exe() {
-            if let Some(exe_dir) = exe_path.parent() {
-                for name in [
-                    "fcitx5-vnchkey-settings.exe",
-                    "fcitx5-vnchkey-settings",
-                    "vnchkey-settings.exe",
-                    "vnchkey-settings",
-                ] {
-                    let candidate = exe_dir.join(name);
-                    if candidate.exists() {
-                        let _ = Command::new(candidate).spawn();
-                        return;
-                    }
+    const SETTINGS_CLASS: &str = "VnCharKeySettingsClass";
+
+    // Settings control IDs
+    const SID_METHOD: i32 = 2001;
+    const SID_CHARSET: i32 = 2002;
+    const SID_TONE: i32 = 2003;
+    const SID_SPELL: i32 = 2010;
+    const SID_AUTORESTORE: i32 = 2011;
+    const SID_ESCRESTORE: i32 = 2012;
+    const SID_BRACKET: i32 = 2013;
+    const SID_QUICK_TELEX: i32 = 2014;
+    const SID_QUICK_START: i32 = 2015;
+    const SID_QUICK_END: i32 = 2016;
+    const SID_MACRO: i32 = 2017;
+    const SID_DICT: i32 = 2018;
+    const SID_HABIT: i32 = 2019;
+    const SID_PER_APP: i32 = 2020;
+    const SID_AUTO_SPACE: i32 = 2021;
+    const SID_AUTO_CAP: i32 = 2022;
+    const SID_CASE_ANCHOR: i32 = 2023;
+    const SID_MOMENTUM: i32 = 2024;
+    const SID_MATH: i32 = 2025;
+    const SID_BACKSPACE_SYL: i32 = 2026;
+    const SID_MACRO_PREVIEW: i32 = 2027;
+    const SID_DEV_MODE: i32 = 2028;
+    const SID_HABIT_THRESHOLD: i32 = 2030;
+    const SID_SAVE: i32 = 2100;
+    const SID_OPEN_CONFIG: i32 = 2101;
+    const SID_OPEN_MACROS: i32 = 2102;
+    const SID_OPEN_DICT: i32 = 2103;
+
+    struct SettingsControls {
+        method: HWND,
+        charset: HWND,
+        tone: HWND,
+        habit_threshold: HWND,
+        checks: Vec<(i32, HWND)>,
+    }
+
+    thread_local! {
+        static SETTINGS_CTLS: RefCell<Option<SettingsControls>> = const { RefCell::new(None) };
+    }
+
+    fn read_config_map() -> HashMap<String, String> {
+        let mut map = HashMap::new();
+        let path = config_path();
+        if let Ok(content) = fs::read_to_string(&path) {
+            for line in content.lines() {
+                let trimmed = line.trim();
+                if trimmed.is_empty() || trimmed.starts_with('#') { continue; }
+                if let Some((k, v)) = trimmed.split_once('=') {
+                    map.insert(k.trim().to_lowercase(), v.trim().to_string());
                 }
             }
         }
-        let _ = Command::new("fcitx5-vnchkey-settings.exe").spawn();
+        map
+    }
+
+    fn cfg_bool(map: &HashMap<String, String>, key: &str, default: bool) -> bool {
+        match map.get(key).map(|s| s.to_lowercase()) {
+            Some(v) => v == "true" || v == "1",
+            None => default,
+        }
+    }
+
+    fn cfg_str<'a>(map: &'a HashMap<String, String>, key: &str, default: &'a str) -> &'a str {
+        map.get(key).map(|s| s.as_str()).unwrap_or(default)
+    }
+
+    unsafe fn set_check(hwnd: HWND, checked: bool) {
+        SendMessageW(hwnd, BM_SETCHECK, if checked { BST_CHECKED } else { 0 } as WPARAM, 0);
+    }
+
+    unsafe fn get_check(hwnd: HWND) -> bool {
+        SendMessageW(hwnd, BM_GETCHECK, 0, 0) == BST_CHECKED as isize
+    }
+
+    unsafe fn combo_add(hwnd: HWND, text: &str) {
+        let w = to_wstring(text);
+        SendMessageW(hwnd, CB_ADDSTRING, 0, w.as_ptr() as LPARAM);
+    }
+
+    unsafe fn combo_set(hwnd: HWND, idx: usize) {
+        SendMessageW(hwnd, CB_SETCURSEL, idx, 0);
+    }
+
+    unsafe fn combo_get(hwnd: HWND) -> usize {
+        let r = SendMessageW(hwnd, CB_GETCURSEL, 0, 0);
+        if r < 0 { 0 } else { r as usize }
+    }
+
+    unsafe fn create_label(parent: HWND, hinst: windows_sys::Win32::Foundation::HINSTANCE, text: &str, x: i32, y: i32, w: i32, h: i32) -> HWND {
+        CreateWindowExW(0, to_wstring("STATIC").as_ptr(), to_wstring(text).as_ptr(),
+            WS_CHILD | WS_VISIBLE, x, y, w, h, parent, null_mut(), hinst, null_mut())
+    }
+
+    unsafe fn create_checkbox(parent: HWND, hinst: windows_sys::Win32::Foundation::HINSTANCE, text: &str, id: i32, x: i32, y: i32, w: i32, h: i32) -> HWND {
+        CreateWindowExW(0, to_wstring("BUTTON").as_ptr(), to_wstring(text).as_ptr(),
+            WS_CHILD | WS_VISIBLE | WS_TABSTOP | BS_AUTOCHECKBOX as u32,
+            x, y, w, h, parent, id as *mut _, hinst, null_mut())
+    }
+
+    unsafe fn create_combo(parent: HWND, hinst: windows_sys::Win32::Foundation::HINSTANCE, id: i32, x: i32, y: i32, w: i32, h: i32) -> HWND {
+        CreateWindowExW(0, to_wstring("COMBOBOX").as_ptr(), null_mut(),
+            WS_CHILD | WS_VISIBLE | WS_TABSTOP | CBS_DROPDOWNLIST as u32 | WS_VSCROLL,
+            x, y, w, h, parent, id as *mut _, hinst, null_mut())
+    }
+
+    unsafe fn create_button(parent: HWND, hinst: windows_sys::Win32::Foundation::HINSTANCE, text: &str, id: i32, x: i32, y: i32, w: i32, h: i32) -> HWND {
+        CreateWindowExW(0, to_wstring("BUTTON").as_ptr(), to_wstring(text).as_ptr(),
+            WS_CHILD | WS_VISIBLE | WS_TABSTOP | BS_PUSHBUTTON as u32,
+            x, y, w, h, parent, id as *mut _, hinst, null_mut())
+    }
+
+    unsafe fn notify_running_instance_reload() {
+        let class = to_wstring("VnCharKeyHiddenWindowClass");
+        let title = to_wstring("VnCharKey");
+        let hwnd = FindWindowW(class.as_ptr(), title.as_ptr());
+        if !hwnd.is_null() {
+            PostMessageW(hwnd, WM_APP_RELOAD_CONFIG, 0, 0);
+        }
+    }
+
+    unsafe fn save_settings_from_ui(hwnd: HWND) {
+        let (values, checks) = SETTINGS_CTLS.with(|c| {
+            let b = c.borrow();
+            let Some(ctls) = b.as_ref() else { return (None, Vec::new()); };
+            let method_idx = combo_get(ctls.method);
+            let charset_idx = combo_get(ctls.charset);
+            let tone_idx = combo_get(ctls.tone);
+            let habit_idx = combo_get(ctls.habit_threshold);
+            let checks: Vec<(i32, bool)> = ctls.checks.iter().map(|(id, h)| (*id, get_check(*h))).collect();
+            (Some((method_idx, charset_idx, tone_idx, habit_idx)), checks)
+        });
+        let Some((method_idx, charset_idx, tone_idx, habit_idx)) = values else { return; };
+
+        let mut map = read_config_map();
+        let method = ["auto", "telex", "vni", "simpletelex"].get(method_idx).copied().unwrap_or("auto");
+        let charset = ["unicode", "composite"].get(charset_idx).copied().unwrap_or("unicode");
+        let tone = ["classic", "modern"].get(tone_idx).copied().unwrap_or("classic");
+        let habit = ["2", "3", "4", "5", "6", "8"].get(habit_idx).copied().unwrap_or("4");
+        map.insert("method".into(), method.into());
+        map.insert("charset".into(), charset.into());
+        map.insert("tone_style".into(), tone.into());
+        map.insert("habit_threshold".into(), habit.into());
+
+        for (id, checked) in checks {
+            let key = match id {
+                SID_SPELL => "spell_check",
+                SID_AUTORESTORE => "auto_restore",
+                SID_ESCRESTORE => "esc_restore",
+                SID_BRACKET => "bracket_transform",
+                SID_QUICK_TELEX => "quick_telex",
+                SID_QUICK_START => "quick_start_consonant",
+                SID_QUICK_END => "quick_end_consonant",
+                SID_MACRO => "macro_enabled",
+                SID_DICT => "dict_enabled",
+                SID_HABIT => "learn_habits",
+                SID_PER_APP => "per_app",
+                SID_AUTO_SPACE => "auto_space_after_punctuation",
+                SID_AUTO_CAP => "auto_capitalize",
+                SID_CASE_ANCHOR => "initial_case_anchor",
+                SID_MOMENTUM => "sentence_momentum",
+                SID_MATH => "math_context",
+                SID_BACKSPACE_SYL => "backspace_by_syllable",
+                SID_MACRO_PREVIEW => "macro_preview",
+                SID_DEV_MODE => "developer_mode",
+                _ => continue,
+            };
+            map.insert(key.into(), if checked { "true".into() } else { "false".into() });
+        }
+
+        // Preserve keys not managed by this simple UI
+        let path = config_path();
+        let mut out = String::from("# VnCharKey Windows Configuration\n");
+        // Write managed keys in stable order
+        let ordered = [
+            "method","charset","tone_style","spell_check","auto_restore","esc_restore","bracket_transform",
+            "quick_telex","quick_start_consonant","quick_end_consonant","macro_enabled","dict_enabled",
+            "learn_habits","habit_threshold","initial_case_anchor","developer_mode","allow_vietnamese_in_backtick",
+            "sentence_momentum","math_context","auto_space_after_punctuation","auto_capitalize",
+            "user_vietnamese_words","backspace_by_syllable","macro_preview","per_app",
+            "ctrl","shift","alt","win","vk","flip_ctrl","flip_shift","flip_alt","flip_win","flip_vk",
+            "case_converter_shortcut","excluded_apps",
+        ];
+        let mut written = std::collections::HashSet::new();
+        for k in ordered {
+            if let Some(v) = map.get(k) {
+                out.push_str(&format!("{}={}\n", k, v));
+                written.insert(k.to_string());
+            }
+        }
+        for (k, v) in &map {
+            if !written.contains(k) {
+                out.push_str(&format!("{}={}\n", k, v));
+            }
+        }
+        let _ = fs::write(&path, out);
+        notify_running_instance_reload();
+
+        let msg = to_wstring("Đã lưu cấu hình. Ứng dụng VnCharKey đang chạy sẽ tự tải lại.");
+        let title = to_wstring("VnCharKey Settings");
+        MessageBoxW(hwnd, msg.as_ptr(), title.as_ptr(), MB_OK | MB_ICONINFORMATION);
+    }
+
+    unsafe extern "system" fn settings_wnd_proc(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LRESULT {
+        match msg {
+            WM_COMMAND => {
+                let id = (wparam & 0xFFFF) as i32;
+                match id {
+                    SID_SAVE => { save_settings_from_ui(hwnd); }
+                    SID_OPEN_CONFIG => {
+                        if let Some(dir) = config_path().parent() {
+                            let _ = Command::new("explorer.exe").arg(dir).spawn();
+                        }
+                    }
+                    SID_OPEN_MACROS => { open_file_in_notepad(macros_path()); }
+                    SID_OPEN_DICT => { open_file_in_notepad(dict_path()); }
+                    _ => {}
+                }
+                0
+            }
+            WM_CLOSE => { DestroyWindow(hwnd); 0 }
+            WM_DESTROY => { PostQuitMessage(0); 0 }
+            _ => DefWindowProcW(hwnd, msg, wparam, lparam),
+        }
+    }
+
+    pub unsafe fn run_settings() {
+        ensure_config_files();
+        let hinstance = GetModuleHandleW(null_mut());
+        let class_name = to_wstring(SETTINGS_CLASS);
+
+        let wc = WNDCLASSW {
+            style: 0,
+            lpfnWndProc: Some(settings_wnd_proc),
+            cbClsExtra: 0,
+            cbWndExtra: 0,
+            hInstance: hinstance,
+            hIcon: LoadIconW(null_mut(), IDI_APPLICATION),
+            hCursor: LoadCursorW(null_mut(), IDC_ARROW),
+            hbrBackground: (COLOR_BTNFACE + 1) as HBRUSH,
+            lpszMenuName: null_mut(),
+            lpszClassName: class_name.as_ptr(),
+        };
+        RegisterClassW(&wc);
+
+        let hwnd = CreateWindowExW(
+            WS_EX_APPWINDOW,
+            class_name.as_ptr(),
+            to_wstring("VnCharKey - Bảng Điều Khiển").as_ptr(),
+            WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX | WS_VISIBLE,
+            CW_USEDEFAULT, CW_USEDEFAULT, 560, 720,
+            null_mut(), null_mut(), hinstance, null_mut(),
+        );
+
+        let font = GetStockObject(DEFAULT_GUI_FONT);
+        let map = read_config_map();
+        let mut y = 16;
+        let left = 20;
+        let col2 = 290;
+
+        create_label(hwnd, hinstance, "Kiểu gõ:", left, y + 3, 80, 20);
+        let method = create_combo(hwnd, hinstance, SID_METHOD, 110, y, 140, 200);
+        for s in ["Auto", "Telex", "VNI", "Simple Telex"] { combo_add(method, s); }
+        let mval = cfg_str(&map, "method", "auto");
+        combo_set(method, match mval { "telex" => 1, "vni" => 2, "simpletelex" | "simple_telex" => 3, _ => 0 });
+        SendMessageW(method, WM_SETFONT, font as WPARAM, 1);
+
+        create_label(hwnd, hinstance, "Bảng mã:", col2, y + 3, 70, 20);
+        let charset = create_combo(hwnd, hinstance, SID_CHARSET, col2 + 75, y, 140, 200);
+        for s in ["Unicode (NFC)", "Unicode Tổ hợp"] { combo_add(charset, s); }
+        combo_set(charset, if matches!(cfg_str(&map, "charset", "unicode"), "composite" | "nfd") { 1 } else { 0 });
+        SendMessageW(charset, WM_SETFONT, font as WPARAM, 1);
+        y += 36;
+
+        create_label(hwnd, hinstance, "Kiểu dấu:", left, y + 3, 80, 20);
+        let tone = create_combo(hwnd, hinstance, SID_TONE, 110, y, 140, 200);
+        for s in ["Cổ điển (òa, òe)", "Hiện đại (oà, oè)"] { combo_add(tone, s); }
+        combo_set(tone, if cfg_str(&map, "tone_style", "classic") == "modern" { 1 } else { 0 });
+        SendMessageW(tone, WM_SETFONT, font as WPARAM, 1);
+
+        create_label(hwnd, hinstance, "Ngưỡng học:", col2, y + 3, 80, 20);
+        let habit_th = create_combo(hwnd, hinstance, SID_HABIT_THRESHOLD, col2 + 85, y, 80, 200);
+        for s in ["2", "3", "4", "5", "6", "8"] { combo_add(habit_th, s); }
+        let hv = cfg_str(&map, "habit_threshold", "4");
+        combo_set(habit_th, match hv { "2"=>0,"3"=>1,"5"=>2,"6"=>3,"8"=>4,_=>2 }); // rough, fix below
+        SendMessageW(habit_th, WM_SETFONT, font as WPARAM, 1);
+        y += 44;
+
+        let mut checks: Vec<(i32, HWND)> = Vec::new();
+        let mut add_check = |label: &str, id: i32, key: &str, default: bool, x: i32, yy: &mut i32| {
+            let h = create_checkbox(hwnd, hinstance, label, id, x, *yy, 250, 24);
+            set_check(h, cfg_bool(&map, key, default));
+            SendMessageW(h, WM_SETFONT, font as WPARAM, 1);
+            checks.push((id, h));
+            *yy += 28;
+        };
+
+        let mut yl = y;
+        let mut yr = y;
+        add_check("Kiểm tra chính tả", SID_SPELL, "spell_check", true, left, &mut yl);
+        add_check("Tự khôi phục tiếng Anh", SID_AUTORESTORE, "auto_restore", true, left, &mut yl);
+        add_check("ESC khôi phục gốc", SID_ESCRESTORE, "esc_restore", true, left, &mut yl);
+        add_check("Gõ tắt ngoặc []", SID_BRACKET, "bracket_transform", false, left, &mut yl);
+        add_check("Quick Telex (cc=ch...)", SID_QUICK_TELEX, "quick_telex", false, left, &mut yl);
+        add_check("Phụ âm đầu nhanh", SID_QUICK_START, "quick_start_consonant", false, left, &mut yl);
+        add_check("Phụ âm cuối nhanh", SID_QUICK_END, "quick_end_consonant", false, left, &mut yl);
+        add_check("Bật Gõ tắt (Macro)", SID_MACRO, "macro_enabled", true, left, &mut yl);
+        add_check("Bật Từ điển riêng", SID_DICT, "dict_enabled", true, left, &mut yl);
+        add_check("Học thói quen gõ", SID_HABIT, "learn_habits", true, left, &mut yl);
+
+        add_check("Nhớ theo ứng dụng", SID_PER_APP, "per_app", true, col2, &mut yr);
+        add_check("Tự thêm space sau dấu", SID_AUTO_SPACE, "auto_space_after_punctuation", false, col2, &mut yr);
+        add_check("Tự viết hoa đầu câu", SID_AUTO_CAP, "auto_capitalize", false, col2, &mut yr);
+        add_check("Neo kiểu viết hoa đầu", SID_CASE_ANCHOR, "initial_case_anchor", false, col2, &mut yr);
+        add_check("Sentence Momentum", SID_MOMENTUM, "sentence_momentum", false, col2, &mut yr);
+        add_check("Ngữ cảnh toán học", SID_MATH, "math_context", false, col2, &mut yr);
+        add_check("Backspace theo âm tiết", SID_BACKSPACE_SYL, "backspace_by_syllable", false, col2, &mut yr);
+        add_check("Xem trước Macro", SID_MACRO_PREVIEW, "macro_preview", false, col2, &mut yr);
+        add_check("Developer Mode", SID_DEV_MODE, "developer_mode", true, col2, &mut yr);
+
+        y = yl.max(yr) + 16;
+        let btn_save = create_button(hwnd, hinstance, "Lưu & Áp dụng", SID_SAVE, left, y, 140, 32);
+        let btn_cfg = create_button(hwnd, hinstance, "Mở thư mục config", SID_OPEN_CONFIG, 170, y, 150, 32);
+        let btn_macro = create_button(hwnd, hinstance, "Mở Macro", SID_OPEN_MACROS, 330, y, 90, 32);
+        let btn_dict = create_button(hwnd, hinstance, "Mở Từ điển", SID_OPEN_DICT, 430, y, 90, 32);
+        for b in [btn_save, btn_cfg, btn_macro, btn_dict] { SendMessageW(b, WM_SETFONT, font as WPARAM, 1); }
+
+        // Fix habit threshold selection (index mapping above was off)
+        let ht_idx = match hv { "2"=>0,"3"=>1,"4"=>2,"5"=>3,"6"=>4,"8"=>5,_=>2 };
+        combo_set(habit_th, ht_idx);
+
+        SETTINGS_CTLS.with(|c| {
+            *c.borrow_mut() = Some(SettingsControls { method, charset, tone, habit_threshold: habit_th, checks });
+        });
+
+        ShowWindow(hwnd, SW_SHOW);
+        UpdateWindow(hwnd);
+
+        let mut msg: MSG = std::mem::zeroed();
+        while GetMessageW(&mut msg, null_mut(), 0, 0) > 0 {
+            TranslateMessage(&msg);
+            DispatchMessageW(&msg);
+        }
+    }
+
+    fn open_settings_panel() {
+        if let Ok(exe_path) = std::env::current_exe() {
+            let _ = Command::new(exe_path).arg("--settings").spawn();
+        }
     }
 
     const IDC_EDIT_SHORTCUT: i32 = 101;
@@ -3003,6 +3337,19 @@ Start-Process -FilePath $batch -WindowStyle Hidden;
                 });
                 0
             }
+            WM_APP_RELOAD_CONFIG => {
+                let (sc, flip_sc) = load_shortcut_config();
+                STATE.with(|s| {
+                    if let Ok(mut st) = s.try_borrow_mut() {
+                        st.shortcut = sc;
+                        st.flip_shortcut = flip_sc;
+                        load_full_config(&mut st);
+                        reload_files(&mut st.engine);
+                        update_tray_tooltip(hwnd, st.enabled, st.method);
+                    }
+                });
+                0
+            }
             WM_DESTROY => {
                 remove_tray_icon(hwnd);
                 PostQuitMessage(0);
@@ -3272,23 +3619,9 @@ fn main() {
     {
         let args: Vec<String> = std::env::args().collect();
         if args.iter().any(|a| a == "--settings" || a == "-s") {
-            if let Ok(exe_path) = std::env::current_exe() {
-                if let Some(exe_dir) = exe_path.parent() {
-                    for name in [
-                        "fcitx5-vnchkey-settings.exe",
-                        "fcitx5-vnchkey-settings",
-                        "vnchkey-settings.exe",
-                        "vnchkey-settings",
-                    ] {
-                        let candidate = exe_dir.join(name);
-                        if candidate.exists() {
-                            let _ = std::process::Command::new(candidate).spawn();
-                            return;
-                        }
-                    }
-                }
+            unsafe {
+                win_app::run_settings();
             }
-            let _ = std::process::Command::new("fcitx5-vnchkey-settings.exe").spawn();
             return;
         }
 

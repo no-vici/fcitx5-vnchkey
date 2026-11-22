@@ -76,10 +76,8 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
 
       - name: Build vnchKey for Windows
-        run: |
-          cargo build --release -p fcitx5-vnchkey-settings
-          cd windows
-          cargo build --release
+        working-directory: windows
+        run: cargo build --release
 
       - name: Package Windows Zip
         shell: pwsh
@@ -91,10 +89,7 @@ jobs:
           } elseif (Test-Path target/release/vnchKey.exe) {
               Copy-Item target/release/vnchKey.exe dist/
           }
-          if (!(Test-Path target/release/fcitx5-vnchkey-settings.exe)) {
-              throw "Missing target/release/fcitx5-vnchkey-settings.exe"
-          }
-          Copy-Item target/release/fcitx5-vnchkey-settings.exe dist/
+
           Copy-Item windows/assets/vncharkey.ico dist/
           Copy-Item windows/README.md dist/
           Compress-Archive -Path dist/* -DestinationPath "vnchKey-$TAG-Windows-x64.zip"
