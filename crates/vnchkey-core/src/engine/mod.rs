@@ -2023,8 +2023,6 @@ impl Engine {
             }
             self.deleted_accented_candidate = None;
 
-            let completed_word_done = self.current_word.clone();
-
             // No macro or auto-restore needed: reset word buffer and let delimiter pass through natively
             let has_word = !self.current_word.is_empty();
             let raw_lower_done = self.raw_strokes.to_lowercase();
