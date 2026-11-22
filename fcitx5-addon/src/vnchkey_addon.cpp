@@ -626,6 +626,7 @@ void VnchkeyEngine::activate(const fcitx::InputMethodEntry &entry, fcitx::InputC
         if (actionMacro_) ic->statusArea().addAction(fcitx::StatusGroup::InputMethod, actionMacro_.get());
         if (actionSpellCheck_) ic->statusArea().addAction(fcitx::StatusGroup::InputMethod, actionSpellCheck_.get());
         if (actionDictionary_) ic->statusArea().addAction(fcitx::StatusGroup::InputMethod, actionDictionary_.get());
+        if (actionUserVnDict_) ic->statusArea().addAction(fcitx::StatusGroup::InputMethod, actionUserVnDict_.get());
         if (actionSettings_) ic->statusArea().addAction(fcitx::StatusGroup::InputMethod, actionSettings_.get());
 
         if (actionOutputModeDirect_) actionOutputModeDirect_->update(ic);
