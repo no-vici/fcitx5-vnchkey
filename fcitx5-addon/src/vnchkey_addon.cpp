@@ -636,6 +636,7 @@ void VnchkeyEngine::activate(const fcitx::InputMethodEntry &entry, fcitx::InputC
         if (actionSpellCheck_) actionSpellCheck_->update(ic);
         if (actionDictionary_) actionDictionary_->update(ic);
         if (actionSettings_) actionSettings_->update(ic);
+        if (actionUserVnDict_) actionUserVnDict_->update(ic);
 
         ic->updateUserInterface(fcitx::UserInterfaceComponent::StatusArea);
     }
