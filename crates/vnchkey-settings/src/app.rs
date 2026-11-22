@@ -1756,13 +1756,20 @@ impl SettingsApp {
 
         // Hiển thị và nhập danh sách từ riêng cho auto-capitalize
         let mut nouns_list_str = self.config.proper_nouns_list.join(", ");
-        ui.horizontal(|ui| {
-            let list_text = egui::TextEdit::multiline(&mut nouns_list_str)
+        let resp_nouns = ui.add(
+            egui::TextEdit::multiline(&mut nouns_list_str)
                 .hint_text("Nhập từ riêng phân cách dấu phẩy (ví dụ: hanoi, openai, github)")
-                .desired_width(300.0)
-                .font(egui::FontId::proportional(12.0));
-            ui.add(list_text);
-        });
+                .desired_width(f32::INFINITY)
+                .desired_rows(2)
+                .font(egui::FontId::proportional(12.0)),
+        );
+        if resp_nouns.changed() {
+            self.config.proper_nouns_list = nouns_list_str
+                .split(|c| c == ',' || c == '\n' || c == ';')
+                .map(|s| s.trim().to_lowercase())
+                .filter(|s| !s.is_empty())
+                .collect();
+        }
         if ui.button("Lưu từ riêng").clicked() {
             let input = self.config.proper_nouns_list.join(", ");
             let new_words: Vec<String> = input
