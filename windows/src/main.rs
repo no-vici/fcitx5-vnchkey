@@ -1115,9 +1115,9 @@ mod win_app {
         combo_set(method, match mval { "telex" => 1, "vni" => 2, "simpletelex" | "simple_telex" => 3, _ => 0 });
         SendMessageW(method, WM_SETFONT, font as WPARAM, 1);
 
-        let lbl_charset = create_label(hwnd, hinstance, "Bảng mã:", col2, y + 3, 75, 20);
+        let lbl_charset = create_label(hwnd, hinstance, "Bảng mã:", col2, y + 3, 90, 20);
         SendMessageW(lbl_charset, WM_SETFONT, font as WPARAM, 1);
-        let charset = create_combo(hwnd, hinstance, SID_CHARSET, col2 + 80, y, 140, 200);
+        let charset = create_combo(hwnd, hinstance, SID_CHARSET, col2 + 95, y, 130, 200);
         for s in ["Unicode (NFC)", "Unicode Tổ hợp"] { combo_add(charset, s); }
         combo_set(charset, if matches!(cfg_str(&map, "charset", "unicode"), "composite" | "nfd") { 1 } else { 0 });
         SendMessageW(charset, WM_SETFONT, font as WPARAM, 1);
@@ -1132,7 +1132,7 @@ mod win_app {
 
         let lbl_habit_th = create_label(hwnd, hinstance, "Ngưỡng học:", col2, y + 3, 90, 20);
         SendMessageW(lbl_habit_th, WM_SETFONT, font as WPARAM, 1);
-        let habit_th = create_combo(hwnd, hinstance, SID_HABIT_THRESHOLD, col2 + 95, y, 80, 200);
+        let habit_th = create_combo(hwnd, hinstance, SID_HABIT_THRESHOLD, col2 + 95, y, 130, 200);
         for s in ["2", "3", "4", "5", "6", "8"] { combo_add(habit_th, s); }
         let hv = cfg_str(&map, "habit_threshold", "4");
         combo_set(habit_th, match hv { "2"=>0,"3"=>1,"5"=>2,"6"=>3,"8"=>4,_=>2 }); // rough, fix below
@@ -1150,32 +1150,32 @@ mod win_app {
 
         let mut yl = y;
         let mut yr = y;
-        add_check("Kiểm tra chính tả", SID_SPELL, "spell_check", true, left, &mut yl);
-        add_check("Tự khôi phục tiếng Anh", SID_AUTORESTORE, "auto_restore", true, left, &mut yl);
+        add_check("Kiểm tra chánh tả", SID_SPELL, "spell_check", true, left, &mut yl);
+        add_check("Tự khôi phục Tiếng Anh", SID_AUTORESTORE, "auto_restore", true, left, &mut yl);
         add_check("ESC khôi phục gốc", SID_ESCRESTORE, "esc_restore", true, left, &mut yl);
         add_check("Gõ tắt ngoặc []", SID_BRACKET, "bracket_transform", false, left, &mut yl);
         add_check("Quick Telex (cc=ch...)", SID_QUICK_TELEX, "quick_telex", false, left, &mut yl);
         add_check("Phụ âm đầu nhanh", SID_QUICK_START, "quick_start_consonant", false, left, &mut yl);
         add_check("Phụ âm cuối nhanh", SID_QUICK_END, "quick_end_consonant", false, left, &mut yl);
-        add_check("Bật Gõ tắt (Macro)", SID_MACRO, "macro_enabled", true, left, &mut yl);
-        add_check("Bật Từ điển riêng", SID_DICT, "dict_enabled", true, left, &mut yl);
+        add_check("Bật gõ tắt (macro)", SID_MACRO, "macro_enabled", true, left, &mut yl);
+        add_check("Bật từ điển cá nhân", SID_DICT, "dict_enabled", true, left, &mut yl);
         add_check("Học thói quen gõ", SID_HABIT, "learn_habits", true, left, &mut yl);
 
         add_check("Nhớ theo ứng dụng", SID_PER_APP, "per_app", true, col2, &mut yr);
-        add_check("Tự thêm space sau dấu", SID_AUTO_SPACE, "auto_space_after_punctuation", false, col2, &mut yr);
+        add_check("Thêm space sau dấu câu", SID_AUTO_SPACE, "auto_space_after_punctuation", false, col2, &mut yr);
         add_check("Tự viết hoa đầu câu", SID_AUTO_CAP, "auto_capitalize", false, col2, &mut yr);
-        add_check("Neo kiểu viết hoa đầu", SID_CASE_ANCHOR, "initial_case_anchor", false, col2, &mut yr);
-        add_check("Sentence Momentum", SID_MOMENTUM, "sentence_momentum", false, col2, &mut yr);
+        add_check("Neo viết hoa/thường đầu từ", SID_CASE_ANCHOR, "initial_case_anchor", false, col2, &mut yr);
+        add_check("Sentence momentum", SID_MOMENTUM, "sentence_momentum", false, col2, &mut yr);
         add_check("Ngữ cảnh toán học", SID_MATH, "math_context", false, col2, &mut yr);
         add_check("Backspace theo âm tiết", SID_BACKSPACE_SYL, "backspace_by_syllable", false, col2, &mut yr);
-        add_check("Xem trước Macro", SID_MACRO_PREVIEW, "macro_preview", false, col2, &mut yr);
-        add_check("Developer Mode", SID_DEV_MODE, "developer_mode", true, col2, &mut yr);
+        add_check("Coi trước macro", SID_MACRO_PREVIEW, "macro_preview", false, col2, &mut yr);
+        add_check("Developer mode", SID_DEV_MODE, "developer_mode", true, col2, &mut yr);
 
         y = yl.max(yr) + 16;
-        let btn_save = create_button(hwnd, hinstance, "Lưu & Áp dụng", SID_SAVE, left, y, 140, 32);
-        let btn_cfg = create_button(hwnd, hinstance, "Mở thư mục config", SID_OPEN_CONFIG, 170, y, 150, 32);
-        let btn_macro = create_button(hwnd, hinstance, "Mở Macro", SID_OPEN_MACROS, 330, y, 90, 32);
-        let btn_dict = create_button(hwnd, hinstance, "Mở Từ điển", SID_OPEN_DICT, 430, y, 90, 32);
+        let btn_save = create_button(hwnd, hinstance, "Lưu thiết lập", SID_SAVE, left, y, 105, 32);
+        let btn_cfg = create_button(hwnd, hinstance, "Mở thư mục config", SID_OPEN_CONFIG, 135, y, 135, 32);
+        let btn_macro = create_button(hwnd, hinstance, "Mở macro", SID_OPEN_MACROS, 280, y, 95, 32);
+        let btn_dict = create_button(hwnd, hinstance, "Mở từ điển cá nhân", SID_OPEN_DICT, 385, y, 135, 32);
         for b in [btn_save, btn_cfg, btn_macro, btn_dict] { SendMessageW(b, WM_SETFONT, font as WPARAM, 1); }
 
         // Fix habit threshold selection (index mapping above was off)
