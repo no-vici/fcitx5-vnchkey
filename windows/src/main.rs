@@ -1072,13 +1072,17 @@ mod win_app {
         let hinstance = GetModuleHandleW(null_mut());
         let class_name = to_wstring(SETTINGS_CLASS);
 
+        let app_icon = {
+            let ic = LoadIconW(hinstance, 1 as *const u16);
+            if ic.is_null() { LoadIconW(null_mut(), IDI_APPLICATION) } else { ic }
+        };
         let wc = WNDCLASSW {
             style: 0,
             lpfnWndProc: Some(settings_wnd_proc),
             cbClsExtra: 0,
             cbWndExtra: 0,
             hInstance: hinstance,
-            hIcon: LoadIconW(null_mut(), IDI_APPLICATION),
+            hIcon: app_icon,
             hCursor: LoadCursorW(null_mut(), IDC_ARROW),
             hbrBackground: (COLOR_BTNFACE + 1) as HBRUSH,
             lpszMenuName: null_mut(),
@@ -1091,38 +1095,50 @@ mod win_app {
             class_name.as_ptr(),
             to_wstring("VnCharKey - Bảng Điều Khiển").as_ptr(),
             WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX | WS_VISIBLE,
-            CW_USEDEFAULT, CW_USEDEFAULT, 560, 720,
+            CW_USEDEFAULT, CW_USEDEFAULT, 560, 490,
             null_mut(), null_mut(), hinstance, null_mut(),
         );
+        SendMessageW(hwnd, WM_SETICON, ICON_SMALL as WPARAM, app_icon as LPARAM);
+        SendMessageW(hwnd, WM_SETICON, ICON_BIG as WPARAM, app_icon as LPARAM);
 
-        let font = GetStockObject(DEFAULT_GUI_FONT);
+        let segoe = CreateFontW(
+            -14, 0, 0, 0, FW_NORMAL as i32, 0, 0, 0,
+            DEFAULT_CHARSET as u32, OUT_DEFAULT_PRECIS as u32, CLIP_DEFAULT_PRECIS as u32,
+            CLEARTYPE_QUALITY as u32, (DEFAULT_PITCH | FF_DONTCARE) as u32,
+            to_wstring("Segoe UI").as_ptr(),
+        );
+        let font = if segoe.is_null() { GetStockObject(DEFAULT_GUI_FONT) } else { segoe as _ };
         let map = read_config_map();
         let mut y = 16;
         let left = 20;
         let col2 = 290;
 
-        create_label(hwnd, hinstance, "Kiểu gõ:", left, y + 3, 80, 20);
+        let lbl_method = create_label(hwnd, hinstance, "Kiểu gõ:", left, y + 3, 80, 20);
+        SendMessageW(lbl_method, WM_SETFONT, font as WPARAM, 1);
         let method = create_combo(hwnd, hinstance, SID_METHOD, 110, y, 140, 200);
         for s in ["Auto", "Telex", "VNI", "Simple Telex"] { combo_add(method, s); }
         let mval = cfg_str(&map, "method", "auto");
         combo_set(method, match mval { "telex" => 1, "vni" => 2, "simpletelex" | "simple_telex" => 3, _ => 0 });
         SendMessageW(method, WM_SETFONT, font as WPARAM, 1);
 
-        create_label(hwnd, hinstance, "Bảng mã:", col2, y + 3, 70, 20);
-        let charset = create_combo(hwnd, hinstance, SID_CHARSET, col2 + 75, y, 140, 200);
+        let lbl_charset = create_label(hwnd, hinstance, "Bảng mã:", col2, y + 3, 75, 20);
+        SendMessageW(lbl_charset, WM_SETFONT, font as WPARAM, 1);
+        let charset = create_combo(hwnd, hinstance, SID_CHARSET, col2 + 80, y, 140, 200);
         for s in ["Unicode (NFC)", "Unicode Tổ hợp"] { combo_add(charset, s); }
         combo_set(charset, if matches!(cfg_str(&map, "charset", "unicode"), "composite" | "nfd") { 1 } else { 0 });
         SendMessageW(charset, WM_SETFONT, font as WPARAM, 1);
         y += 36;
 
-        create_label(hwnd, hinstance, "Kiểu dấu:", left, y + 3, 80, 20);
+        let lbl_tone = create_label(hwnd, hinstance, "Kiểu dấu:", left, y + 3, 80, 20);
+        SendMessageW(lbl_tone, WM_SETFONT, font as WPARAM, 1);
         let tone = create_combo(hwnd, hinstance, SID_TONE, 110, y, 140, 200);
         for s in ["Cổ điển (òa, òe)", "Hiện đại (oà, oè)"] { combo_add(tone, s); }
         combo_set(tone, if cfg_str(&map, "tone_style", "classic") == "modern" { 1 } else { 0 });
         SendMessageW(tone, WM_SETFONT, font as WPARAM, 1);
 
-        create_label(hwnd, hinstance, "Ngưỡng học:", col2, y + 3, 80, 20);
-        let habit_th = create_combo(hwnd, hinstance, SID_HABIT_THRESHOLD, col2 + 85, y, 80, 200);
+        let lbl_habit_th = create_label(hwnd, hinstance, "Ngưỡng học:", col2, y + 3, 90, 20);
+        SendMessageW(lbl_habit_th, WM_SETFONT, font as WPARAM, 1);
+        let habit_th = create_combo(hwnd, hinstance, SID_HABIT_THRESHOLD, col2 + 95, y, 80, 200);
         for s in ["2", "3", "4", "5", "6", "8"] { combo_add(habit_th, s); }
         let hv = cfg_str(&map, "habit_threshold", "4");
         combo_set(habit_th, match hv { "2"=>0,"3"=>1,"5"=>2,"6"=>3,"8"=>4,_=>2 }); // rough, fix below
