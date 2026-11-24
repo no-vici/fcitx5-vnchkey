@@ -1101,13 +1101,7 @@ mod win_app {
         SendMessageW(hwnd, WM_SETICON, ICON_SMALL as WPARAM, app_icon as LPARAM);
         SendMessageW(hwnd, WM_SETICON, ICON_BIG as WPARAM, app_icon as LPARAM);
 
-        let segoe = CreateFontW(
-            -14, 0, 0, 0, FW_NORMAL as i32, 0, 0, 0,
-            DEFAULT_CHARSET as u32, OUT_DEFAULT_PRECIS as u32, CLIP_DEFAULT_PRECIS as u32,
-            CLEARTYPE_QUALITY as u32, (DEFAULT_PITCH | FF_DONTCARE) as u32,
-            to_wstring("Segoe UI").as_ptr(),
-        );
-        let font = if segoe.is_null() { GetStockObject(DEFAULT_GUI_FONT) } else { segoe as _ };
+        let font = GetStockObject(DEFAULT_GUI_FONT);
         let map = read_config_map();
         let mut y = 16;
         let left = 20;
