@@ -8,7 +8,7 @@
 
 ### 1. Phím Tắt Chuyển Việt / Anh Hoàn Toàn Tự Do
 Bạn không bị bó buộc vào vài phím tắt cố định. Bạn có thể gán bất kỳ tổ hợp phím nào quen tay nhất:
-- **Cách đặt phím tắt**: Nhấp chuột phải vào icon ở khay hệ thống (System Tray) $\to$ chọn **"Phím tắt chuyển Việt / Anh"** $\to$ bấm **"⌨️ Bấm để đặt phím tắt mới (Tự do)..."**.
+- **Cách đặt phím tắt**: Nhấp chuột phải vào icon ở khay hệ thống (System Tray) $\to$ **"Phím tắt"** $\to$ **"Chuyển Việt / Anh"** $\to$ bấm **"⌨️ Bấm để đặt phím tắt mới (Tự do)..."**.
 - Một hộp thoại hiện ra, bạn chỉ cần bấm tổ hợp phím mong muốn trên bàn phím:
   - Các tổ hợp modifier: `Ctrl + Shift`, `Alt + Shift`, `Ctrl + Alt`...
   - Các tổ hợp có phím ký tự: `Alt + Z`, `Ctrl + Space`, `Win + Space`, `Ctrl + Alt + V`...
@@ -40,7 +40,7 @@ Tính năng Gõ Tắt giúp bạn tiết kiệm hàng ngàn lượt bấm phím 
      diachi=Số 123 Đường Tự Do, Quận 1, Sài Gòn
      ```
   3. Bấm `Ctrl + S` lưu lại trong Notepad.
-  4. Chuột phải icon $\to$ bấm **"Nạp lại Gõ Tắt & Từ Điển"** để áp dụng ngay.
+  4. Chuột phải icon $\to$ **"Gõ tắt & Từ điển"** $\to$ bấm **"Nạp lại Gõ Tắt & Từ Điển"** để áp dụng ngay.
 - **Cơ chế Hủy Gõ Tắt thông minh 2 bước**:
   - Khi bung cụm từ gõ tắt, bộ gõ tự động thêm dấu cách (`Space`) phía sau.
   - **Bấm `Backspace` lần 1**: Xóa dấu cách vừa bung để bạn có thể gõ thêm dấu thanh hoặc dấu câu; bộ gõ sẽ tự động nuốt khoảng trắng để dấu dính liền sát vào cụm từ vừa bung.
@@ -50,7 +50,7 @@ Tính năng Gõ Tắt giúp bạn tiết kiệm hàng ngàn lượt bấm phím 
 
 ### 3. Đảo Từ Nhanh (Flip Word) — Tùy Chỉnh Phím Tắt Tự Do & Bảo Vệ Lệnh Redo
 Khi đang gõ một từ Tiếng Việt (hoặc chuỗi phím thô), bạn muốn lật qua lại giữa chữ Tiếng Việt có dấu và chuỗi ký tự gõ phím gốc mà không cần xóa đi gõ lại:
-- **Tổ hợp phím mặc định**: **`Ctrl + Shift + Z`** (hoặc tự chọn `Alt + X`, `Ctrl + Alt + Z`, hay thu bất kỳ tổ hợp phím nào qua menu **"Phím tắt Đảo Từ (Flip Word)"**).
+- **Tổ hợp phím mặc định**: **`Ctrl + Shift + Z`** (hoặc tự chọn `Alt + X`, `Ctrl + Alt + Z`, hay thu bất kỳ tổ hợp phím nào qua menu **"Phím tắt"** $\to$ **"Đảo từ (Flip Word)"**).
 - **Thông minh, không nuốt lệnh Redo của Editor**: Phím tắt Đảo Từ **chỉ kích hoạt khi bạn đang thực sự gõ dở một từ trong bộ đệm** (`has_active_word()`). Khi bộ đệm đang rỗng (sau khi bạn đã bấm Space hoặc đang chỉnh sửa tài liệu), `Ctrl + Shift + Z` sẽ được trả thẳng về cho ứng dụng (VS Code, Word, trình duyệt...) thực hiện lệnh Redo bình thường!
 - **Ví dụ**:
   - Gõ `tiếng` $\xrightarrow{\text{Ctrl+Shift+Z}}$ đảo thành **`tieengs`**
@@ -66,12 +66,12 @@ Khi gõ code hoặc văn bản có lẫn từ tiếng Anh/thuật ngữ kỹ thu
 - **Thêm từ thủ công vào từ điển ngoại lệ**:
   1. Chuột phải vào icon $\to$ tích chọn **"Tự động khôi phục Tiếng Anh"** và **"Bật Từ Điển Cá Nhân"**.
   2. Chọn **"Chỉnh sửa Từ Điển Cá Nhân (dictionary.conf)..."** $\to$ Notepad sẽ mở ra.
-  3. Gõ mỗi từ tiếng Anh hoặc tên riêng trên một dòng, lưu file (`Ctrl + S`) và bấm **"Nạp lại Gõ Tắt & Từ Điển"**.
+  3. Gõ mỗi từ tiếng Anh hoặc tên riêng trên một dòng, lưu file (`Ctrl + S`) và chuột phải icon $\to$ **"Gõ tắt & Từ điển"** $\to$ bấm **"Nạp lại Gõ Tắt & Từ Điển"**.
 
 ---
 
 ### 5. Tùy Chọn Tốc Ký (Quick Consonants)
-Nếu bạn thường xuyên gõ văn bản nhanh, hãy bật các tùy chọn trong menu **"Tùy chọn Tốc ký..."**:
+Nếu bạn thường xuyên gõ văn bản nhanh, hãy bật các tùy chọn trong menu **"Tính năng nâng cao"** $\to$ **"Tùy chọn Tốc ký..."**:
 - **Quick Telex**: Gõ lặp phụ âm để ra phụ âm ghép (`cc` $\to$ `ch`, `gg` $\to$ `gi`, `kk` $\to$ `kh`, `nn` $\to$ `ng`, `pp` $\to$ `ph`, `qq` $\to$ `qu`, `tt` $\to$ `th`).
 - **Phụ âm đầu nhanh**: Gõ `f` $\to$ `ph`, `j` $\to$ `gi`, `w` $\to$ `qu` khi ở đầu từ.
 - **Phụ âm cuối nhanh**: Gõ `g` $\to$ `ng`, `h` $\to$ `nh`, `k` $\to$ `ch` sau nguyên âm.
@@ -84,7 +84,7 @@ Khi đang gõ một từ tiếng Việt nhưng muốn hủy toàn bộ dấu v�
 ---
 
 ### 7. Khởi Động Cùng Windows & Chế Độ 100% Portable
-- **Khởi động cùng máy**: Chuột phải icon $\to$ tích chọn **"Khởi động cùng Windows"**. Ứng dụng sẽ tự khởi động ngầm êm ái mỗi khi mở máy.
+- **Khởi động cùng máy**: Chuột phải icon $\to$ **"Hệ thống"** $\to$ tích chọn **"Khởi động cùng Windows"**. Ứng dụng sẽ tự khởi động ngầm êm ái mỗi khi mở máy.
 - **Chế độ 100% Portable (Lưu tất cả tại một nơi duy nhất)**:
   - `VnCharKey.exe` luôn lưu toàn bộ dữ liệu (`config.conf`, `macros.conf`, `dictionary.conf`, và `habit.log`) **trực tiếp ngay trong cùng thư mục chứa file `VnCharKey.exe`** (tuyệt đối không rải rác vào `%APPDATA%`).
   - Bạn chỉ cần copy cả thư mục chứa `VnCharKey.exe` vào USB hoặc ổ đĩa đám mây, mang sang bất kỳ máy nào khác là sử dụng được ngay với đầy đủ phím tắt, bảng gõ tắt và toàn bộ từ vựng mà bộ gõ đã tự học được.

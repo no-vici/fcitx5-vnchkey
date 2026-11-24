@@ -2401,7 +2401,7 @@ Start-Process -FilePath $batch -WindowStyle Hidden;
             return;
         };
 
-        // 1. Toggle Vietnamese
+        // 1. Trạng thái chính
         let toggle_label = to_wstring("Bật gõ Tiếng Việt");
         AppendMenuW(
             menu,
@@ -2453,11 +2453,11 @@ Start-Process -FilePath $batch -WindowStyle Hidden;
             menu,
             MF_POPUP,
             exclude_sub as usize,
-            to_wstring("Danh sách ứng dụng bị loại trừ").as_ptr(),
+            to_wstring("Ứng dụng bị loại trừ").as_ptr(),
         );
         AppendMenuW(menu, MF_SEPARATOR, 0, null_mut());
 
-        // 2. Kiểu Gõ Submenu
+        // 2. Kiểu gõ & Bảng mã
         let method_sub = CreatePopupMenu();
         AppendMenuW(
             method_sub,
@@ -2490,7 +2490,6 @@ Start-Process -FilePath $batch -WindowStyle Hidden;
             to_wstring("Kiểu gõ").as_ptr(),
         );
 
-        // 3. Bảng mã & Dấu thanh Submenu
         let style_sub = CreatePopupMenu();
         AppendMenuW(
             style_sub,
@@ -2524,124 +2523,45 @@ Start-Process -FilePath $batch -WindowStyle Hidden;
             to_wstring("Bảng mã & Dấu thanh").as_ptr(),
         );
 
-        // 4. Phím tắt Bật/Tắt Submenu
+        // 3. Phím tắt (gộp 2 submenu)
+        let shortcut_parent = CreatePopupMenu();
+
         let sc_sub = CreatePopupMenu();
         let cur_sc_label = format!("Hiện tại: [{}]", shortcut.display_name);
-        AppendMenuW(
-            sc_sub,
-            MF_STRING | MF_GRAYED,
-            0,
-            to_wstring(&cur_sc_label).as_ptr(),
-        );
+        AppendMenuW(sc_sub, MF_STRING | MF_GRAYED, 0, to_wstring(&cur_sc_label).as_ptr());
         AppendMenuW(sc_sub, MF_SEPARATOR, 0, null_mut());
-
-        AppendMenuW(
-            sc_sub,
-            MF_STRING,
-            ID_SHORTCUT_RECORD,
-            to_wstring("⌨️ Bấm để đặt phím tắt mới (Tự do)...").as_ptr(),
-        );
+        AppendMenuW(sc_sub, MF_STRING, ID_SHORTCUT_RECORD, to_wstring("⌨️ Bấm để đặt phím tắt mới (Tự do)...").as_ptr());
         AppendMenuW(sc_sub, MF_SEPARATOR, 0, null_mut());
-
         let is_ctrl_shift = shortcut.ctrl && shortcut.shift && !shortcut.alt && !shortcut.win && shortcut.key_code == 0;
         let is_alt_z = !shortcut.ctrl && !shortcut.shift && shortcut.alt && !shortcut.win && shortcut.key_code == 'Z' as u16;
         let is_ctrl_space = shortcut.ctrl && !shortcut.shift && !shortcut.alt && !shortcut.win && shortcut.key_code == VK_SPACE;
         let is_win_space = !shortcut.ctrl && !shortcut.shift && !shortcut.alt && shortcut.win && shortcut.key_code == VK_SPACE;
+        AppendMenuW(sc_sub, MF_STRING | if is_ctrl_shift { MF_CHECKED } else { 0 }, ID_SHORTCUT_CTRL_SHIFT, to_wstring("Ctrl + Shift (Nhấn rồi thả)").as_ptr());
+        AppendMenuW(sc_sub, MF_STRING | if is_alt_z { MF_CHECKED } else { 0 }, ID_SHORTCUT_ALT_Z, to_wstring("Alt + Z").as_ptr());
+        AppendMenuW(sc_sub, MF_STRING | if is_ctrl_space { MF_CHECKED } else { 0 }, ID_SHORTCUT_CTRL_SPACE, to_wstring("Ctrl + Space").as_ptr());
+        AppendMenuW(sc_sub, MF_STRING | if is_win_space { MF_CHECKED } else { 0 }, ID_SHORTCUT_WIN_SPACE, to_wstring("Win + Space").as_ptr());
+        AppendMenuW(sc_sub, MF_STRING | if shortcut.is_disabled() { MF_CHECKED } else { 0 }, ID_SHORTCUT_DISABLED, to_wstring("Tắt phím tắt chuyển nhanh").as_ptr());
+        AppendMenuW(shortcut_parent, MF_POPUP, sc_sub as usize, to_wstring("Chuyển Việt / Anh").as_ptr());
 
-        AppendMenuW(
-            sc_sub,
-            MF_STRING | if is_ctrl_shift { MF_CHECKED } else { 0 },
-            ID_SHORTCUT_CTRL_SHIFT,
-            to_wstring("Ctrl + Shift (Nhấn rồi thả)").as_ptr(),
-        );
-        AppendMenuW(
-            sc_sub,
-            MF_STRING | if is_alt_z { MF_CHECKED } else { 0 },
-            ID_SHORTCUT_ALT_Z,
-            to_wstring("Alt + Z").as_ptr(),
-        );
-        AppendMenuW(
-            sc_sub,
-            MF_STRING | if is_ctrl_space { MF_CHECKED } else { 0 },
-            ID_SHORTCUT_CTRL_SPACE,
-            to_wstring("Ctrl + Space").as_ptr(),
-        );
-        AppendMenuW(
-            sc_sub,
-            MF_STRING | if is_win_space { MF_CHECKED } else { 0 },
-            ID_SHORTCUT_WIN_SPACE,
-            to_wstring("Win + Space").as_ptr(),
-        );
-        AppendMenuW(
-            sc_sub,
-            MF_STRING | if shortcut.is_disabled() { MF_CHECKED } else { 0 },
-            ID_SHORTCUT_DISABLED,
-            to_wstring("Tắt phím tắt chuyển nhanh").as_ptr(),
-        );
-        AppendMenuW(
-            menu,
-            MF_POPUP,
-            sc_sub as usize,
-            to_wstring("Phím tắt chuyển Việt / Anh").as_ptr(),
-        );
-
-        // 4b. Phím tắt Đảo Từ (Flip Word) Submenu
         let flip_sub = CreatePopupMenu();
         let cur_flip_label = format!("Hiện tại: [{}]", flip_shortcut.display_name);
-        AppendMenuW(
-            flip_sub,
-            MF_STRING | MF_GRAYED,
-            0,
-            to_wstring(&cur_flip_label).as_ptr(),
-        );
+        AppendMenuW(flip_sub, MF_STRING | MF_GRAYED, 0, to_wstring(&cur_flip_label).as_ptr());
         AppendMenuW(flip_sub, MF_SEPARATOR, 0, null_mut());
-
-        AppendMenuW(
-            flip_sub,
-            MF_STRING,
-            ID_FLIP_RECORD,
-            to_wstring("⌨️ Bấm để đặt phím tắt Đảo Từ mới...").as_ptr(),
-        );
+        AppendMenuW(flip_sub, MF_STRING, ID_FLIP_RECORD, to_wstring("⌨️ Bấm để đặt phím tắt Đảo Từ mới...").as_ptr());
         AppendMenuW(flip_sub, MF_SEPARATOR, 0, null_mut());
-
         let is_flip_csz = flip_shortcut.ctrl && flip_shortcut.shift && !flip_shortcut.alt && !flip_shortcut.win && flip_shortcut.key_code == 'Z' as u16;
         let is_flip_alt_x = !flip_shortcut.ctrl && !flip_shortcut.shift && flip_shortcut.alt && !flip_shortcut.win && flip_shortcut.key_code == 'X' as u16;
         let is_flip_caz = flip_shortcut.ctrl && !flip_shortcut.shift && flip_shortcut.alt && !flip_shortcut.win && flip_shortcut.key_code == 'Z' as u16;
+        AppendMenuW(flip_sub, MF_STRING | if is_flip_csz { MF_CHECKED } else { 0 }, ID_FLIP_CTRL_SHIFT_Z, to_wstring("Ctrl + Shift + Z (Chỉ khi đang gõ từ)").as_ptr());
+        AppendMenuW(flip_sub, MF_STRING | if is_flip_alt_x { MF_CHECKED } else { 0 }, ID_FLIP_ALT_X, to_wstring("Alt + X").as_ptr());
+        AppendMenuW(flip_sub, MF_STRING | if is_flip_caz { MF_CHECKED } else { 0 }, ID_FLIP_CTRL_ALT_Z, to_wstring("Ctrl + Alt + Z").as_ptr());
+        AppendMenuW(flip_sub, MF_STRING | if flip_shortcut.is_disabled() { MF_CHECKED } else { 0 }, ID_FLIP_DISABLED, to_wstring("Tắt phím tắt Đảo Từ").as_ptr());
+        AppendMenuW(shortcut_parent, MF_POPUP, flip_sub as usize, to_wstring("Đảo từ (Flip Word)").as_ptr());
 
-        AppendMenuW(
-            flip_sub,
-            MF_STRING | if is_flip_csz { MF_CHECKED } else { 0 },
-            ID_FLIP_CTRL_SHIFT_Z,
-            to_wstring("Ctrl + Shift + Z (Chỉ khi đang gõ từ)").as_ptr(),
-        );
-        AppendMenuW(
-            flip_sub,
-            MF_STRING | if is_flip_alt_x { MF_CHECKED } else { 0 },
-            ID_FLIP_ALT_X,
-            to_wstring("Alt + X").as_ptr(),
-        );
-        AppendMenuW(
-            flip_sub,
-            MF_STRING | if is_flip_caz { MF_CHECKED } else { 0 },
-            ID_FLIP_CTRL_ALT_Z,
-            to_wstring("Ctrl + Alt + Z").as_ptr(),
-        );
-        AppendMenuW(
-            flip_sub,
-            MF_STRING | if flip_shortcut.is_disabled() { MF_CHECKED } else { 0 },
-            ID_FLIP_DISABLED,
-            to_wstring("Tắt phím tắt Đảo Từ").as_ptr(),
-        );
-        AppendMenuW(
-            menu,
-            MF_POPUP,
-            flip_sub as usize,
-            to_wstring("Phím tắt Đảo Từ (Flip Word)").as_ptr(),
-        );
-
+        AppendMenuW(menu, MF_POPUP, shortcut_parent as usize, to_wstring("Phím tắt").as_ptr());
         AppendMenuW(menu, MF_SEPARATOR, 0, null_mut());
 
-        // 5. Tính năng thông minh Checkboxes
+        // 4. Tính năng gõ thường dùng
         let (quick_telex, quick_start, quick_end, dev_mode, sentence_momentum, math_context) = STATE.with(|s| {
             s.try_borrow()
                 .ok()
@@ -2658,252 +2578,81 @@ Start-Process -FilePath $batch -WindowStyle Hidden;
                 .unwrap_or((false, false, false, true, false, false))
         });
 
-        AppendMenuW(
-            menu,
-            MF_STRING | if spell { MF_CHECKED } else { 0 },
-            ID_TOGGLE_SPELLCHECK,
-            to_wstring("Kiểm tra Chánh Tả").as_ptr(),
-        );
-        AppendMenuW(
-            menu,
-            MF_STRING | if restore { MF_CHECKED } else { 0 },
-            ID_TOGGLE_AUTORESTORE,
-            to_wstring("Tự động khôi phục Tiếng Anh").as_ptr(),
-        );
-        AppendMenuW(
-            menu,
-            MF_STRING | if esc { MF_CHECKED } else { 0 },
-            ID_TOGGLE_ESCRESTORE,
-            to_wstring("Hoàn nguyên từ bằng Esc").as_ptr(),
-        );
-        AppendMenuW(
-            menu,
-            MF_STRING | if bracket { MF_CHECKED } else { 0 },
-            ID_TOGGLE_BRACKET,
-            to_wstring("Gõ [ ] thành ơ ư").as_ptr(),
-        );
-        AppendMenuW(
-            menu,
-            MF_STRING | if case_anchor { MF_CHECKED } else { 0 },
-            ID_TOGGLE_CASE_ANCHOR,
-            to_wstring("Đồng nhất chữ hoa theo chữ cái đầu (Được, được)").as_ptr(),
-        );
-        AppendMenuW(
-            menu,
-            MF_STRING | if dev_mode { MF_CHECKED } else { 0 },
-            ID_TOGGLE_DEV_MODE,
-            to_wstring("Chế độ Code (Tự ngắt dấu trong `code`)").as_ptr(),
-        );
-        AppendMenuW(
-            menu,
-            MF_STRING | if sentence_momentum { MF_CHECKED } else { 0 },
-            ID_TOGGLE_SENTENCE_MOMENTUM,
-            to_wstring("Sentence Momentum (giữ tiếng Anh trong câu song ngữ)").as_ptr(),
-        );
-        AppendMenuW(
-            menu,
-            MF_STRING | if math_context { MF_CHECKED } else { 0 },
-            ID_TOGGLE_MATH_CONTEXT,
-            to_wstring("Math Context (giữ tiếng Anh sau sin/cos/tan)").as_ptr(),
-        );
+        AppendMenuW(menu, MF_STRING | if spell { MF_CHECKED } else { 0 }, ID_TOGGLE_SPELLCHECK, to_wstring("Kiểm tra Chánh Tả").as_ptr());
 
-        // Tùy chọn Tốc ký
+        let advanced_sub = CreatePopupMenu();
+        AppendMenuW(advanced_sub, MF_STRING | if restore { MF_CHECKED } else { 0 }, ID_TOGGLE_AUTORESTORE, to_wstring("Tự động khôi phục Tiếng Anh").as_ptr());
+        AppendMenuW(advanced_sub, MF_STRING | if esc { MF_CHECKED } else { 0 }, ID_TOGGLE_ESCRESTORE, to_wstring("Hoàn nguyên từ bằng Esc").as_ptr());
+        AppendMenuW(advanced_sub, MF_SEPARATOR, 0, null_mut());
+        AppendMenuW(advanced_sub, MF_STRING | if case_anchor { MF_CHECKED } else { 0 }, ID_TOGGLE_CASE_ANCHOR, to_wstring("Đồng nhất chữ hoa theo chữ cái đầu (Được, được)").as_ptr());
+        AppendMenuW(advanced_sub, MF_STRING | if dev_mode { MF_CHECKED } else { 0 }, ID_TOGGLE_DEV_MODE, to_wstring("Chế độ Code (Tự ngắt dấu trong `code`)").as_ptr());
+        AppendMenuW(advanced_sub, MF_STRING | if sentence_momentum { MF_CHECKED } else { 0 }, ID_TOGGLE_SENTENCE_MOMENTUM, to_wstring("Sentence Momentum (giữ tiếng Anh trong câu song ngữ)").as_ptr());
+        AppendMenuW(advanced_sub, MF_STRING | if math_context { MF_CHECKED } else { 0 }, ID_TOGGLE_MATH_CONTEXT, to_wstring("Math Context (giữ tiếng Anh sau sin/cos/tan)").as_ptr());
+        AppendMenuW(advanced_sub, MF_SEPARATOR, 0, null_mut());
         let quick_sub = CreatePopupMenu();
-        AppendMenuW(
-            quick_sub,
-            MF_STRING | if quick_telex { MF_CHECKED } else { 0 },
-            ID_TOGGLE_QUICK_TELEX,
-            to_wstring("Quick Telex (cc->ch, kk->kh, tt->th...)").as_ptr(),
-        );
-        AppendMenuW(
-            quick_sub,
-            MF_STRING | if quick_start { MF_CHECKED } else { 0 },
-            ID_TOGGLE_QUICK_START,
-            to_wstring("Phụ âm đầu nhanh (f->ph, j->gi, w->qu)").as_ptr(),
-        );
-        AppendMenuW(
-            quick_sub,
-            MF_STRING | if quick_end { MF_CHECKED } else { 0 },
-            ID_TOGGLE_QUICK_END,
-            to_wstring("Phụ âm cuối nhanh (g->ng, h->nh, k->ch)").as_ptr(),
-        );
-        AppendMenuW(
-            menu,
-            MF_POPUP,
-            quick_sub as usize,
-            to_wstring("Tùy chọn Tốc ký...").as_ptr(),
-        );
+        AppendMenuW(quick_sub, MF_STRING | if bracket { MF_CHECKED } else { 0 }, ID_TOGGLE_BRACKET, to_wstring("Gõ [ ] thành ơ ư").as_ptr());
+        AppendMenuW(quick_sub, MF_SEPARATOR, 0, null_mut());
+        AppendMenuW(quick_sub, MF_STRING | if quick_telex { MF_CHECKED } else { 0 }, ID_TOGGLE_QUICK_TELEX, to_wstring("Quick Telex (cc->ch, kk->kh, tt->th...)").as_ptr());
+        AppendMenuW(quick_sub, MF_STRING | if quick_start { MF_CHECKED } else { 0 }, ID_TOGGLE_QUICK_START, to_wstring("Phụ âm đầu nhanh (f->ph, j->gi, w->qu)").as_ptr());
+        AppendMenuW(quick_sub, MF_STRING | if quick_end { MF_CHECKED } else { 0 }, ID_TOGGLE_QUICK_END, to_wstring("Phụ âm cuối nhanh (g->ng, h->nh, k->ch)").as_ptr());
+        AppendMenuW(advanced_sub, MF_POPUP, quick_sub as usize, to_wstring("Tùy chọn Tốc ký...").as_ptr());
+        AppendMenuW(menu, MF_POPUP, advanced_sub as usize, to_wstring("Tính năng nâng cao").as_ptr());
 
-        AppendMenuW(menu, MF_SEPARATOR, 0, null_mut());
-
-        // 6. Gõ Tắt & Từ Điển
-        AppendMenuW(
-            menu,
-            MF_STRING,
-            ID_OPEN_SETTINGS,
-            to_wstring("Mở Bảng Điều Khiển...").as_ptr(),
-        );
-        AppendMenuW(menu, MF_SEPARATOR, 0, null_mut());
-        AppendMenuW(
-            menu,
-            MF_STRING | if macro_en { MF_CHECKED } else { 0 },
-            ID_TOGGLE_MACRO,
-            to_wstring("Bật Gõ Tắt (Macro)").as_ptr(),
-        );
-        AppendMenuW(
-            menu,
-            MF_STRING,
-            ID_ADD_MACRO,
-            to_wstring("➕ Thêm Gõ Tắt mới...").as_ptr(),
-        );
-        AppendMenuW(
-            menu,
-            MF_STRING,
-            ID_OPEN_MACROS,
-            to_wstring("Chỉnh sửa bảng Gõ Tắt (macros.conf)...").as_ptr(),
-        );
-        AppendMenuW(
-            menu,
-            MF_STRING | if dict_en { MF_CHECKED } else { 0 },
-            ID_TOGGLE_DICT,
-            to_wstring("Bật Từ Điển Cá Nhân").as_ptr(),
-        );
-        AppendMenuW(
-            menu,
-            MF_STRING,
-            ID_OPEN_DICT,
-            to_wstring("Chỉnh sửa Từ Điển Cá Nhân (dictionary.conf)...").as_ptr(),
-        );
-        AppendMenuW(
-            menu,
-            MF_STRING,
-            ID_RELOAD_FILES,
-            to_wstring("Nạp lại Gõ Tắt & Từ Điển").as_ptr(),
-        );
-
-        // 6b. Tự Động Học Thói Quen (Adaptive Habit Learning)
+        // 5. Gõ tắt & Từ điển (ít thay đổi)
+        let macro_dict_sub = CreatePopupMenu();
+        AppendMenuW(macro_dict_sub, MF_STRING | if macro_en { MF_CHECKED } else { 0 }, ID_TOGGLE_MACRO, to_wstring("Bật Gõ Tắt (Macro)").as_ptr());
+        AppendMenuW(macro_dict_sub, MF_STRING, ID_ADD_MACRO, to_wstring("➕ Thêm Gõ Tắt mới...").as_ptr());
+        AppendMenuW(macro_dict_sub, MF_STRING, ID_OPEN_MACROS, to_wstring("Chỉnh sửa bảng Gõ Tắt (macros.conf)...").as_ptr());
+        AppendMenuW(macro_dict_sub, MF_SEPARATOR, 0, null_mut());
+        AppendMenuW(macro_dict_sub, MF_STRING | if dict_en { MF_CHECKED } else { 0 }, ID_TOGGLE_DICT, to_wstring("Bật Từ Điển Cá Nhân").as_ptr());
+        AppendMenuW(macro_dict_sub, MF_STRING, ID_OPEN_DICT, to_wstring("Chỉnh sửa Từ Điển Cá Nhân (dictionary.conf)...").as_ptr());
+        AppendMenuW(macro_dict_sub, MF_SEPARATOR, 0, null_mut());
+        AppendMenuW(macro_dict_sub, MF_STRING, ID_RELOAD_FILES, to_wstring("Nạp lại Gõ Tắt & Từ Điển").as_ptr());
+        AppendMenuW(macro_dict_sub, MF_SEPARATOR, 0, null_mut());
         let habit_sub = CreatePopupMenu();
-        AppendMenuW(
-            habit_sub,
-            MF_STRING | if habit_en { MF_CHECKED } else { 0 },
-            ID_TOGGLE_HABIT_LEARNING,
-            to_wstring("Bật Tự Động Học Sửa Từ").as_ptr(),
-        );
+        AppendMenuW(habit_sub, MF_STRING | if habit_en { MF_CHECKED } else { 0 }, ID_TOGGLE_HABIT_LEARNING, to_wstring("Bật Tự Động Học Sửa Từ").as_ptr());
         AppendMenuW(habit_sub, MF_SEPARATOR, 0, null_mut());
         let cur_th_label = format!("Ngưỡng học hiện tại: [{} lần sửa/xoá]", habit_threshold);
         AppendMenuW(habit_sub, MF_STRING | MF_GRAYED, 0, to_wstring(&cur_th_label).as_ptr());
-        AppendMenuW(
-            habit_sub,
-            MF_STRING | if habit_threshold == 2 { MF_CHECKED } else { 0 },
-            ID_HABIT_THRESHOLD_2,
-            to_wstring("2 lần (Nhanh nhất)").as_ptr(),
-        );
-        AppendMenuW(
-            habit_sub,
-            MF_STRING | if habit_threshold == 3 { MF_CHECKED } else { 0 },
-            ID_HABIT_THRESHOLD_3,
-            to_wstring("3 lần").as_ptr(),
-        );
-        AppendMenuW(
-            habit_sub,
-            MF_STRING | if habit_threshold == 4 { MF_CHECKED } else { 0 },
-            ID_HABIT_THRESHOLD_4,
-            to_wstring("4 lần (Khuyên dùng)").as_ptr(),
-        );
-        AppendMenuW(
-            habit_sub,
-            MF_STRING | if habit_threshold == 5 { MF_CHECKED } else { 0 },
-            ID_HABIT_THRESHOLD_5,
-            to_wstring("5 lần (An toàn)").as_ptr(),
-        );
-        AppendMenuW(
-            habit_sub,
-            MF_STRING | if habit_threshold == 6 { MF_CHECKED } else { 0 },
-            ID_HABIT_THRESHOLD_6,
-            to_wstring("6 lần").as_ptr(),
-        );
-        AppendMenuW(
-            habit_sub,
-            MF_STRING | if habit_threshold == 8 { MF_CHECKED } else { 0 },
-            ID_HABIT_THRESHOLD_8,
-            to_wstring("8 lần").as_ptr(),
-        );
-        AppendMenuW(
-            menu,
-            MF_POPUP,
-            habit_sub as usize,
-            to_wstring("Học thói quen sửa từ (Adaptive Learning)...").as_ptr(),
-        );
+        AppendMenuW(habit_sub, MF_STRING | if habit_threshold == 2 { MF_CHECKED } else { 0 }, ID_HABIT_THRESHOLD_2, to_wstring("2 lần (Nhanh nhất)").as_ptr());
+        AppendMenuW(habit_sub, MF_STRING | if habit_threshold == 3 { MF_CHECKED } else { 0 }, ID_HABIT_THRESHOLD_3, to_wstring("3 lần").as_ptr());
+        AppendMenuW(habit_sub, MF_STRING | if habit_threshold == 4 { MF_CHECKED } else { 0 }, ID_HABIT_THRESHOLD_4, to_wstring("4 lần (Khuyên dùng)").as_ptr());
+        AppendMenuW(habit_sub, MF_STRING | if habit_threshold == 5 { MF_CHECKED } else { 0 }, ID_HABIT_THRESHOLD_5, to_wstring("5 lần (An toàn)").as_ptr());
+        AppendMenuW(habit_sub, MF_STRING | if habit_threshold == 6 { MF_CHECKED } else { 0 }, ID_HABIT_THRESHOLD_6, to_wstring("6 lần").as_ptr());
+        AppendMenuW(habit_sub, MF_STRING | if habit_threshold == 8 { MF_CHECKED } else { 0 }, ID_HABIT_THRESHOLD_8, to_wstring("8 lần").as_ptr());
+        AppendMenuW(macro_dict_sub, MF_POPUP, habit_sub as usize, to_wstring("Học thói quen sửa từ (Adaptive Learning)...").as_ptr());
+        AppendMenuW(menu, MF_POPUP, macro_dict_sub as usize, to_wstring("Gõ tắt & Từ điển").as_ptr());
 
         AppendMenuW(menu, MF_SEPARATOR, 0, null_mut());
 
-        // 7. Khởi động cùng Windows
+        // 6. Bảng điều khiển
+        AppendMenuW(menu, MF_STRING, ID_OPEN_SETTINGS, to_wstring("Mở Bảng Điều Khiển...").as_ptr());
+        AppendMenuW(menu, MF_SEPARATOR, 0, null_mut());
+
+        // 7. Hệ thống & Gỡ lỗi (ít dùng)
+        let system_sub = CreatePopupMenu();
         let autorun_on = is_autorun_enabled();
-        AppendMenuW(
-            menu,
-            MF_STRING | if autorun_on { MF_CHECKED } else { 0 },
-            ID_TOGGLE_AUTORUN,
-            to_wstring("Khởi động cùng Windows").as_ptr(),
-        );
+        AppendMenuW(system_sub, MF_STRING | if autorun_on { MF_CHECKED } else { 0 }, ID_TOGGLE_AUTORUN, to_wstring("Khởi động cùng Windows").as_ptr());
+        AppendMenuW(system_sub, MF_SEPARATOR, 0, null_mut());
+        AppendMenuW(system_sub, MF_STRING, ID_CHECK_UPDATE, to_wstring("Kiểm tra bản cập nhật mới...").as_ptr());
+        AppendMenuW(system_sub, MF_STRING, ID_ABOUT, to_wstring("Thông tin VnCharKey (About)...").as_ptr());
+        AppendMenuW(system_sub, MF_SEPARATOR, 0, null_mut());
+        AppendMenuW(system_sub, MF_STRING, ID_RESET_DEFAULTS, to_wstring("Khôi phục mặc định").as_ptr());
+        AppendMenuW(menu, MF_POPUP, system_sub as usize, to_wstring("Hệ thống").as_ptr());
 
-        AppendMenuW(menu, MF_SEPARATOR, 0, null_mut());
-
-        // 8. Thông tin & Cập nhật
-        AppendMenuW(
-            menu,
-            MF_STRING,
-            ID_CHECK_UPDATE,
-            to_wstring("Kiểm tra bản cập nhật mới...").as_ptr(),
-        );
-        AppendMenuW(
-            menu,
-            MF_STRING,
-            ID_ABOUT,
-            to_wstring("Thông tin VnCharKey (About)...").as_ptr(),
-        );
-        AppendMenuW(
-            menu,
-            MF_STRING,
-            ID_LIVE_INSPECTOR,
-            to_wstring("Live Inspector (Debug)...").as_ptr(),
-        );
+        let debug_sub = CreatePopupMenu();
+        AppendMenuW(debug_sub, MF_STRING, ID_LIVE_INSPECTOR, to_wstring("Live Inspector...").as_ptr());
         let allow_backtick_checked = STATE.with(|s| s.borrow().engine.allow_vietnamese_in_backtick());
-        AppendMenuW(
-            menu,
-            if allow_backtick_checked { MF_STRING | MF_CHECKED } else { MF_STRING },
-            ID_ALLOW_VIETNAMESE_IN_BACKTICK,
-            to_wstring("Cho phép gõ Tiếng Việt trong `backtick` / ```code```").as_ptr(),
-        );
+        AppendMenuW(debug_sub, if allow_backtick_checked { MF_STRING | MF_CHECKED } else { MF_STRING }, ID_ALLOW_VIETNAMESE_IN_BACKTICK, to_wstring("Cho phép gõ Tiếng Việt trong `backtick` / ```code```").as_ptr());
         let trace_checked = STATE.with(|s| s.borrow().tracing_enabled);
-        AppendMenuW(
-            menu,
-            if trace_checked { MF_STRING | MF_CHECKED } else { MF_STRING },
-            ID_TOGGLE_TRACE_LOG,
-            to_wstring("Ghi Trace Log (Debug)").as_ptr(),
-        );
-        AppendMenuW(
-            menu,
-            MF_STRING,
-            ID_EXPORT_DEBUG_LOGS,
-            to_wstring("Export Debug Logs...").as_ptr(),
-        );
-
-        AppendMenuW(
-            menu,
-            MF_STRING,
-            ID_RESET_DEFAULTS,
-            to_wstring("Khôi phục mặc định").as_ptr(),
-        );
+        AppendMenuW(debug_sub, if trace_checked { MF_STRING | MF_CHECKED } else { MF_STRING }, ID_TOGGLE_TRACE_LOG, to_wstring("Ghi Trace Log (Debug)").as_ptr());
+        AppendMenuW(debug_sub, MF_STRING, ID_EXPORT_DEBUG_LOGS, to_wstring("Export Debug Logs...").as_ptr());
+        AppendMenuW(menu, MF_POPUP, debug_sub as usize, to_wstring("Gỡ lỗi").as_ptr());
 
         AppendMenuW(menu, MF_SEPARATOR, 0, null_mut());
 
-        // 9. Exit
-        AppendMenuW(
-            menu,
-            MF_STRING,
-            ID_TRAY_EXIT,
-            to_wstring("Thoát VnCharKey").as_ptr(),
-        );
+        // 8. Thoát
+        AppendMenuW(menu, MF_STRING, ID_TRAY_EXIT, to_wstring("Thoát VnCharKey").as_ptr());
 
         let mut pt = POINT { x: 0, y: 0 };
         GetCursorPos(&mut pt);
