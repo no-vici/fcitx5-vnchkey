@@ -3153,6 +3153,16 @@ Start-Process -FilePath $batch -WindowStyle Hidden;
 
                 STATE.with(|s| {
                     if let Ok(mut st) = s.try_borrow_mut() {
+                        let app_changed = st.current_app != proc_name;
+                        if !app_changed {
+                            return;
+                        }
+
+                        // Reset composition buffer on app switch. This prevents stale
+                        // engine/screen desync (e.g. caret moved or text mutated by the
+                        // previous app) from leaking into the newly focused app.
+                        st.engine.reset();
+
                         if !st.per_app {
                             st.current_app = proc_name;
                             return;
@@ -3176,7 +3186,6 @@ Start-Process -FilePath $batch -WindowStyle Hidden;
                         };
                         if st.enabled != next_state {
                             st.enabled = next_state;
-                            st.engine.reset();
                             let h = st.hwnd;
                             let m = st.method;
                             update_tray_tooltip(h, next_state, m);
