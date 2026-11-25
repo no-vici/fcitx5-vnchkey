@@ -1172,7 +1172,7 @@ mod win_app {
         add_check("Developer mode", SID_DEV_MODE, "developer_mode", true, col2, &mut yr);
 
         y = yl.max(yr) + 16;
-        let btn_save = create_button(hwnd, hinstance, "Lưu thiết lập", SID_SAVE, left, y, 105, 32);
+        let btn_save = create_button(hwnd, hinstance, "Lưu thay đổi", SID_SAVE, left, y, 105, 32);
         let btn_cfg = create_button(hwnd, hinstance, "Mở thư mục config", SID_OPEN_CONFIG, 135, y, 135, 32);
         let btn_macro = create_button(hwnd, hinstance, "Mở macro", SID_OPEN_MACROS, 280, y, 95, 32);
         let btn_dict = create_button(hwnd, hinstance, "Mở từ điển cá nhân", SID_OPEN_DICT, 385, y, 135, 32);
