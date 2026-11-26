@@ -255,10 +255,10 @@ impl EnglishAutoRestore {
     pub fn should_restore(&self, raw_strokes: &str, current_word: &str, use_dictionary: bool) -> bool {
         static EMPTY: std::sync::OnceLock<std::collections::HashSet<String>> = std::sync::OnceLock::new();
         let empty = EMPTY.get_or_init(std::collections::HashSet::new);
-        self.should_restore_with_options(raw_strokes, current_word, use_dictionary, true, empty)
+        self.should_restore_with_options(raw_strokes, current_word, use_dictionary, true, empty, false)
     }
 
-    /// Extended `should_restore` with explicit `acronym_bypass` toggle and user Vietnamese words.
+    /// Extended `should_restore` with explicit `acronym_bypass`, user Vietnamese words, and collision preference.
     pub fn should_restore_with_options(
         &self,
         raw_strokes: &str,
@@ -266,6 +266,7 @@ impl EnglishAutoRestore {
         use_dictionary: bool,
         acronym_bypass: bool,
         user_vietnamese_words: &std::collections::HashSet<String>,
+        collision_prefers_vietnamese: bool,
     ) -> bool {
         let raw_trimmed = raw_strokes.trim();
         let cur_trimmed = current_word.trim();
@@ -305,13 +306,16 @@ impl EnglishAutoRestore {
                 // Rule 3: If User Dictionary is enabled and raw_strokes is in the English/User dictionary:
                 // - Restore if raw_strokes is >= 4 chars (e.g. "text", "post", "cost", "user", "window", "linux")
                 // - Or restore if the resulting 2-3 letter word is NOT in the Vietnamese dictionary (e.g. "fix" -> "fĩ", "web" -> "ưeb", "yes" -> "ýe")
-                if use_dictionary
-                    && self.keywords.contains(raw_clean)
-                    && (raw_clean.len() >= 4
-                        || !(is_in_vietnamese_dictionary(cur_clean)
-                            || user_vietnamese_words.contains(cur_clean)))
-                {
-                    return true;
+                // - If collision_prefers_vietnamese is ON, keep Vietnamese when the transformed result is a valid Vietnamese word.
+                if use_dictionary && self.keywords.contains(raw_clean) {
+                    let cur_is_vietnamese =
+                        is_in_vietnamese_dictionary(cur_clean) || user_vietnamese_words.contains(cur_clean);
+                    if collision_prefers_vietnamese && cur_is_vietnamese {
+                        return false;
+                    }
+                    if raw_clean.len() >= 4 || !cur_is_vietnamese {
+                        return true;
+                    }
                 }
 
                 false

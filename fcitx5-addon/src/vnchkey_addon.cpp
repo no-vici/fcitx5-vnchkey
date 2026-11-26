@@ -961,6 +961,8 @@ void VnchkeyEngine::loadConfig() {
                 config_sentence_momentum_ = (line.find("True") != std::string::npos || line.find("true") != std::string::npos);
             } else if (line.rfind("MathContext=", 0) == 0) {
                 config_math_context_ = (line.find("True") != std::string::npos || line.find("true") != std::string::npos);
+            } else if (line.rfind("CollisionPrefersVietnamese=", 0) == 0) {
+                config_collision_prefers_vietnamese_ = (line.find("True") != std::string::npos || line.find("true") != std::string::npos);
             } else if (line.rfind("AutoCapitalize=", 0) == 0 || line.rfind("auto_capitalize=", 0) == 0) {
                 config_auto_capitalize_ = (line.find("True") != std::string::npos || line.find("true") != std::string::npos);
             } else if (line.rfind("UserVietnameseWords=", 0) == 0) {
@@ -1009,6 +1011,7 @@ void VnchkeyEngine::loadConfig() {
         fcitx5_vnchkey_set_allow_vietnamese_in_backtick(ctx, config_allow_vietnamese_in_backtick_);
         fcitx5_vnchkey_set_sentence_momentum(ctx, config_sentence_momentum_);
         fcitx5_vnchkey_set_math_context(ctx, config_math_context_);
+        fcitx5_vnchkey_set_collision_prefers_vietnamese(ctx, config_collision_prefers_vietnamese_);
         fcitx5_vnchkey_set_auto_capitalize(ctx, config_auto_capitalize_);
         fcitx5_vnchkey_set_user_vietnamese_words(ctx, config_user_vietnamese_words_.c_str());
         fcitx5_vnchkey_set_backspace_by_syllable(ctx, config_backspace_by_syllable_);
@@ -1059,6 +1062,7 @@ void VnchkeyEngine::saveConfig() {
                     l.rfind("AllowVietnameseInBacktick=", 0) != 0 &&
                     l.rfind("SentenceMomentum=", 0) != 0 &&
                     l.rfind("MathContext=", 0) != 0 &&
+                    l.rfind("CollisionPrefersVietnamese=", 0) != 0 &&
                     l.rfind("AutoCapitalize=", 0) != 0 &&
                     l.rfind("auto_capitalize=", 0) != 0 &&
                     l.rfind("UserVietnameseWords=", 0) != 0 &&
@@ -1105,6 +1109,7 @@ void VnchkeyEngine::saveConfig() {
         out << "AllowVietnameseInBacktick=" << (config_allow_vietnamese_in_backtick_ ? "True" : "False") << "\n";
         out << "SentenceMomentum=" << (config_sentence_momentum_ ? "True" : "False") << "\n";
         out << "MathContext=" << (config_math_context_ ? "True" : "False") << "\n";
+        out << "CollisionPrefersVietnamese=" << (config_collision_prefers_vietnamese_ ? "True" : "False") << "\n";
         out << "AutoCapitalize=" << (config_auto_capitalize_ ? "True" : "False") << "\n";
         out << "UserVietnameseWords=" << config_user_vietnamese_words_ << "\n";
         out << "BackspaceBySyllable=" << (config_backspace_by_syllable_ ? "True" : "False") << "\n";

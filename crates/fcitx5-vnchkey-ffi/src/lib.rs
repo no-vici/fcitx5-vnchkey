@@ -880,6 +880,35 @@ pub unsafe extern "C" fn fcitx5_vnchkey_get_sentence_momentum(
     }
 }
 
+/// Sets whether ambiguous EN/VN collision words prefer Vietnamese.
+///
+/// # Safety
+/// `ctx` must be a valid pointer returned by `fcitx5_vnchkey_init` or null.
+#[no_mangle]
+pub unsafe extern "C" fn fcitx5_vnchkey_set_collision_prefers_vietnamese(
+    ctx: *mut Fcitx5VnchkeyContext,
+    enabled: bool,
+) {
+    if !ctx.is_null() {
+        (*ctx).engine.set_collision_prefers_vietnamese(enabled);
+    }
+}
+
+/// Returns whether ambiguous EN/VN collision words prefer Vietnamese.
+///
+/// # Safety
+/// `ctx` must be a valid pointer returned by `fcitx5_vnchkey_init` or null.
+#[no_mangle]
+pub unsafe extern "C" fn fcitx5_vnchkey_get_collision_prefers_vietnamese(
+    ctx: *const Fcitx5VnchkeyContext,
+) -> bool {
+    if !ctx.is_null() {
+        (*ctx).engine.collision_prefers_vietnamese()
+    } else {
+        false
+    }
+}
+
 /// Enables or disables Math Context.
 ///
 /// # Safety

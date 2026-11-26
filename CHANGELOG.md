@@ -15,6 +15,10 @@ Tất cả những thay đổi nổi bật của dự án **vnchKey** (**fcitx5-
 - **Dọn Gọn `AutoCapitalizeProperNouns`**:
   - Gỡ bỏ `auto_capitalize_proper_nouns` và `proper_nouns_list` khỏi core, FFI, config và UI (dùng Macro cho danh từ riêng/cụm từ linh hoạt và chính xác hơn).
   - **Preset + Import/Merge trong Settings**: thêm `presets/vietnamese-dialect-user-dict.txt` (preset phương ngữ/từ bổ sung) và nút **Gộp preset phương ngữ** / **Nhập từ file...**; merge chuẩn hóa lowercase, bỏ comment `#`, dedup, không ghi đè entry cũ.
+- **Ưu Tiên Tiếng Việt Khi Từ Va Chạm (`CollisionPrefersVietnamese`)**:
+  - Thêm tùy chọn `collision_prefers_vietnamese` (mặc định **TẮT**, giữ hành vi hiện tại) cho các từ va chạm EN/VN mơ hồ như `list/lít`, `last/lát`.
+  - Khi bật, bộ gõ ưu tiên dạng tiếng Việt hợp lệ; khi tắt, giữ hành vi auto-restore/collision hiện có để tránh hồi quy.
+  - Đã nối config/FFI và UI: Windows tray/Settings native, Fcitx5 settings config, FFI setter/getter.
 
 ### 🐛 Sửa Lỗi & Audit
 - **User Vietnamese Dict có hiệu lực đầy đủ trong core**: audit các đường dùng `is_in_vietnamese_dictionary`/validation — `auto_restore`, fuzzy vowel resolver (`uo/ươ`...), elongated word check, và digit-restore spell check giờ đều tôn trọng `UserVietnameseWords`. Không merge vào built-in dict/bloom; preset được quản lý qua user dict.

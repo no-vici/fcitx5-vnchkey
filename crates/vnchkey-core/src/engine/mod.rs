@@ -105,6 +105,8 @@ pub struct EngineConfig {
     pub sentence_momentum: bool,
     /// Math Context: preserve English for ambiguous collision words after math function anchors (e.g. `sin and cos`, `tan or cos`). Defaults to false (opt-in).
     pub math_context: bool,
+    /// Prefer Vietnamese for ambiguous EN/VN collision words (e.g. `list -> lít`, `last -> lát`). Defaults to false to preserve current behavior.
+    pub collision_prefers_vietnamese: bool,
 }
 
 impl Default for EngineConfig {
@@ -138,6 +140,7 @@ impl Default for EngineConfig {
             backspace_by_syllable: false,
             sentence_momentum: false,
             math_context: false,
+            collision_prefers_vietnamese: false,
             macro_preview: false,
         }
     }
@@ -870,6 +873,16 @@ impl Engine {
     /// Returns whether Math Context is enabled.
     pub fn math_context(&self) -> bool {
         self.config.math_context
+    }
+
+    /// Enables or disables preferring Vietnamese for ambiguous EN/VN collision words.
+    pub fn set_collision_prefers_vietnamese(&mut self, enabled: bool) {
+        self.config.collision_prefers_vietnamese = enabled;
+    }
+
+    /// Returns whether ambiguous EN/VN collision words prefer Vietnamese.
+    pub fn collision_prefers_vietnamese(&self) -> bool {
+        self.config.collision_prefers_vietnamese
     }
 
     /// Returns a compact live-inspector snapshot of the current engine state and syllable breakdown.
@@ -1918,16 +1931,20 @@ impl Engine {
                     && (2..=4).contains(&self.raw_strokes.len())
                     && self.current_word != self.raw_strokes
                     && matches!(raw_lower.as_str(), "is" | "this" | "has" | "see");
-                let context_english_collision =
-                    math_context_collision || sentence_momentum_collision || prev_word_collision;
+                let context_english_collision = !self.config.collision_prefers_vietnamese
+                    && (math_context_collision || sentence_momentum_collision || prev_word_collision);
 
+                let is_english_keyword = self.config.auto_restore_english
+                    && !has_digits
+                    && self.current_word != self.raw_strokes
+                    && self.auto_restore.is_english_keyword(&self.raw_strokes);
+                let vn_preferred_collision = self.config.collision_prefers_vietnamese
+                    && is_english_keyword
+                    && self.is_in_any_vietnamese_dictionary(&self.current_word);
                 let is_known_english = is_slash_command_or_path
                     || is_dot_module_prefix
                     || context_english_collision
-                    || (self.config.auto_restore_english
-                        && !has_digits
-                        && self.current_word != self.raw_strokes
-                        && self.auto_restore.is_english_keyword(&self.raw_strokes));
+                    || (is_english_keyword && !vn_preferred_collision);
 
                 let alphanumeric_trap = self.has_letter_after_digit
                     && (!is_valid_vietnamese_syllable(&self.current_word)
@@ -1948,6 +1965,7 @@ impl Engine {
                             true,
                             self.config.acronym_bypass,
                             &self.user_vietnamese_words,
+                            self.config.collision_prefers_vietnamese,
                         );
                     // Invalid intermediate syllables (duòng, tién, nuóc) MUST auto-restore on Space even if auto_restore_english is false.
                     let english_or_spell_restore = is_known_english
@@ -2492,6 +2510,7 @@ impl Engine {
                     true,
                     false,
                     &self.user_vietnamese_words,
+                    self.config.collision_prefers_vietnamese,
                 );
 
         if !self.manual_undo

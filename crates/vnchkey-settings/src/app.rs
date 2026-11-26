@@ -790,6 +790,12 @@ impl SettingsApp {
         ui.add_space(6.0);
 
         ui.checkbox(
+            &mut self.config.collision_prefers_vietnamese,
+            "Ưu tiên Tiếng Việt khi từ va chạm (list → lít, last → lát). Mặc định TẮT để giữ hành vi hiện tại.",
+        );
+        ui.add_space(6.0);
+
+        ui.checkbox(
             &mut self.config.auto_space_after_punctuation,
             "Auto-space after sentence-ending punctuation: Tự thêm khoảng trắng sau `.`, `?`, `!` khi từ trước là chữ cái. Mặc định TẮT.",
         );

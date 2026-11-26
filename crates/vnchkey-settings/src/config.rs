@@ -53,6 +53,8 @@ pub struct VnchkeyConfig {
     #[serde(default)]
     pub math_context: bool,
     #[serde(default)]
+    pub collision_prefers_vietnamese: bool,
+    #[serde(default)]
     pub auto_space_after_punctuation: bool,
     #[serde(default)]
     pub auto_capitalize: bool,
@@ -110,6 +112,7 @@ impl Default for VnchkeyConfig {
             allow_vietnamese_in_backtick: false,
             sentence_momentum: false,
             math_context: false,
+            collision_prefers_vietnamese: false,
             auto_space_after_punctuation: false,
             auto_capitalize: false,
             backspace_by_syllable: false,
@@ -276,6 +279,7 @@ impl ConfigManager {
             if let Some(v) = map.get("AllowVietnameseInBacktick") { cfg.allow_vietnamese_in_backtick = v.eq_ignore_ascii_case("true"); }
             if let Some(v) = map.get("SentenceMomentum") { cfg.sentence_momentum = v.eq_ignore_ascii_case("true"); }
             if let Some(v) = map.get("MathContext") { cfg.math_context = v.eq_ignore_ascii_case("true"); }
+            if let Some(v) = map.get("CollisionPrefersVietnamese") { cfg.collision_prefers_vietnamese = v.eq_ignore_ascii_case("true"); }
         if let Some(v) = map.get("AutoCapitalize") { cfg.auto_capitalize = v.eq_ignore_ascii_case("true"); }
         if let Some(v) = map.get("AutoSpaceAfterPunctuation") { cfg.auto_space_after_punctuation = v.eq_ignore_ascii_case("true"); }
         if let Some(v) = map.get("BackspaceBySyllable") { cfg.backspace_by_syllable = v.eq_ignore_ascii_case("true"); }
@@ -340,6 +344,7 @@ impl ConfigManager {
         lines.push(format!("AllowVietnameseInBacktick={}", if cfg.allow_vietnamese_in_backtick { "True" } else { "False" }));
         lines.push(format!("SentenceMomentum={}", if cfg.sentence_momentum { "True" } else { "False" }));
         lines.push(format!("MathContext={}", if cfg.math_context { "True" } else { "False" }));
+        lines.push(format!("CollisionPrefersVietnamese={}", if cfg.collision_prefers_vietnamese { "True" } else { "False" }));
         lines.push(format!("AutoCapitalize={}", if cfg.auto_capitalize { "True" } else { "False" }));
         lines.push(format!("AutoSpaceAfterPunctuation={}", if cfg.auto_space_after_punctuation { "True" } else { "False" }));
         lines.push(format!("BackspaceBySyllable={}", if cfg.backspace_by_syllable { "True" } else { "False" }));
