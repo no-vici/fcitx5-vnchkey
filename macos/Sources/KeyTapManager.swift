@@ -511,6 +511,17 @@ public class KeyTapManager {
         return fcitx5_vnchkey_get_math_context(engine)
     }
 
+    public func setCollisionPrefersVietnamese(_ enabled: Bool) {
+        if let engine = self.engine {
+            fcitx5_vnchkey_set_collision_prefers_vietnamese(engine, enabled)
+        }
+    }
+
+    public func getCollisionPrefersVietnamese() -> Bool {
+        guard let engine = self.engine else { return false }
+        return fcitx5_vnchkey_get_collision_prefers_vietnamese(engine)
+    }
+
     private var autoCapitalizeEnabled = false
 
     public func setAutoCapitalize(_ enabled: Bool) {

@@ -18,7 +18,7 @@ Tất cả những thay đổi nổi bật của dự án **vnchKey** (**fcitx5-
 - **Ưu Tiên Tiếng Việt Khi Từ Va Chạm (`CollisionPrefersVietnamese`)**:
   - Thêm tùy chọn `collision_prefers_vietnamese` (mặc định **TẮT**, giữ hành vi hiện tại) cho các từ va chạm EN/VN mơ hồ như `list/lít`, `last/lát`.
   - Khi bật, bộ gõ ưu tiên dạng tiếng Việt hợp lệ; khi tắt, giữ hành vi auto-restore/collision hiện có để tránh hồi quy.
-  - Đã nối config/FFI và UI: Windows tray/Settings native, Fcitx5 settings config, FFI setter/getter.
+  - Đã nối config/FFI và UI: Windows tray/Settings native, Fcitx5 settings config + addon C++, macOS menu/config, FFI setter/getter.
 
 ### 🐛 Sửa Lỗi & Audit
 - **User Vietnamese Dict có hiệu lực đầy đủ trong core**: audit các đường dùng `is_in_vietnamese_dictionary`/validation — `auto_restore`, fuzzy vowel resolver (`uo/ươ`...), elongated word check, và digit-restore spell check giờ đều tôn trọng `UserVietnameseWords`. Không merge vào built-in dict/bloom; preset được quản lý qua user dict.

@@ -164,6 +164,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         km.setAllowVietnameseInBacktick(defaults.bool(forKey: "vnchkey.allowVietnameseInBacktick"))
         km.setSentenceMomentum(defaults.bool(forKey: "vnchkey.sentenceMomentum"))
         km.setMathContext(defaults.bool(forKey: "vnchkey.mathContext"))
+        km.setCollisionPrefersVietnamese(defaults.bool(forKey: "vnchkey.collisionPrefersVietnamese"))
         km.setAutoCapitalize(defaults.bool(forKey: "vnchkey.autoCapitalize"))
         if let savedVnWords = defaults.string(forKey: "vnchkey.userVietnameseWords") {
             km.setUserVietnameseWords(savedVnWords)
@@ -358,6 +359,10 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         let mathContextItem = NSMenuItem(title: "Math Context (giữ tiếng Anh sau sin/cos/tan)", action: #selector(toggleMathContext(_:)), keyEquivalent: "")
         mathContextItem.state = km.getMathContext() ? .on : .off
         advancedMenu.addItem(mathContextItem)
+
+        let collisionVnItem = NSMenuItem(title: "Ưu tiên tiếng Việt khi từ va chạm (list → lít)", action: #selector(toggleCollisionPrefersVietnamese(_:)), keyEquivalent: "")
+        collisionVnItem.state = km.getCollisionPrefersVietnamese() ? .on : .off
+        advancedMenu.addItem(collisionVnItem)
 
         let advancedParent = NSMenuItem(title: "Tùy chọn nâng cao...", action: nil, keyEquivalent: "")
         advancedParent.submenu = advancedMenu
@@ -693,6 +698,15 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         let next = !km.getMathContext()
         defaults.set(next, forKey: "vnchkey.mathContext")
         km.setMathContext(next)
+        rebuildMenu()
+        syncDashboardControls()
+    }
+
+    @objc func toggleCollisionPrefersVietnamese(_ sender: NSMenuItem) {
+        guard let km = keyManager else { return }
+        let next = !km.getCollisionPrefersVietnamese()
+        defaults.set(next, forKey: "vnchkey.collisionPrefersVietnamese")
+        km.setCollisionPrefersVietnamese(next)
         rebuildMenu()
         syncDashboardControls()
     }
