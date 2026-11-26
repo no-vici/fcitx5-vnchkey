@@ -60,6 +60,7 @@ mod win_app {
     const ID_TOGGLE_SENTENCE_MOMENTUM: usize = 1067;
     const ID_TOGGLE_MATH_CONTEXT: usize = 1068;
     const ID_TOGGLE_COLLISION_VIETNAMESE: usize = 1069;
+    const ID_TOGGLE_FREQUENCY_DISAMBIGUATION: usize = 1070;
     const ID_TOGGLE_MACRO: usize = 1034;
     const ID_TOGGLE_DICT: usize = 1035;
     const ID_TOGGLE_HABIT_LEARNING: usize = 1053;
@@ -604,6 +605,10 @@ mod win_app {
                             let val = v == "true" || v == "1";
                             st.engine.set_collision_prefers_vietnamese(val);
                         }
+                        "frequency_disambiguation" => {
+                            let val = v == "true" || v == "1";
+                            st.engine.set_frequency_disambiguation(val);
+                        }
                         "auto_space_after_punctuation" => {
                             let val = v == "true" || v == "1";
                             st.engine.set_auto_space_after_punctuation(val);
@@ -677,6 +682,7 @@ mod win_app {
              sentence_momentum={}\n\
              math_context={}\n\
              collision_prefers_vietnamese={}\n\
+             frequency_disambiguation={}\n\
              auto_space_after_punctuation={}\n\
              auto_capitalize={}\n\
              user_vietnamese_words={}\n\
@@ -715,6 +721,7 @@ mod win_app {
             st.engine.sentence_momentum(),
             st.engine.math_context(),
             st.engine.collision_prefers_vietnamese(),
+            st.engine.frequency_disambiguation(),
             st.engine.auto_space_after_punctuation(),
             st.engine.auto_capitalize(),
             st.engine.user_vietnamese_words().join(","),
@@ -869,6 +876,7 @@ mod win_app {
     const SID_MOMENTUM: i32 = 2024;
     const SID_MATH: i32 = 2025;
     const SID_COLLISION_VN: i32 = 2029;
+    const SID_FREQ_DISAMBIG: i32 = 2031;
     const SID_BACKSPACE_SYL: i32 = 2026;
     const SID_MACRO_PREVIEW: i32 = 2027;
     const SID_DEV_MODE: i32 = 2028;
@@ -1012,6 +1020,7 @@ mod win_app {
                 SID_MOMENTUM => "sentence_momentum",
                 SID_MATH => "math_context",
                 SID_COLLISION_VN => "collision_prefers_vietnamese",
+                SID_FREQ_DISAMBIG => "frequency_disambiguation",
                 SID_BACKSPACE_SYL => "backspace_by_syllable",
                 SID_MACRO_PREVIEW => "macro_preview",
                 SID_DEV_MODE => "developer_mode",
@@ -1028,7 +1037,7 @@ mod win_app {
             "method","charset","tone_style","spell_check","auto_restore","esc_restore","bracket_transform",
             "quick_telex","quick_start_consonant","quick_end_consonant","macro_enabled","dict_enabled",
             "learn_habits","habit_threshold","initial_case_anchor","developer_mode","allow_vietnamese_in_backtick",
-            "sentence_momentum","math_context","collision_prefers_vietnamese","auto_space_after_punctuation","auto_capitalize",
+            "sentence_momentum","math_context","collision_prefers_vietnamese","frequency_disambiguation","auto_space_after_punctuation","auto_capitalize",
             "user_vietnamese_words","backspace_by_syllable","macro_preview","per_app",
             "ctrl","shift","alt","win","vk","flip_ctrl","flip_shift","flip_alt","flip_win","flip_vk",
             "case_converter_shortcut","excluded_apps",
@@ -1177,6 +1186,7 @@ mod win_app {
         add_check("Sentence momentum", SID_MOMENTUM, "sentence_momentum", false, col2, &mut yr);
         add_check("Ngữ cảnh toán học", SID_MATH, "math_context", false, col2, &mut yr);
         add_check("Ưu tiên TV khi va chạm", SID_COLLISION_VN, "collision_prefers_vietnamese", false, col2, &mut yr);
+        add_check("Phân giải va chạm theo tần suất", SID_FREQ_DISAMBIG, "frequency_disambiguation", false, col2, &mut yr);
         add_check("Backspace theo âm tiết", SID_BACKSPACE_SYL, "backspace_by_syllable", false, col2, &mut yr);
         add_check("Coi trước macro", SID_MACRO_PREVIEW, "macro_preview", false, col2, &mut yr);
         add_check("Developer mode", SID_DEV_MODE, "developer_mode", true, col2, &mut yr);
@@ -2582,7 +2592,7 @@ Start-Process -FilePath $batch -WindowStyle Hidden;
         AppendMenuW(menu, MF_SEPARATOR, 0, null_mut());
 
         // 4. Tính năng gõ thường dùng
-        let (quick_telex, quick_start, quick_end, dev_mode, sentence_momentum, math_context, collision_prefers_vietnamese) = STATE.with(|s| {
+        let (quick_telex, quick_start, quick_end, dev_mode, sentence_momentum, math_context, collision_prefers_vietnamese, frequency_disambiguation) = STATE.with(|s| {
             s.try_borrow()
                 .ok()
                 .map(|st| {
@@ -2594,9 +2604,10 @@ Start-Process -FilePath $batch -WindowStyle Hidden;
                         st.engine.sentence_momentum(),
                         st.engine.math_context(),
                         st.engine.collision_prefers_vietnamese(),
+                        st.engine.frequency_disambiguation(),
                     )
                 })
-                .unwrap_or((false, false, false, true, false, false, false))
+                .unwrap_or((false, false, false, true, false, false, false, false))
         });
 
         AppendMenuW(menu, MF_STRING | if spell { MF_CHECKED } else { 0 }, ID_TOGGLE_SPELLCHECK, to_wstring("Kiểm tra Chánh Tả").as_ptr());
@@ -2610,6 +2621,7 @@ Start-Process -FilePath $batch -WindowStyle Hidden;
         AppendMenuW(advanced_sub, MF_STRING | if sentence_momentum { MF_CHECKED } else { 0 }, ID_TOGGLE_SENTENCE_MOMENTUM, to_wstring("Sentence Momentum (giữ tiếng Anh trong câu song ngữ)").as_ptr());
         AppendMenuW(advanced_sub, MF_STRING | if math_context { MF_CHECKED } else { 0 }, ID_TOGGLE_MATH_CONTEXT, to_wstring("Math Context (giữ tiếng Anh sau sin/cos/tan)").as_ptr());
         AppendMenuW(advanced_sub, MF_STRING | if collision_prefers_vietnamese { MF_CHECKED } else { 0 }, ID_TOGGLE_COLLISION_VIETNAMESE, to_wstring("Ưu tiên tiếng Việt khi từ va chạm (list → lít)").as_ptr());
+        AppendMenuW(advanced_sub, MF_STRING | if frequency_disambiguation { MF_CHECKED } else { 0 }, ID_TOGGLE_FREQUENCY_DISAMBIGUATION, to_wstring("Phân giải va chạm theo tần suất (thử nghiệm)").as_ptr());
         AppendMenuW(advanced_sub, MF_SEPARATOR, 0, null_mut());
         let quick_sub = CreatePopupMenu();
         AppendMenuW(quick_sub, MF_STRING | if bracket { MF_CHECKED } else { 0 }, ID_TOGGLE_BRACKET, to_wstring("Gõ [ ] thành ơ ư").as_ptr());
@@ -2913,6 +2925,11 @@ Start-Process -FilePath $batch -WindowStyle Hidden;
                         ID_TOGGLE_COLLISION_VIETNAMESE => {
                             let val = !st.engine.collision_prefers_vietnamese();
                             st.engine.set_collision_prefers_vietnamese(val);
+                            save_app_config(&st);
+                        }
+                        ID_TOGGLE_FREQUENCY_DISAMBIGUATION => {
+                            let val = !st.engine.frequency_disambiguation();
+                            st.engine.set_frequency_disambiguation(val);
                             save_app_config(&st);
                         }
                         ID_TOGGLE_QUICK_TELEX => {

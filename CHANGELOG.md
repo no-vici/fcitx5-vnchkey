@@ -19,6 +19,11 @@ Tất cả những thay đổi nổi bật của dự án **vnchKey** (**fcitx5-
   - Thêm tùy chọn `collision_prefers_vietnamese` (mặc định **TẮT**, giữ hành vi hiện tại) cho các từ va chạm EN/VN mơ hồ như `list/lít`, `last/lát`.
   - Khi bật, bộ gõ ưu tiên dạng tiếng Việt hợp lệ; khi tắt, giữ hành vi auto-restore/collision hiện có để tránh hồi quy.
   - Đã nối config/FFI và UI: Windows tray/Settings native, Fcitx5 settings config + addon C++, macOS menu/config, FFI setter/getter.
+- **Phân Giải Va Chạm EN/VN Theo Tần Suất (`FrequencyDisambiguation`, Phase 3, thử nghiệm)**:
+  - Thêm tùy chọn `frequency_disambiguation` (mặc định **TẮT**) dùng bảng tần suất EN/VN ở ranh giới từ để hỗ trợ các từ va chạm mơ hồ.
+  - Khi bật và `collision_prefers_vietnamese` TẮT, bộ gõ chỉ ưu tiên tiếng Việt khi tín hiệu VN đủ mạnh (heuristic bảo thủ); EN-dominant vẫn giữ auto-restore tiếng Anh.
+  - Bảng dữ liệu/ý tưởng tham khảo từ VietTelex `EnglishFrequency.swift` (GPLv3), có ghi chú nguồn và cảm ơn VietTelex: https://github.com/ptrinh/viettelex. Triển khai dạng module nhỏ `english_frequency.rs`, dễ bảo trì/gỡ bỏ.
+  - Đã nối config/FFI và UI: Windows tray/Settings native, Fcitx5 settings config + addon C++, macOS menu/config, FFI setter/getter.
 
 ### 🐛 Sửa Lỗi & Audit
 - **User Vietnamese Dict có hiệu lực đầy đủ trong core**: audit các đường dùng `is_in_vietnamese_dictionary`/validation — `auto_restore`, fuzzy vowel resolver (`uo/ươ`...), elongated word check, và digit-restore spell check giờ đều tôn trọng `UserVietnameseWords`. Không merge vào built-in dict/bloom; preset được quản lý qua user dict.

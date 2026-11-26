@@ -124,6 +124,8 @@ void fcitx5_vnchkey_set_math_context(Fcitx5VnchkeyContext* ctx, bool enabled);
 bool fcitx5_vnchkey_get_math_context(const Fcitx5VnchkeyContext* ctx);
 void fcitx5_vnchkey_set_collision_prefers_vietnamese(Fcitx5VnchkeyContext* ctx, bool enabled);
 bool fcitx5_vnchkey_get_collision_prefers_vietnamese(const Fcitx5VnchkeyContext* ctx);
+void fcitx5_vnchkey_set_frequency_disambiguation(Fcitx5VnchkeyContext* ctx, bool enabled);
+bool fcitx5_vnchkey_get_frequency_disambiguation(const Fcitx5VnchkeyContext* ctx);
 void fcitx5_vnchkey_set_auto_capitalize(Fcitx5VnchkeyContext* ctx, bool enabled);
 void fcitx5_vnchkey_set_user_vietnamese_words(Fcitx5VnchkeyContext* ctx, const char* words_csv);
 

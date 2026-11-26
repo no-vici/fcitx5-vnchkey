@@ -909,6 +909,35 @@ pub unsafe extern "C" fn fcitx5_vnchkey_get_collision_prefers_vietnamese(
     }
 }
 
+/// Enables or disables frequency-based EN/VN disambiguation.
+///
+/// # Safety
+/// `ctx` must be a valid pointer returned by `fcitx5_vnchkey_init` or null.
+#[no_mangle]
+pub unsafe extern "C" fn fcitx5_vnchkey_set_frequency_disambiguation(
+    ctx: *mut Fcitx5VnchkeyContext,
+    enabled: bool,
+) {
+    if !ctx.is_null() {
+        (*ctx).engine.set_frequency_disambiguation(enabled);
+    }
+}
+
+/// Returns whether frequency-based EN/VN disambiguation is enabled.
+///
+/// # Safety
+/// `ctx` must be a valid pointer returned by `fcitx5_vnchkey_init` or null.
+#[no_mangle]
+pub unsafe extern "C" fn fcitx5_vnchkey_get_frequency_disambiguation(
+    ctx: *const Fcitx5VnchkeyContext,
+) -> bool {
+    if !ctx.is_null() {
+        (*ctx).engine.frequency_disambiguation()
+    } else {
+        false
+    }
+}
+
 /// Enables or disables Math Context.
 ///
 /// # Safety

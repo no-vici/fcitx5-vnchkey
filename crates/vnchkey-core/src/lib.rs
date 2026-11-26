@@ -11,6 +11,7 @@
 pub mod auto_restore;
 pub mod casing;
 pub mod engine;
+pub mod english_frequency;
 pub mod glyph;
 pub mod habit_learner;
 pub mod macros;

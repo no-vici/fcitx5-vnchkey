@@ -522,6 +522,17 @@ public class KeyTapManager {
         return fcitx5_vnchkey_get_collision_prefers_vietnamese(engine)
     }
 
+    public func setFrequencyDisambiguation(_ enabled: Bool) {
+        if let engine = self.engine {
+            fcitx5_vnchkey_set_frequency_disambiguation(engine, enabled)
+        }
+    }
+
+    public func getFrequencyDisambiguation() -> Bool {
+        guard let engine = self.engine else { return false }
+        return fcitx5_vnchkey_get_frequency_disambiguation(engine)
+    }
+
     private var autoCapitalizeEnabled = false
 
     public func setAutoCapitalize(_ enabled: Bool) {

@@ -88,6 +88,8 @@ extern "C" {
     bool fcitx5_vnchkey_get_math_context(const void* ctx);
     void fcitx5_vnchkey_set_collision_prefers_vietnamese(void* ctx, bool enabled);
     bool fcitx5_vnchkey_get_collision_prefers_vietnamese(const void* ctx);
+    void fcitx5_vnchkey_set_frequency_disambiguation(void* ctx, bool enabled);
+    bool fcitx5_vnchkey_get_frequency_disambiguation(const void* ctx);
 
     char* fcitx5_vnchkey_get_current_word(void* ctx);
     char* fcitx5_vnchkey_get_completed_word(void* ctx);
@@ -165,6 +167,7 @@ private:
     bool config_sentence_momentum_ = false;
     bool config_math_context_ = false;
     bool config_collision_prefers_vietnamese_ = false;
+    bool config_frequency_disambiguation_ = false;
     bool config_auto_capitalize_ = false;
     std::string config_user_vietnamese_words_;
     bool config_backspace_by_syllable_ = false;

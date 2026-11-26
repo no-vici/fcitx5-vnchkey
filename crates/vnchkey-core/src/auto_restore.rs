@@ -255,10 +255,10 @@ impl EnglishAutoRestore {
     pub fn should_restore(&self, raw_strokes: &str, current_word: &str, use_dictionary: bool) -> bool {
         static EMPTY: std::sync::OnceLock<std::collections::HashSet<String>> = std::sync::OnceLock::new();
         let empty = EMPTY.get_or_init(std::collections::HashSet::new);
-        self.should_restore_with_options(raw_strokes, current_word, use_dictionary, true, empty, false)
+        self.should_restore_with_options(raw_strokes, current_word, use_dictionary, true, empty, false, false)
     }
 
-    /// Extended `should_restore` with explicit `acronym_bypass`, user Vietnamese words, and collision preference.
+    /// Extended `should_restore` with explicit toggles for acronym bypass, collision preference, and frequency disambiguation.
     pub fn should_restore_with_options(
         &self,
         raw_strokes: &str,
@@ -267,6 +267,7 @@ impl EnglishAutoRestore {
         acronym_bypass: bool,
         user_vietnamese_words: &std::collections::HashSet<String>,
         collision_prefers_vietnamese: bool,
+        frequency_disambiguation: bool,
     ) -> bool {
         let raw_trimmed = raw_strokes.trim();
         let cur_trimmed = current_word.trim();
@@ -310,8 +311,18 @@ impl EnglishAutoRestore {
                 if use_dictionary && self.keywords.contains(raw_clean) {
                     let cur_is_vietnamese =
                         is_in_vietnamese_dictionary(cur_clean) || user_vietnamese_words.contains(cur_clean);
-                    if collision_prefers_vietnamese && cur_is_vietnamese {
-                        return false;
+                    if cur_is_vietnamese {
+                        if collision_prefers_vietnamese {
+                            return false;
+                        }
+                        if frequency_disambiguation {
+                            let prefer_vn = crate::english_frequency::scores(raw_clean)
+                                .map(|(en, vn)| vn >= 120 && en <= vn.saturating_add(20))
+                                .unwrap_or(false);
+                            if prefer_vn {
+                                return false;
+                            }
+                        }
                     }
                     if raw_clean.len() >= 4 || !cur_is_vietnamese {
                         return true;

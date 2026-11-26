@@ -796,6 +796,12 @@ impl SettingsApp {
         ui.add_space(6.0);
 
         ui.checkbox(
+            &mut self.config.frequency_disambiguation,
+            "Phân giải va chạm EN/VN theo tần suất (Phase 3, thử nghiệm). Mặc định TẮT; chỉ áp dụng khi chưa bật ưu tiên Tiếng Việt.",
+        );
+        ui.add_space(6.0);
+
+        ui.checkbox(
             &mut self.config.auto_space_after_punctuation,
             "Auto-space after sentence-ending punctuation: Tự thêm khoảng trắng sau `.`, `?`, `!` khi từ trước là chữ cái. Mặc định TẮT.",
         );

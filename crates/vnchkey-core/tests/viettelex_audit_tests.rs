@@ -216,3 +216,42 @@ fn audit_glue_number_unit() {
     // Desired: keep predictable, not garbled; exact expected depends on policy.
     assert_eq!(out, "5k/tháng ");
 }
+// ---------------------------------------------------------------------------
+// Frequency disambiguation (Phase 3) - default OFF, easy to remove
+// ---------------------------------------------------------------------------
+
+#[test]
+fn audit_freq_disambig_off_keeps_default_english_restore() {
+    let mut e = telex_engine(EngineConfig {
+        spell_check: true,
+        auto_restore_english: true,
+        frequency_disambiguation: false,
+        ..EngineConfig::default()
+    });
+    // "rust" -> "rút" is a valid VN word, but default len>=4 English keyword restore keeps English.
+    assert_eq!(type_stream(&mut e, "rust "), "rust ");
+}
+
+#[test]
+fn audit_freq_disambig_on_prefers_vn_when_vn_score_strong() {
+    let mut e = telex_engine(EngineConfig {
+        spell_check: true,
+        auto_restore_english: true,
+        frequency_disambiguation: true,
+        ..EngineConfig::default()
+    });
+    // "rust" (en 89, vn 152): VN-dominant collision; prefer Vietnamese when enabled.
+    assert_eq!(type_stream(&mut e, "rust "), "rút ");
+}
+
+#[test]
+fn audit_freq_disambig_on_keeps_english_when_en_dominant() {
+    let mut e = telex_engine(EngineConfig {
+        spell_check: true,
+        auto_restore_english: true,
+        frequency_disambiguation: true,
+        ..EngineConfig::default()
+    });
+    // "best" (en 173, vn 95): EN-dominant; keep English restore.
+    assert_eq!(type_stream(&mut e, "best "), "best ");
+}

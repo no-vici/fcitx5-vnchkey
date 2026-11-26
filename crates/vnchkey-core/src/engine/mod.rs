@@ -107,6 +107,8 @@ pub struct EngineConfig {
     pub math_context: bool,
     /// Prefer Vietnamese for ambiguous EN/VN collision words (e.g. `list -> lít`, `last -> lát`). Defaults to false to preserve current behavior.
     pub collision_prefers_vietnamese: bool,
+    /// Use English/Vietnamese frequency data at word boundaries for ambiguous collisions. Defaults to false.
+    pub frequency_disambiguation: bool,
 }
 
 impl Default for EngineConfig {
@@ -141,6 +143,7 @@ impl Default for EngineConfig {
             sentence_momentum: false,
             math_context: false,
             collision_prefers_vietnamese: false,
+            frequency_disambiguation: false,
             macro_preview: false,
         }
     }
@@ -883,6 +886,16 @@ impl Engine {
     /// Returns whether ambiguous EN/VN collision words prefer Vietnamese.
     pub fn collision_prefers_vietnamese(&self) -> bool {
         self.config.collision_prefers_vietnamese
+    }
+
+    /// Enables or disables frequency-based EN/VN disambiguation at word boundaries.
+    pub fn set_frequency_disambiguation(&mut self, enabled: bool) {
+        self.config.frequency_disambiguation = enabled;
+    }
+
+    /// Returns whether frequency-based EN/VN disambiguation is enabled.
+    pub fn frequency_disambiguation(&self) -> bool {
+        self.config.frequency_disambiguation
     }
 
     /// Returns a compact live-inspector snapshot of the current engine state and syllable breakdown.
@@ -1938,9 +1951,19 @@ impl Engine {
                     && !has_digits
                     && self.current_word != self.raw_strokes
                     && self.auto_restore.is_english_keyword(&self.raw_strokes);
-                let vn_preferred_collision = self.config.collision_prefers_vietnamese
-                    && is_english_keyword
+                let is_ambiguous_collision = is_english_keyword
                     && self.is_in_any_vietnamese_dictionary(&self.current_word);
+                let vn_preferred_collision = if self.config.collision_prefers_vietnamese {
+                    is_ambiguous_collision
+                } else if self.config.frequency_disambiguation && is_ambiguous_collision {
+                    // Frequency-based disambiguation (easy to remove): prefer VN when VN score is strong
+                    // and not dominated by English; otherwise keep existing English-restore behavior.
+                    crate::english_frequency::scores(&raw_lower)
+                        .map(|(en, vn)| vn >= 120 && en <= vn.saturating_add(20))
+                        .unwrap_or(false)
+                } else {
+                    false
+                };
                 let is_known_english = is_slash_command_or_path
                     || is_dot_module_prefix
                     || context_english_collision
@@ -1966,6 +1989,7 @@ impl Engine {
                             self.config.acronym_bypass,
                             &self.user_vietnamese_words,
                             self.config.collision_prefers_vietnamese,
+                            self.config.frequency_disambiguation,
                         );
                     // Invalid intermediate syllables (duòng, tién, nuóc) MUST auto-restore on Space even if auto_restore_english is false.
                     let english_or_spell_restore = is_known_english
@@ -2511,6 +2535,7 @@ impl Engine {
                     false,
                     &self.user_vietnamese_words,
                     self.config.collision_prefers_vietnamese,
+                    self.config.frequency_disambiguation,
                 );
 
         if !self.manual_undo

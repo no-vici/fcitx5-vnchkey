@@ -76,7 +76,7 @@ Nếu bạn thường xuyên gõ văn bản nhanh, hãy bật các tùy chọn t
 - **Phụ âm đầu nhanh**: Gõ `f` $\to$ `ph`, `j` $\to$ `gi`, `w` $\to$ `qu` khi ở đầu từ.
 - **Phụ âm cuối nhanh**: Gõ `g` $\to$ `ng`, `h` $\to$ `nh`, `k` $\to$ `ch` sau nguyên âm.
 
-Ngoài ra trong **"Tính năng nâng cao"**, bạn có thể bật **"Ưu tiên tiếng Việt khi từ va chạm (list → lít)"** (mặc định TẮT) nếu muốn các từ mơ hồ EN/VN ưu tiên dạng tiếng Việt.
+Ngoài ra trong **"Tính năng nâng cao"**, bạn có thể bật **"Ưu tiên tiếng Việt khi từ va chạm (list → lít)"** (mặc định TẮT) hoặc **"Phân giải va chạm theo tần suất (thử nghiệm)"** (mặc định TẮT, heuristic bảo thủ) cho các từ EN/VN mơ hồ.
 
 ---
 
